@@ -11,7 +11,7 @@ interface RioVideoAvatarProps {
 const RioVideoAvatar = ({ 
   autoPlay = true, 
   muted = false, 
-  loop = true,
+  loop = false,
   className 
 }: RioVideoAvatarProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
