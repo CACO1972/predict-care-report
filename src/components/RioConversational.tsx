@@ -1,8 +1,10 @@
-import { Loader2, ChevronRight } from "lucide-react";
+import { Loader2, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useEffect, useRef } from "react";
 import RioAvatarExpressive from "./RioAvatarExpressive";
 import { RioExpression } from "@/hooks/useRioExpression";
+import { useRioTTS } from "@/hooks/useRioTTS";
 
 interface RioConversationalProps {
   message: string | null;
@@ -11,20 +13,48 @@ interface RioConversationalProps {
   showContinue: boolean;
   expression?: RioExpression;
   className?: string;
+  autoSpeak?: boolean;
 }
 
 const RioConversational = ({ 
   message, 
-  isLoading, 
+  isLoading: isLoadingMessage, 
   onContinue, 
   showContinue,
   expression = 'encouraging',
-  className 
+  className,
+  autoSpeak = true
 }: RioConversationalProps) => {
-  if (!isLoading && !message) return null;
+  const { isPlaying, isLoading: isLoadingAudio, speak, stop } = useRioTTS();
+  const lastSpokenRef = useRef<string>("");
+  
+  // Auto-speak when message arrives
+  useEffect(() => {
+    if (autoSpeak && message && !isLoadingMessage && message !== lastSpokenRef.current) {
+      lastSpokenRef.current = message;
+      speak(message);
+    }
+  }, [message, isLoadingMessage, autoSpeak, speak]);
+
+  // Stop audio when component unmounts or message changes
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
+
+  if (!isLoadingMessage && !message) return null;
 
   // Determine expression based on state
-  const currentExpression: RioExpression = isLoading ? 'thinking' : expression;
+  const currentExpression: RioExpression = isLoadingMessage ? 'thinking' : expression;
+
+  const handleAudioToggle = () => {
+    if (isPlaying) {
+      stop();
+    } else if (message) {
+      speak(message);
+    }
+  };
 
   return (
     <div className={cn(
@@ -39,13 +69,36 @@ const RioConversational = ({
         <div className="flex items-center gap-4 mb-6 pb-4 border-b border-border">
           <RioAvatarExpressive 
             expression={currentExpression}
-            isSpeaking={isLoading}
+            isSpeaking={isLoadingMessage || isPlaying}
             size="lg"
           />
           <div className="flex-1">
             <p className="text-base font-semibold text-foreground font-display">Río</p>
             <p className="text-xs text-muted-foreground">Asistente ImplantX</p>
           </div>
+          
+          {/* Audio control button */}
+          {!isLoadingMessage && message && (
+            <button
+              onClick={handleAudioToggle}
+              disabled={isLoadingAudio}
+              className={cn(
+                "p-2 rounded-full transition-all duration-200 mr-2",
+                "hover:bg-primary/10 text-muted-foreground hover:text-primary",
+                isPlaying && "text-primary bg-primary/10"
+              )}
+              aria-label={isPlaying ? "Detener audio" : "Reproducir audio"}
+            >
+              {isLoadingAudio ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : isPlaying ? (
+                <Volume2 className="w-5 h-5" />
+              ) : (
+                <VolumeX className="w-5 h-5" />
+              )}
+            </button>
+          )}
+          
           {/* Online indicator with expression color */}
           <div className={cn(
             "w-2.5 h-2.5 rounded-full transition-colors duration-300",
@@ -59,7 +112,7 @@ const RioConversational = ({
 
         {/* Message Content */}
         <div className="min-h-[60px]">
-          {isLoading ? (
+          {isLoadingMessage ? (
             <div className="flex items-center gap-3 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <div className="space-y-1">
@@ -79,7 +132,7 @@ const RioConversational = ({
         </div>
 
         {/* Continue Button */}
-        {showContinue && !isLoading && message && (
+        {showContinue && !isLoadingMessage && message && (
           <div className="mt-6 pt-4 border-t border-border">
             <Button
               onClick={onContinue}
