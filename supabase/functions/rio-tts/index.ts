@@ -12,10 +12,10 @@ serve(async (req) => {
 
   try {
     const { text } = await req.json();
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI");
 
     if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+      throw new Error("OPENAI API key is not configured");
     }
 
     if (!text) {
