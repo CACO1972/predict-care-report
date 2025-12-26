@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { 
   FileText, Download, CheckCircle2, AlertCircle, TrendingUp, 
   Calendar, User, Heart, Bone, Stethoscope, ArrowRight, Phone,
-  Scan, Activity, Target, CircleAlert, Sparkles
+  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -395,6 +395,59 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Premium Report CTA */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 space-y-4">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="relative">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Crown className="w-6 h-6 text-primary" />
+              <h4 className="text-xl font-bold text-foreground">Reporte Premium</h4>
+            </div>
+            
+            <p className="text-center text-muted-foreground text-sm mb-4">
+              Obtén un análisis completo con recomendaciones personalizadas del especialista
+            </p>
+
+            <ul className="space-y-2 mb-6">
+              {[
+                "Análisis detallado de tu caso clínico",
+                "Plan de tratamiento personalizado",
+                "Estimación de costos y tiempos",
+                "Consulta prioritaria con el especialista"
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <div className="text-center space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-3xl font-bold text-foreground">$29.990</span>
+                <span className="text-sm text-muted-foreground">CLP</span>
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <CreditCard className="w-3 h-3" />
+                Hasta 3 cuotas sin interés
+              </p>
+              
+              <a 
+                href="https://mpago.li/2jpxDi2" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-semibold text-lg shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02]"
+              >
+                <Crown className="w-5 h-5" />
+                Obtener Reporte Premium
+              </a>
+            </div>
           </div>
         </div>
 
