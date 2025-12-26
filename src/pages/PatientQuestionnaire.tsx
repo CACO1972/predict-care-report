@@ -312,7 +312,7 @@ const PatientQuestionnaire = () => {
                 <RioVideoAvatar 
                   autoPlay={true}
                   muted={false}
-                  loop={true}
+                  loop={false}
                   className="mx-auto"
                 />
               </div>
