@@ -1,0 +1,409 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design System - ImplantX Premium Dark Theme
+   Typography: Sentient (display) + Inter (body)
+   Palette: Pure Black (#000000) + Golden (#FFC700)
+   Clínica Miró Branding Kit
+   All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Pure Black foundation */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Primary - Golden (#FFC700) */
+    --primary-h: 47;
+    --primary-s: 100%;
+    --primary-l: 50%;
+    
+    --primary: var(--primary-h) var(--primary-s) var(--primary-l);
+    --primary-foreground: 0 0% 0%;
+    --primary-soft: 47 80% 55%;
+
+    /* Secondary - Dark Gray */
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted - Gray tones */
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 85%;
+
+    /* Accent - Golden */
+    --accent-h: 47;
+    --accent-s: 100%;
+    --accent-l: 50%;
+    
+    --accent: var(--accent-h) var(--accent-s) var(--accent-l);
+    --accent-foreground: 0 0% 0%;
+    
+    /* Golden variants */
+    --medical-blue: 47 100% 50%;
+    --medical-blue-light: 47 100% 60%;
+    --medical-blue-dark: 47 100% 40%;
+    
+    /* Cyan replaced with golden tones */
+    --cyan: 47 100% 55%;
+    --cyan-light: 47 90% 65%;
+    --cyan-dark: 47 100% 45%;
+
+    /* Clean white text */
+    --ivory: 0 0% 100%;
+    --steel: 0 0% 65%;
+
+    /* Status colors */
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 120 60% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 47 100% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Borders - Dark Gray */
+    --border: 0 0% 26%;
+    --border-subtle: 0 0% 15%;
+    --input: 0 0% 26%;
+    --ring: var(--primary-h) var(--primary-s) var(--primary-l);
+
+    --radius: 0.5rem;
+    
+    /* Shadows - Golden glows */
+    --shadow-soft: 0 1px 3px hsla(47, 100%, 50%, 0.06);
+    --shadow-medium: 0 4px 12px hsla(0, 0%, 0%, 0.5);
+    --shadow-card: 0 4px 24px hsla(0, 0%, 0%, 0.6);
+    --shadow-elevated: 0 20px 50px hsla(0, 0%, 0%, 0.7);
+    --shadow-card-hover: 0 12px 40px hsla(47, 100%, 50%, 0.15);
+    --shadow-glow: 0 0 40px hsla(47, 100%, 50%, 0.25);
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(47 100% 50%), hsl(47 100% 40%));
+    --gradient-secondary: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 12%));
+    --gradient-bg: linear-gradient(165deg, hsl(0 0% 0%) 0%, hsl(0 0% 2%) 30%, hsl(0 0% 5%) 70%, hsl(0 0% 0%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 7%), hsl(0 0% 4%));
+    
+    /* Transitions & Easing */
+    --easing: cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-smooth: all 0.3s var(--easing);
+    --transition-reveal: all 1000ms var(--easing);
+    
+    /* Typography - Clínica Miró Premium */
+    --font-display: 'Sentient', 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    
+    --font-size-h1: clamp(2rem, 5vw, 3rem);
+    --font-size-h2: clamp(1.5rem, 4vw, 2.25rem);
+    --font-size-h3: clamp(1.25rem, 3vw, 1.5rem);
+    --font-size-p: clamp(0.95rem, 1.5vw, 1.0625rem);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: var(--primary-h) var(--primary-s) var(--primary-l);
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: var(--primary-h) var(--primary-s) var(--primary-l);
+  }
+
+  /* Light mode override - Golden accents on white */
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: var(--primary-h) var(--primary-s) 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 47 80% 50%;
+
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 8%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: var(--accent-h) var(--accent-s) 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --border-subtle: 0 0% 92%;
+    --input: 0 0% 88%;
+    
+    --shadow-card: 0 4px 20px hsla(0, 0%, 8%, 0.08);
+    --shadow-card-hover: 0 12px 40px hsla(47, 100%, 50%, 0.2);
+    
+    --gradient-bg: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 96%));
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: var(--primary-h) var(--primary-s) 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 0 0% 88%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    background: var(--gradient-bg);
+  }
+  
+  h1, h2 {
+    font-family: var(--font-display);
+    font-size: var(--font-size-h1);
+    color: hsl(var(--foreground));
+    font-weight: 300;
+    font-style: normal;
+    letter-spacing: 0.02em;
+  }
+  
+  h2 {
+    font-size: var(--font-size-h2);
+  }
+  
+  h3 {
+    font-family: var(--font-display);
+    font-size: var(--font-size-h3);
+    color: hsl(var(--foreground));
+    font-weight: 400;
+  }
+  
+  p {
+    font-family: var(--font-body);
+    font-size: var(--font-size-p);
+    color: hsl(var(--muted-foreground));
+  }
+}
+
+@layer utilities {
+  /* Reveal animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes reveal-up {
+    from {
+      opacity: 0;
+      transform: translateY(60px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+  
+  .reveal {
+    opacity: 0;
+    transform: translateY(60px);
+    transition: opacity 1000ms var(--easing), transform 1000ms var(--easing);
+    will-change: opacity, transform;
+  }
+  
+  .reveal-active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .reveal-delay-100 { transition-delay: 100ms; }
+  .reveal-delay-200 { transition-delay: 200ms; }
+  .reveal-delay-300 { transition-delay: 300ms; }
+  .reveal-delay-400 { transition-delay: 400ms; }
+  .reveal-delay-500 { transition-delay: 500ms; }
+
+  /* Premium glow effects - Golden */
+  .glow-blue {
+    box-shadow: 0 0 40px hsla(47, 100%, 50%, 0.3);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 40px hsla(47, 100%, 50%, 0.3);
+  }
+
+  .text-gradient-blue {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(47 100% 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(47 100% 50%), hsl(47 100% 65%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Shimmer effect for premium text */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .text-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--foreground)) 0%,
+      hsl(var(--foreground)) 40%,
+      hsl(47 100% 60%) 50%,
+      hsl(var(--foreground)) 60%,
+      hsl(var(--foreground)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+
+  .text-shimmer-gold {
+    background: linear-gradient(
+      90deg,
+      hsl(47 100% 50%) 0%,
+      hsl(47 100% 50%) 40%,
+      hsl(47 100% 80%) 50%,
+      hsl(47 100% 50%) 60%,
+      hsl(47 100% 50%) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+}
+
+@layer components {
+  /* Premium outline button - Golden */
+  .btn-premium {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer bg-transparent;
+    font-family: var(--font-body);
+    border: 1px solid hsl(var(--primary));
+    color: hsl(var(--primary));
+    transition: all 300ms var(--easing);
+  }
+  
+  .btn-premium:hover {
+    background-color: hsl(var(--primary) / 0.1);
+    box-shadow: var(--shadow-glow);
+  }
+  
+  /* Premium solid button - Golden */
+  .btn-premium-solid {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer border-none;
+    font-family: var(--font-body);
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(47 100% 40%));
+    color: hsl(0 0% 0%);
+    box-shadow: 0 10px 30px hsla(47, 100%, 50%, 0.3);
+    transition: all 300ms var(--easing);
+  }
+  
+  .btn-premium-solid:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px hsla(47, 100%, 50%, 0.4);
+  }
+  
+  .btn-premium-solid:active {
+    transform: translateY(0);
+  }
+
+  /* Premium card - Black with golden accent */
+  .card-premium {
+    background: var(--gradient-card);
+    border: 1px solid hsl(var(--border));
+    border-radius: 1rem;
+    box-shadow: var(--shadow-card);
+    transition: all 300ms var(--easing);
+  }
+
+  .card-premium:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Legacy button styles for compatibility - Golden theme */
+  .btn-collins {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer bg-transparent;
+    font-family: var(--font-body);
+    border: 1px solid hsl(var(--primary));
+    color: hsl(var(--primary));
+    transition: all 300ms var(--easing);
+  }
+  
+  .btn-collins:hover {
+    background-color: hsl(var(--primary));
+    color: hsl(0 0% 0%);
+  }
+  
+  .btn-collins-solid {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer border-none;
+    font-family: var(--font-body);
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(47 100% 40%));
+    color: hsl(0 0% 0%);
+    transition: all 300ms var(--easing);
+  }
+  
+  .btn-collins-solid:hover {
+    filter: brightness(1.1);
+  }
+  
+  .btn-collins-accent {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer border-none;
+    font-family: var(--font-body);
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(47 100% 55%));
+    color: hsl(0 0% 0%);
+    box-shadow: 0 10px 30px hsla(47, 100%, 50%, 0.3);
+    transition: transform 300ms var(--easing), box-shadow 300ms var(--easing);
+  }
+  
+  .btn-collins-accent:hover {
+    transform: scale(1.02) translateY(-2px);
+    box-shadow: 0 15px 40px hsla(47, 100%, 50%, 0.4);
+  }
+  
+  .btn-collins-accent:active {
+    transform: scale(0.98);
+  }
+
+  /* Text shadow glow for titles */
+  .text-glow-gold {
+    text-shadow: 0 0 20px hsla(47, 100%, 50%, 0.5), 0 0 40px hsla(47, 100%, 50%, 0.3);
+  }
+}

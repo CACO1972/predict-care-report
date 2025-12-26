@@ -1,0 +1,1033 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import RioAvatar from "@/components/RioAvatar";
+import RioConversational from "@/components/RioConversational";
+import RioAvatarExpressive from "@/components/RioAvatarExpressive";
+import RioVideoAvatar from "@/components/RioVideoAvatar";
+import ProgressBar from "@/components/ProgressBar";
+import QuestionCard from "@/components/QuestionCard";
+import ReportPreview from "@/components/ReportPreview";
+import ImageUpload from "@/components/ImageUpload";
+import AnswersSummary from "@/components/AnswersSummary";
+import { UserProfile, DensityProAnswers, ImplantXAnswers, QuestionnaireStep } from "@/types/questionnaire";
+import { calculateRiskAssessment, EnhancedAssessmentResult } from "@/utils/riskCalculation";
+import { getQuestionConfig } from "@/utils/questionConfig";
+import { useRioFeedback } from "@/hooks/useRioFeedback";
+import { useRioExpression, RioExpression, getFeedbackTypeFromAnswer } from "@/hooks/useRioExpression";
+import { Loader2, Sparkles, Shield, Clock, Award, ArrowLeft } from "lucide-react";
+import logoMiro from "@/assets/logo-miro-largo-blanco.png";
+import { triggerConfetti } from "@/utils/confetti";
+
+// Map question IDs to their labels for Rio's context
+const getAnswerLabel = (questionId: string, value: string): string => {
+  const labelMaps: Record<string, Record<string, string>> = {
+    fractures: { no: 'No', once: 'Sí, una vez', multiple: 'Sí, más de una vez' },
+    heightLoss: { no: 'No', yes: 'Sí, he perdido un poco de altura', unsure: 'No estoy seguro/a' },
+    familyHistory: { no: 'No', yes: 'Sí', unknown: 'No lo sé' },
+    corticosteroids: { no: 'No', yes: 'Sí', unsure: 'No estoy seguro/a' },
+    alcohol: { no: 'No', yes: 'Sí' },
+    smoking: { no: 'No', 'less-10': 'Sí, menos de 10 cigarrillos al día', '10-plus': 'Sí, 10 o más cigarrillos al día' },
+    bruxism: { no: 'No', unsure: 'No estoy seguro/a', yes: 'Sí' },
+    bruxismGuard: { no: 'No', yes: 'Sí' },
+    diabetes: { no: 'No', controlled: 'Sí, y está controlada', uncontrolled: 'Sí, y no está bien controlada' },
+    implantHistory: { no: 'No, este sería mi primer implante', success: 'Sí, y siguen funcionando bien', failed: 'Sí, pero fracasaron' },
+    toothLossCause: { cavity: 'Por una caries', periodontitis: 'Por enfermedad de las encías', trauma: 'Por un golpe o accidente', other: 'Otra razón' },
+    toothLossTime: { 'less-1': 'Menos de 1 año', '1-3': 'Entre 1 y 3 años', 'more-3': 'Más de 3 años' },
+    gumBleeding: { never: 'Nunca o casi nunca', sometimes: 'A veces', frequently: 'Frecuentemente' },
+    oralHygiene: { 'less-once': 'Menos de una vez', once: 'Una vez', 'twice-plus': 'Dos o más veces' },
+    implantZones: { 'anterior-superior': 'Zona anterior superior', 'posterior-superior': 'Zona posterior superior', 'anterior-inferior': 'Zona anterior inferior', 'posterior-inferior': 'Zona posterior inferior' },
+  };
+  return labelMaps[questionId]?.[value] || value;
+};
+
+// Map question IDs to their question text
+const getQuestionText = (questionId: string): string => {
+  const questionTexts: Record<string, string> = {
+    fractures: '¿Alguna vez has tenido una fractura de hueso después de una caída o golpe menor como adulto?',
+    heightLoss: '¿Has notado una disminución en tu estatura en los últimos años?',
+    familyHistory: '¿Alguno de tus padres fue diagnosticado con osteoporosis o sufrió una fractura de cadera?',
+    corticosteroids: '¿Has tomado medicamentos corticoides de forma regular por más de 3 meses?',
+    alcohol: '¿Consumes más de dos bebidas alcohólicas al día de forma habitual?',
+    smoking: '¿Fumas actualmente?',
+    bruxism: '¿Aprietas o rechinas los dientes?',
+    bruxismGuard: '¿Usas una férula de descarga nocturna?',
+    diabetes: '¿Tienes diabetes?',
+    implantHistory: '¿Has tenido implantes dentales anteriormente?',
+    toothLossCause: '¿Cuál fue el motivo principal de la pérdida del diente?',
+    toothLossTime: '¿Hace cuánto tiempo perdiste el diente o dientes?',
+    gumBleeding: '¿Sangran tus encías cuando te cepillas los dientes?',
+    oralHygiene: '¿Cuántas veces al día te cepillas los dientes?',
+    implantZones: '¿En qué zona de la boca necesitas el implante?',
+  };
+  return questionTexts[questionId] || questionId;
+};
+
+const PatientQuestionnaire = () => {
+  const [step, setStep] = useState<QuestionnaireStep>('welcome');
+  const [userProfile, setUserProfile] = useState<Partial<UserProfile>>({});
+  const [densityAnswers, setDensityAnswers] = useState<Partial<DensityProAnswers>>({});
+  const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>({});
+  const [assessmentResult, setAssessmentResult] = useState<EnhancedAssessmentResult | null>(null);
+  const [showRioResponse, setShowRioResponse] = useState(false);
+  const [pendingNextStep, setPendingNextStep] = useState<(() => void) | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
+  const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
+
+  const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
+  const { getExpressionFromFeedback } = useRioExpression();
+
+  const requiresDensityPro = userProfile.gender === 'female' && (userProfile.age || 0) > 45;
+
+  // Get previous step for back navigation
+  const getPreviousStep = (): QuestionnaireStep | null => {
+    const baseSteps: QuestionnaireStep[] = ['welcome', 'name', 'demographics'];
+    const densitySteps: QuestionnaireStep[] = ['density-intro', 'density-q1', 'density-q2', 'density-q3', 'density-q4', 'density-q5', 'density-complete'];
+    const healthSteps: QuestionnaireStep[] = ['smoking', 'bruxism', 'bruxism-guard', 'diabetes'];
+    const oralSteps: QuestionnaireStep[] = ['implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'gum-health', 'hygiene', 'odontogram', 'summary'];
+    
+    let allSteps = [...baseSteps];
+    if (requiresDensityPro) {
+      allSteps = [...allSteps, ...densitySteps];
+    }
+    allSteps = [...allSteps, ...healthSteps, ...oralSteps];
+    
+    // Handle bruxism-guard conditional step
+    if (step === 'diabetes' && implantAnswers.bruxism !== 'yes') {
+      return 'bruxism';
+    }
+    
+    const currentIndex = allSteps.indexOf(step);
+    if (currentIndex <= 0) return null;
+    
+    const prevStep = allSteps[currentIndex - 1];
+    
+    // Skip bruxism-guard if bruxism is not 'yes'
+    if (prevStep === 'bruxism-guard' && implantAnswers.bruxism !== 'yes') {
+      return 'bruxism';
+    }
+    
+    return prevStep;
+  };
+
+  const handleBack = () => {
+    setShowRioResponse(false);
+    clearFeedback();
+    const prevStep = getPreviousStep();
+    if (prevStep) {
+      setStep(prevStep);
+    }
+  };
+
+  const canGoBack = (): boolean => {
+    const noBackSteps: QuestionnaireStep[] = ['welcome', 'processing', 'results'];
+    return !noBackSteps.includes(step) && getPreviousStep() !== null;
+  };
+
+  const getStepNumber = (): number => {
+    const steps: QuestionnaireStep[] = ['welcome', 'name', 'demographics'];
+    if (requiresDensityPro) {
+      steps.push('density-intro', 'density-q1', 'density-q2', 'density-q3', 'density-q4', 'density-q5', 'density-complete');
+    }
+    steps.push('smoking', 'bruxism', 'bruxism-guard', 'diabetes', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'gum-health', 'hygiene', 'odontogram', 'summary', 'processing', 'results');
+    return steps.indexOf(step) + 1;
+  };
+
+  const getTotalSteps = (): number => {
+    return requiresDensityPro ? 22 : 16;
+  };
+
+  const getCurrentPhase = (): 'base' | 'density' | 'health' | 'oral' | 'mapping' | 'complete' => {
+    if (['welcome', 'name', 'demographics'].includes(step)) return 'base';
+    if (step.startsWith('density')) return 'density';
+    if (['smoking', 'bruxism', 'bruxism-guard', 'diabetes'].includes(step)) return 'health';
+    if (['implant-history', 'tooth-loss', 'tooth-loss-time', 'gum-health', 'hygiene'].includes(step)) return 'oral';
+    if (step === 'odontogram' || step === 'summary') return 'mapping';
+    return 'complete';
+  };
+
+  const handleContinueFromRio = () => {
+    setShowRioResponse(false);
+    clearFeedback();
+    if (pendingNextStep) {
+      pendingNextStep();
+      setPendingNextStep(null);
+    }
+  };
+
+  const handleAnswerWithRioFeedback = async (
+    questionId: string,
+    value: string,
+    nextStepFn: () => void
+  ) => {
+    const config = getQuestionConfig(questionId);
+    const patientName = userProfile.name || 'Paciente';
+    
+    // Set expression based on answer feedback type
+    const feedbackType = getFeedbackTypeFromAnswer(questionId, value);
+    setCurrentExpression(getExpressionFromFeedback(feedbackType));
+    
+    setShowRioResponse(true);
+    setPendingNextStep(() => nextStepFn);
+
+    await generateFeedback({
+      questionId,
+      questionText: getQuestionText(questionId),
+      answerValue: value,
+      answerLabel: getAnswerLabel(questionId, value),
+      patientName,
+      questionComplexity: config.complexity,
+      clinicalContext: config.clinicalContext,
+    });
+  };
+
+  const handleNext = () => {
+    setShowRioResponse(false);
+    clearFeedback();
+    
+    if (step === 'name') {
+      setStep('demographics');
+      return;
+    }
+    
+    if (step === 'demographics' && requiresDensityPro) {
+      setStep('density-intro');
+      return;
+    } else if (step === 'demographics') {
+      setStep('smoking');
+      return;
+    }
+
+    if (step === 'density-intro') setStep('density-q1');
+    else if (step === 'density-q1') setStep('density-q2');
+    else if (step === 'density-q2') setStep('density-q3');
+    else if (step === 'density-q3') setStep('density-q4');
+    else if (step === 'density-q4') setStep('density-q5');
+    else if (step === 'density-q5') {
+      setStep('density-complete');
+      setTimeout(() => triggerConfetti(), 300);
+    }
+    else if (step === 'density-complete') setStep('smoking');
+    else if (step === 'smoking') setStep('bruxism');
+    else if (step === 'bruxism') {
+      // Si tiene bruxismo, preguntar por férula; si no, saltar a diabetes
+      if (implantAnswers.bruxism === 'yes') {
+        setStep('bruxism-guard');
+      } else {
+        setImplantAnswers({ ...implantAnswers, bruxismGuard: 'not-applicable' });
+        setStep('diabetes');
+      }
+    }
+    else if (step === 'bruxism-guard') setStep('diabetes');
+    else if (step === 'diabetes') setStep('implant-history');
+    else if (step === 'implant-history') setStep('tooth-loss');
+    else if (step === 'tooth-loss') setStep('tooth-loss-time');
+    else if (step === 'tooth-loss-time') setStep('teeth-count');
+    else if (step === 'teeth-count') setStep('gum-health');
+    else if (step === 'gum-health') setStep('hygiene');
+    else if (step === 'hygiene') setStep('odontogram');
+    else if (step === 'odontogram') {
+      setStep('processing');
+      triggerConfetti();
+      setTimeout(() => {
+        const result = calculateRiskAssessment(
+          requiresDensityPro ? densityAnswers as DensityProAnswers : null,
+          implantAnswers as ImplantXAnswers,
+          userProfile.age
+        );
+        setAssessmentResult(result);
+        setStep('results');
+      }, 3000);
+    }
+  };
+
+  // Create step transition functions
+  const getNextStepFunction = (currentStep: QuestionnaireStep): () => void => {
+    const transitions: Record<string, () => void> = {
+      'density-q1': () => setStep('density-q2'),
+      'density-q2': () => setStep('density-q3'),
+      'density-q3': () => setStep('density-q4'),
+      'density-q4': () => setStep('density-q5'),
+      'density-q5': () => { setStep('density-complete'); setTimeout(() => triggerConfetti(), 300); },
+      'smoking': () => setStep('bruxism'),
+      'bruxism': () => {
+        // Si tiene bruxismo, preguntar por férula; si no, saltar a diabetes
+        if (implantAnswers.bruxism === 'yes') {
+          setStep('bruxism-guard');
+        } else {
+          setImplantAnswers(prev => ({ ...prev, bruxismGuard: 'not-applicable' }));
+          setStep('diabetes');
+        }
+      },
+      'bruxism-guard': () => setStep('diabetes'),
+      'diabetes': () => setStep('implant-history'),
+      'implant-history': () => setStep('tooth-loss'),
+      'tooth-loss': () => setStep('tooth-loss-time'),
+      'tooth-loss-time': () => setStep('teeth-count'),
+      'teeth-count': () => setStep('gum-health'),
+      'gum-health': () => setStep('hygiene'),
+      'hygiene': () => setStep('odontogram'),
+      'odontogram': () => {
+        setStep('processing');
+        triggerConfetti();
+        setTimeout(() => {
+          const result = calculateRiskAssessment(
+            requiresDensityPro ? densityAnswers as DensityProAnswers : null,
+            implantAnswers as ImplantXAnswers,
+            userProfile.age
+          );
+          setAssessmentResult(result);
+          setStep('results');
+        }, 3000);
+      },
+    };
+    return transitions[currentStep] || (() => {});
+  };
+
+  const renderContent = () => {
+    // If showing Rio's response, render it prominently
+    if (showRioResponse) {
+      return (
+        <RioConversational
+          message={feedback}
+          isLoading={isLoading}
+          onContinue={handleContinueFromRio}
+          showContinue={true}
+          expression={currentExpression}
+        />
+      );
+    }
+
+    switch (step) {
+      case 'welcome':
+        return (
+          <div className="space-y-8 animate-fade-in text-center">
+            {/* Minimalist Welcome Card */}
+            <div className="relative bg-background border border-border rounded-2xl p-8 sm:p-12 shadow-sm overflow-hidden">
+              {/* Subtle accent line */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
+              
+              {/* Rio Video Avatar - WITH AUDIO */}
+              <div className="relative inline-block mb-8">
+                <RioVideoAvatar 
+                  autoPlay={true}
+                  muted={false}
+                  loop={true}
+                  className="mx-auto"
+                />
+              </div>
+              
+              <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
+                ¡Hola! Soy Río
+              </h1>
+              <p className="text-lg text-muted-foreground mb-2">
+                Tu Asistente de Evaluación ImplantX
+              </p>
+              <p className="text-base text-muted-foreground/80 leading-relaxed max-w-md mx-auto">
+                Te guiaré en una evaluación rápida que será analizada por IA Predictiva para que conozcas tus posibilidades de colocarte implantes dentales.
+              </p>
+
+              {/* Trust badges - Minimalist */}
+              <div className="flex flex-wrap justify-center gap-6 mt-8 pt-6 border-t border-border">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="w-4 h-4 text-primary" />
+                  <span>Confidencial</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span>5 minutos</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Award className="w-4 h-4 text-primary" />
+                  <span>Reporte PDF</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Button - Minimalist with neon accent */}
+            <Button 
+              onClick={() => setStep('name')} 
+              size="lg" 
+              className="w-full h-14 text-lg font-semibold rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all duration-300 group"
+            >
+              Comenzar Evaluación
+              <Sparkles className="ml-2 w-5 h-5 text-primary" />
+            </Button>
+          </div>
+        );
+
+      case 'name':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar message="Para empezar, por favor dime tu nombre." />
+            <QuestionCard
+              question="¿Cuál es tu nombre?"
+              type="text"
+              value={userProfile.name}
+              onChange={(value) => setUserProfile({ ...userProfile, name: value as string })}
+              onNext={handleNext}
+              nextButtonText="Continuar"
+            />
+          </div>
+        );
+
+      case 'demographics':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`¡Un gusto, ${userProfile.name}! Ahora necesito algunos datos básicos para personalizar tu evaluación.`}
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Cuál es tu edad?"
+              type="number"
+              value={userProfile.age}
+              onChange={(value) => setUserProfile({ ...userProfile, age: value as number })}
+              onNext={() => {}}
+              nextButtonText="Continuar"
+              disabled={!userProfile.age}
+            />
+            {userProfile.age && (
+              <QuestionCard
+                question="¿Cuál es tu género?"
+                type="gender"
+                value={userProfile.gender}
+                onChange={(value) => {
+                  setUserProfile({ ...userProfile, gender: value as 'male' | 'female' | 'other' });
+                }}
+                onNext={() => {}}
+                hideNextButton={true}
+              />
+            )}
+            {userProfile.age && userProfile.gender && (
+              <Button 
+                onClick={handleNext}
+                size="lg" 
+                className="w-full h-12 text-base font-medium rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all"
+              >
+                Continuar →
+              </Button>
+            )}
+          </div>
+        );
+
+      case 'density-intro':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`Hola {name}, he notado por tu edad y género que es importante evaluar tu salud ósea. Estas preguntas nos ayudarán a entender la calidad de tus huesos.`}
+              userName={userProfile.name}
+            />
+            <Button 
+              onClick={handleNext} 
+              size="lg" 
+              className="w-full h-12 text-base font-medium rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all"
+            >
+              Comenzar Evaluación Ósea
+            </Button>
+          </div>
+        );
+
+      case 'density-q1':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar message="Comencemos con tu historial médico." userName={userProfile.name} />
+            <QuestionCard
+              question="¿Alguna vez has tenido una fractura de hueso (ej. muñeca, cadera, columna) después de una caída o golpe menor como adulto?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'once', label: 'Sí, una vez' },
+                { value: 'multiple', label: 'Sí, más de una vez' },
+              ]}
+              value={densityAnswers.fractures}
+              onChange={(value) => {
+                setDensityAnswers({ ...densityAnswers, fractures: value as any });
+                handleAnswerWithRioFeedback('fractures', value as string, getNextStepFunction('density-q1'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'density-q2':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar message="Ahora, sobre algunos cambios que quizás hayas notado." userName={userProfile.name} />
+            <QuestionCard
+              question="¿Has notado una disminución en tu estatura en los últimos años?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Sí, he perdido un poco de altura' },
+                { value: 'unsure', label: 'No estoy seguro/a' },
+              ]}
+              value={densityAnswers.heightLoss}
+              onChange={(value) => {
+                setDensityAnswers({ ...densityAnswers, heightLoss: value as any });
+                handleAnswerWithRioFeedback('heightLoss', value as string, getNextStepFunction('density-q2'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'density-q3':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar message="La genética también juega un papel importante." userName={userProfile.name} />
+            <QuestionCard
+              question="¿Alguno de tus padres fue diagnosticado con osteoporosis o sufrió una fractura de cadera después de una caída leve?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Sí' },
+                { value: 'unknown', label: 'No lo sé' },
+              ]}
+              value={densityAnswers.familyHistory}
+              onChange={(value) => {
+                setDensityAnswers({ ...densityAnswers, familyHistory: value as any });
+                handleAnswerWithRioFeedback('familyHistory', value as string, getNextStepFunction('density-q3'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'density-q4':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar message="Ciertos medicamentos pueden afectar la salud de los huesos." userName={userProfile.name} />
+            <QuestionCard
+              question="¿Has tomado o tomas actualmente medicamentos corticoides (como prednisona o cortisona) de forma regular por más de 3 meses?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Sí' },
+                { value: 'unsure', label: 'No estoy seguro/a' },
+              ]}
+              value={densityAnswers.corticosteroids}
+              onChange={(value) => {
+                setDensityAnswers({ ...densityAnswers, corticosteroids: value as any });
+                handleAnswerWithRioFeedback('corticosteroids', value as string, getNextStepFunction('density-q4'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'density-q5':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar message="Finalmente, algunos hábitos de vida." userName={userProfile.name} />
+            <QuestionCard
+              question="¿Consumes más de dos bebidas alcohólicas al día de forma habitual?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Sí' },
+              ]}
+              value={densityAnswers.alcohol}
+              onChange={(value) => {
+                setDensityAnswers({ ...densityAnswers, alcohol: value as any });
+                handleAnswerWithRioFeedback('alcohol', value as string, getNextStepFunction('density-q5'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'density-complete':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center p-8 bg-background border border-border rounded-2xl shadow-sm">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Sección Completada</h3>
+              <p className="text-muted-foreground">Evaluación ósea finalizada</p>
+            </div>
+            <RioAvatar 
+              message="¡Gracias, {name}! He analizado tus respuestas. Continuemos con el cuestionario principal."
+              userName={userProfile.name}
+            />
+            <Button 
+              onClick={handleNext} 
+              size="lg" 
+              className="w-full h-12 text-base font-medium rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all"
+            >
+              Continuar →
+            </Button>
+          </div>
+        );
+
+      case 'smoking':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`Perfecto, ${userProfile.name}. Hablemos ahora de algunos hábitos. Tu honestidad es clave para darte el mejor tratamiento posible.`}
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Fumas actualmente?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'less-10', label: 'Sí, menos de 10 cigarrillos al día' },
+                { value: '10-plus', label: 'Sí, 10 o más cigarrillos al día' },
+              ]}
+              value={implantAnswers.smoking}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, smoking: value as any });
+                handleAnswerWithRioFeedback('smoking', value as string, getNextStepFunction('smoking'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'bruxism':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question={`¿Aprietas o rechinas los dientes, ${userProfile.name}?`}
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'unsure', label: 'No estoy seguro/a' },
+                { value: 'yes', label: 'Sí' },
+              ]}
+              value={implantAnswers.bruxism}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, bruxism: value as any });
+                handleAnswerWithRioFeedback('bruxism', value as string, getNextStepFunction('bruxism'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'bruxism-guard':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="El bruxismo puede manejarse muy bien. Una férula de descarga protege tanto tus dientes naturales como los implantes."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question={`${userProfile.name}, ¿usas una férula de descarga nocturna?`}
+              type="radio"
+              options={[
+                { value: 'no', label: 'No, no uso férula' },
+                { value: 'yes', label: 'Sí, uso férula de descarga' },
+              ]}
+              value={implantAnswers.bruxismGuard}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, bruxismGuard: value as any });
+                handleAnswerWithRioFeedback('bruxismGuard', value as string, getNextStepFunction('bruxism-guard'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'diabetes':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="Tu salud general influye mucho en el éxito del tratamiento."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Tienes diabetes?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'controlled', label: 'Sí, y está controlada' },
+                { value: 'uncontrolled', label: 'Sí, y no está bien controlada' },
+              ]}
+              value={implantAnswers.diabetes}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, diabetes: value as any });
+                handleAnswerWithRioFeedback('diabetes', value as string, getNextStepFunction('diabetes'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'implant-history':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="Saber tu experiencia previa nos ayuda a entender mejor tu caso."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Has tenido implantes dentales anteriormente?"
+              type="radio"
+              options={[
+                { value: 'no', label: 'No, este sería mi primer implante' },
+                { value: 'success', label: 'Sí, y siguen funcionando bien' },
+                { value: 'failed', label: 'Sí, pero fracasaron' },
+              ]}
+              value={implantAnswers.implantHistory}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, implantHistory: value as any });
+                handleAnswerWithRioFeedback('implantHistory', value as string, getNextStepFunction('implant-history'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'tooth-loss':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="Entender por qué perdiste tus dientes nos da pistas importantes."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question={`¿Cuál fue el motivo principal, ${userProfile.name}?`}
+              type="radio"
+              options={[
+                { value: 'cavity', label: 'Por una caries' },
+                { value: 'periodontitis', label: 'Por enfermedad de las encías (periodontitis)' },
+                { value: 'trauma', label: 'Por un golpe o accidente' },
+                { value: 'other', label: 'Otra razón' },
+              ]}
+              value={implantAnswers.toothLossCause}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, toothLossCause: value as any });
+                handleAnswerWithRioFeedback('toothLossCause', value as string, getNextStepFunction('tooth-loss'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'tooth-loss-time':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="Saber cuánto tiempo ha pasado nos ayuda a evaluar el hueso disponible."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question={`¿Hace cuánto tiempo perdiste el diente, ${userProfile.name}?`}
+              type="radio"
+              options={[
+                { value: 'less-1', label: 'Menos de 1 año' },
+                { value: '1-3', label: 'Entre 1 y 3 años' },
+                { value: 'more-3', label: 'Más de 3 años' },
+              ]}
+              value={implantAnswers.toothLossTime}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, toothLossTime: value as any });
+                handleAnswerWithRioFeedback('toothLossTime', value as string, getNextStepFunction('tooth-loss-time'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'teeth-count':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`${userProfile.name}, ¿cuántos dientes necesitas reemplazar? Esto nos ayuda a orientar el tipo de tratamiento más adecuado para ti.`}
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Cuántos dientes te faltan o necesitas reemplazar?"
+              type="radio"
+              options={[
+                { value: '1', label: 'Solo 1 diente' },
+                { value: '2-3', label: '2 a 3 dientes' },
+                { value: '4-6', label: '4 a 6 dientes' },
+                { value: '7-plus', label: '7 o más dientes' },
+                { value: 'all-upper', label: 'Todos los dientes de arriba' },
+                { value: 'all-lower', label: 'Todos los dientes de abajo' },
+                { value: 'all', label: 'Todos los dientes (arriba y abajo)' },
+              ]}
+              value={implantAnswers.teethToReplace}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, teethToReplace: value as any });
+                handleAnswerWithRioFeedback('teethCount', value as string, getNextStepFunction('teeth-count'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'gum-health':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message="Veamos ahora la salud de tus encías."
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Sangran cuando te cepillas los dientes?"
+              type="radio"
+              options={[
+                { value: 'never', label: 'Nunca o casi nunca' },
+                { value: 'sometimes', label: 'A veces' },
+                { value: 'frequently', label: 'Frecuentemente' },
+              ]}
+              value={implantAnswers.gumBleeding}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, gumBleeding: value as any });
+                handleAnswerWithRioFeedback('gumBleeding', value as string, getNextStepFunction('gum-health'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'hygiene':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`¡Casi terminamos, ${userProfile.name}! Hablemos de tu rutina diaria.`}
+              userName={userProfile.name}
+            />
+            <QuestionCard
+              question="¿Cuántas veces al día te cepillas los dientes?"
+              type="radio"
+              options={[
+                { value: 'less-once', label: 'Menos de una vez' },
+                { value: 'once', label: 'Una vez' },
+                { value: 'twice-plus', label: 'Dos o más veces' },
+              ]}
+              value={implantAnswers.oralHygiene}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, oralHygiene: value as any });
+                handleAnswerWithRioFeedback('oralHygiene', value as string, getNextStepFunction('hygiene'));
+              }}
+              onNext={() => {}}
+              hideNextButton={true}
+            />
+          </div>
+        );
+
+      case 'odontogram':
+        const handleImageContinue = () => {
+          setStep('summary');
+        };
+
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`Última pregunta, ${userProfile.name}. Si tienes una foto o radiografía de la zona, nuestra IA la analizará para darte información útil.`}
+              userName={userProfile.name}
+            />
+            <ImageUpload
+              onImageSelect={(file, preview, analysis) => {
+                setUploadedImage(preview);
+                setImageAnalysis(analysis);
+              }}
+              onContinue={handleImageContinue}
+              showSkip={true}
+              patientName={userProfile.name}
+            />
+          </div>
+        );
+
+      case 'summary':
+        const handleConfirmAndProcess = () => {
+          setStep('processing');
+          triggerConfetti();
+          setTimeout(() => {
+            const result = calculateRiskAssessment(
+              requiresDensityPro ? densityAnswers as DensityProAnswers : null,
+              implantAnswers as ImplantXAnswers,
+              userProfile.age
+            );
+            setAssessmentResult(result);
+            setStep('results');
+          }, 3000);
+        };
+
+        return (
+          <AnswersSummary
+            userProfile={userProfile}
+            densityAnswers={densityAnswers}
+            implantAnswers={implantAnswers}
+            requiresDensityPro={requiresDensityPro}
+            uploadedImage={uploadedImage}
+            onConfirm={handleConfirmAndProcess}
+            onEdit={() => setStep('name')}
+          />
+        );
+
+      case 'processing':
+        return (
+          <div className="space-y-6 animate-fade-in text-center py-6">
+            <RioAvatar 
+              message="¡Gracias, {name}! Estoy analizando tus respuestas para generar tu reporte personalizado..."
+              userName={userProfile.name}
+            />
+            <div className="bg-background border border-border rounded-2xl p-8 shadow-sm">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-foreground">Procesando evaluación</p>
+                  <p className="text-sm text-muted-foreground">Analizando factores clínicos...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'results':
+        if (!assessmentResult) return null;
+        
+        // Calculate nTeeth from teethToReplace answer
+        const getNTeethFromAnswer = (answer?: string): number => {
+          const mapping: Record<string, number> = {
+            '1': 1,
+            '2-3': 3,
+            '4-6': 5,
+            '7-plus': 10,
+            'all-upper': 14,
+            'all-lower': 14,
+            'all': 28
+          };
+          return mapping[answer || '1'] || 1;
+        };
+
+        const evaluationData = {
+          id: `EV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+          date: new Date().toLocaleDateString('es-ES'),
+          patient: userProfile.name,
+          pronosticoLabel: assessmentResult.pronosticoLabel,
+          pronosticoMessage: assessmentResult.pronosticoMessage,
+          pronosticoColor: assessmentResult.pronosticoColor,
+          successProbability: assessmentResult.successProbability,
+          factors: assessmentResult.riskFactors.map(rf => ({
+            name: rf.name,
+            value: rf.impact === 'high' ? 'Alto' : rf.impact === 'medium' ? 'Medio' : 'Bajo',
+            impact: rf.impact === 'high' ? 15 : rf.impact === 'medium' ? 10 : 5
+          })),
+          recommendations: assessmentResult.recommendations.map(rec => ({
+            text: rec.title,
+            evidence: rec.description
+          })),
+          uploadedImage: uploadedImage,
+          imageAnalysis: imageAnalysis,
+          synergies: assessmentResult.synergies?.map(s => s.description) || [],
+          nTeeth: getNTeethFromAnswer(implantAnswers.teethToReplace)
+        };
+
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <RioAvatar 
+              message={`¡Excelente, ${userProfile.name}! Hemos completado tu evaluación. Tu reporte personalizado está listo. Este documento será muy valioso para ti y tu especialista.`}
+              userName={userProfile.name}
+            />
+            <ReportPreview evaluation={evaluationData} />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen" style={{ background: 'linear-gradient(165deg, #0a0a0a 0%, #0d0d0d 30%, #1a1510 70%, #0d0d0d 100%)' }}>
+      {/* Premium Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div 
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] opacity-20"
+          style={{ background: 'radial-gradient(circle, rgba(201, 168, 124, 0.15) 0%, transparent 60%)' }}
+        />
+      </div>
+
+      {/* Header - Premium Dark */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-rose-gold/20 bg-black/60 backdrop-blur-md">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="font-display text-xl text-ivory font-light tracking-wide">
+              Implant<span className="text-rose-gold font-normal">X</span>™
+            </span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+            <span className="text-xs font-medium text-primary tracking-wider">humanaia.cl</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="relative z-10 pt-20 pb-16">
+        <div className="container mx-auto px-4 sm:px-6">
+          {step !== 'welcome' && step !== 'results' && !showRioResponse && (
+            <div className="mb-6 max-w-xl mx-auto">
+              {/* Back Button */}
+              {canGoBack() && (
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group"
+                >
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                  <span>Volver</span>
+                </button>
+              )}
+              <ProgressBar
+                currentStep={getStepNumber()}
+                totalSteps={getTotalSteps()}
+                currentPhase={getCurrentPhase()}
+              />
+            </div>
+          )}
+
+          <div className="max-w-xl mx-auto">
+            {renderContent()}
+          </div>
+        </div>
+      </main>
+
+      {/* Footer - Premium Dark */}
+      <footer className="border-t border-rose-gold/10 py-6" style={{ background: 'rgba(10, 10, 10, 0.5)' }}>
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-[0.65rem] tracking-[0.3em] uppercase text-primary/50">
+              Powered by <a href="https://humanaia.cl" target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline">humana.ia</a>
+            </p>
+            <div className="text-center">
+              <p className="text-xs text-warm-taupe/70">
+                Propiedad Intelectual · <span className="font-medium text-warm-taupe">Dr. Carlos Montoya</span> · <span className="font-medium text-warm-taupe">Clínica Miró</span>
+              </p>
+              <p className="text-xs text-warm-taupe/50 mt-1">
+                © 2024 ImplantX. Todos los derechos reservados.
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default PatientQuestionnaire;
