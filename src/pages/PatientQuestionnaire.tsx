@@ -166,6 +166,10 @@ const PatientQuestionnaire = () => {
       if (value === 'less-10') return '/audio/rio-menosde10.mp3';
       if (value === '10-plus') return '/audio/rio-masde10.mp3';
     }
+    if (questionId === 'bruxism') {
+      if (value === 'no') return '/audio/rio-nobruxa.mp3';
+      if (value === 'yes' || value === 'unsure') return '/audio/rio-sibruxa.mp3';
+    }
     return undefined;
   };
 
@@ -641,6 +645,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message="Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas."
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-brux-pregunta.mp3"
             />
             <QuestionCard
               question={`¿Aprietas o rechinas los dientes, ${userProfile.name}?`}
