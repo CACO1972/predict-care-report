@@ -410,7 +410,7 @@ const PatientQuestionnaire = () => {
               value={userProfile.age}
               onChange={(value) => setUserProfile({ ...userProfile, age: value as number })}
               onNext={() => {}}
-              nextButtonText="Continuar"
+              hideNextButton={true}
               disabled={!userProfile.age}
             />
             {userProfile.age && (
@@ -598,6 +598,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message={`Perfecto, ${userProfile.name}. Hablemos ahora de algunos hábitos. Tu honestidad es clave para darte el mejor tratamiento posible.`}
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-fuma.mp3"
             />
             <QuestionCard
               question="¿Fumas actualmente?"
