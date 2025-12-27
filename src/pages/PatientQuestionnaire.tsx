@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import RioAvatar from "@/components/RioAvatar";
 import RioConversational from "@/components/RioConversational";
 import RioAvatarExpressive from "@/components/RioAvatarExpressive";
-import RioVideoAvatar from "@/components/RioVideoAvatar";
+import RioWelcomeAvatar from "@/components/RioWelcomeAvatar";
 import ProgressBar from "@/components/ProgressBar";
 import QuestionCard from "@/components/QuestionCard";
 import ReportPreview from "@/components/ReportPreview";
@@ -355,12 +355,11 @@ const PatientQuestionnaire = () => {
               {/* Accent line */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
               
-              {/* Rio Video Avatar - WITH AUDIO */}
+              {/* Río (imagen estática) + audio de bienvenida */}
               <div className="relative inline-block mb-8">
-                <RioVideoAvatar 
-                  autoPlay={true}
-                  muted={false}
-                  loop={false}
+                <RioWelcomeAvatar
+                  audioUrl="/audio/hola-soy-rio.mp3?v=3"
+                  autoPlayAudio={true}
                   className="mx-auto"
                 />
               </div>
@@ -424,7 +423,7 @@ const PatientQuestionnaire = () => {
       case 'name':
         return (
           <div className="space-y-6 animate-fade-in">
-            <RioAvatar message="Para empezar, por favor dime tu nombre." customAudioUrl="/audio/hola-soy-rio.mp3?v=2" />
+            <RioAvatar message="Para empezar, por favor dime tu nombre." customAudioUrl="/audio/hola-soy-rio.mp3?v=3" />
             <QuestionCard
               question="¿Cuál es tu nombre?"
               type="text"
