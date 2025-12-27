@@ -5,7 +5,7 @@
 /* Design System - ImplantX Premium Dark Theme
    Typography: Sentient (display) + Inter (body)
    Palette: Pure Black (#000000) + Golden (#FFC700)
-   Clínica Miró Branding Kit
+   humana.ia Branding
    All colors MUST be HSL.
 */
 
@@ -97,7 +97,7 @@
     --transition-smooth: all 0.3s var(--easing);
     --transition-reveal: all 1000ms var(--easing);
     
-    /* Typography - Clínica Miró Premium */
+    /* Typography - Premium */
     --font-display: 'Sentient', 'Plus Jakarta Sans', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     

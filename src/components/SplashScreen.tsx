@@ -204,11 +204,11 @@ const SplashScreen = ({ onComplete, minDuration = 2500 }: SplashScreenProps) => 
         <p 
           className="text-[0.7rem] tracking-[0.4em] uppercase mb-3 opacity-0"
           style={{
-            color: '#3B82F6',
+            color: '#FFC700',
             animation: 'fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.9s forwards'
           }}
         >
-          Clínica Miró
+          humana.ia
         </p>
         
         {/* Title */}
@@ -219,7 +219,7 @@ const SplashScreen = ({ onComplete, minDuration = 2500 }: SplashScreenProps) => 
             animation: 'fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1s forwards'
           }}
         >
-          Implant<span style={{ color: '#3B82F6', fontWeight: 400 }}>X</span>™
+          Implant<span style={{ color: '#FFC700', fontWeight: 400 }}>X</span>™
         </h1>
         
         {/* Subtitle */}
