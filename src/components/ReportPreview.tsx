@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 import SynergyFactors from "./SynergyFactors";
 import TreatmentInfographic from "./TreatmentInfographic";
 import ShareButtons from "./ShareButtons";
-import UrgencyCounter from "./UrgencyCounter";
 import SuccessGauge from "./SuccessGauge";
 import RiskFactorBars from "./RiskFactorBars";
 import NextStepsCards from "./NextStepsCards";
+import PremiumReportSection from "./PremiumReportSection";
 
 // Component for structured image analysis display
 const ImageAnalysisSections = ({ analysis }: { analysis: string }) => {
@@ -347,95 +347,12 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
         {/* Próximos pasos - Cards con iconos grandes */}
         <NextStepsCards />
 
-        {/* Premium Report CTA with Paywall */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 space-y-4">
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-          
-          <div className="relative">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Crown className="w-6 h-6 text-primary" />
-              <h4 className="text-xl font-bold text-foreground">Reporte Premium Completo</h4>
-            </div>
-            
-            {/* Blurred preview of premium content */}
-            <div className="relative mb-4 rounded-xl overflow-hidden">
-              <div className="blur-sm opacity-50 pointer-events-none p-4 bg-muted/30 space-y-2">
-                <div className="h-4 bg-primary/20 rounded w-3/4 mx-auto" />
-                <div className="h-3 bg-primary/10 rounded w-full" />
-                <div className="h-3 bg-primary/10 rounded w-5/6 mx-auto" />
-                <div className="h-3 bg-primary/10 rounded w-4/5" />
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <div className="h-16 bg-primary/10 rounded" />
-                  <div className="h-16 bg-primary/10 rounded" />
-                </div>
-              </div>
-              {/* Lock overlay */}
-              <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
-                <div className="text-center">
-                  <Lock className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Contenido Premium</p>
-                </div>
-              </div>
-            </div>
-            
-            <p className="text-center text-muted-foreground text-sm mb-4">
-              Desbloquea el análisis completo con recomendaciones del especialista
-            </p>
-
-            <ul className="space-y-2 mb-4">
-              {[
-                "Análisis detallado de tu caso clínico",
-                "Plan de tratamiento paso a paso",
-                "Estimación de costos y tiempos reales",
-                "Consulta prioritaria con el especialista"
-              ].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
-                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            
-            {/* Urgency Counter */}
-            <UrgencyCounter className="mb-4" />
-
-            <div className="text-center space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-sm text-muted-foreground line-through">$49.990</span>
-                <span className="text-3xl font-bold text-foreground">$29.990</span>
-                <span className="text-sm text-muted-foreground">CLP</span>
-                <span className="px-2 py-0.5 bg-red-500/20 text-red-500 text-xs font-bold rounded-full">-40%</span>
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                <CreditCard className="w-3 h-3" />
-                Hasta 3 cuotas sin interés
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <a 
-                  href="https://mpago.li/2jpxDi2" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#009ee3] text-white hover:bg-[#007bb5] transition-all duration-300 font-semibold shadow-lg hover:scale-[1.02]"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Pagar con MercadoPago
-                </a>
-                <a 
-                  href="https://www.flow.cl/uri/htBg1Fpys" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#00b140] text-white hover:bg-[#009933] transition-all duration-300 font-semibold shadow-lg hover:scale-[1.02]"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Pagar con Flow
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Premium Report Section with Ebook + Smile Simulation */}
+        <PremiumReportSection 
+          patientName={evaluation.patient}
+          uploadedImage={evaluation.uploadedImage}
+          pronosticoLabel={evaluation.pronosticoLabel}
+        />
 
         {/* FAQ Section */}
         <div className="bg-muted/30 rounded-xl p-6 space-y-4">
