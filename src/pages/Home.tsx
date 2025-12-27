@@ -147,7 +147,7 @@ const Home = () => {
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-3">Diseñada para ti</h3>
                     <p className="text-muted-foreground leading-relaxed text-sm">
-                      Esta app fue creada especialmente para quienes <strong className="text-foreground">no tienen acceso a orientación dental especializada</strong> y deben gastar miles de pesos solo para saber si son o no candidatos a implantes.
+                      Esta app fue creada especialmente para quienes <strong className="text-foreground">no tienen acceso a orientación dental especializada</strong> y deben gastar dinero en viajes, estadía, consultas, permisos y horas perdidas en el trabajo, solo para saber si son o no candidatos a implantes.
                     </p>
                     <p className="text-primary text-sm mt-4 font-medium">
                       Ahora puedes saberlo gratis, desde cualquier lugar.
