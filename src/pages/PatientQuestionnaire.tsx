@@ -307,10 +307,13 @@ const PatientQuestionnaire = () => {
       case 'welcome':
         return (
           <div className="space-y-8 animate-fade-in text-center">
-            {/* Minimalist Welcome Card */}
-            <div className="relative bg-background border border-border rounded-2xl p-8 sm:p-12 shadow-sm overflow-hidden">
-              {/* Subtle accent line */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
+            {/* Premium Welcome Card */}
+            <div className="relative bg-gradient-to-b from-card to-card/80 border border-primary/20 rounded-3xl p-8 sm:p-12 shadow-2xl shadow-primary/5 overflow-hidden">
+              {/* Glow effect */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 rounded-full blur-3xl" />
+              
+              {/* Accent line */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
               
               {/* Rio Video Avatar - WITH AUDIO */}
               <div className="relative inline-block mb-8">
@@ -322,42 +325,59 @@ const PatientQuestionnaire = () => {
                 />
               </div>
               
+              {/* Brand badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 mb-6">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-primary tracking-wide">EVALUACIÓN IMPLANTX</span>
+              </div>
+              
               <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-                ¡Hola! Soy Río
+                ¡Hola! Soy <span className="text-primary">Río</span>
               </h1>
-              <p className="text-lg text-muted-foreground mb-2">
-                Tu Asistente de Evaluación ImplantX
+              <p className="text-lg text-foreground/80 mb-2 font-medium">
+                Tu Asistente de Evaluación con IA
               </p>
-              <p className="text-base text-muted-foreground/80 leading-relaxed max-w-md mx-auto">
-                Te guiaré en una evaluación rápida que será analizada por IA Predictiva para que conozcas tus posibilidades de colocarte implantes dentales.
+              <p className="text-base text-muted-foreground leading-relaxed max-w-md mx-auto">
+                Te guiaré en una evaluación rápida que será analizada por <strong className="text-foreground">IA Predictiva</strong> para conocer tus posibilidades de colocarte implantes dentales.
               </p>
 
-              {/* Trust badges - Minimalist */}
-              <div className="flex flex-wrap justify-center gap-6 mt-8 pt-6 border-t border-border">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4 text-primary" />
-                  <span>Confidencial</span>
+              {/* Trust badges - Premium */}
+              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-8 pt-6 border-t border-border/50">
+                <div className="flex items-center gap-2 text-sm text-foreground/70">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="font-medium">100% Privado</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span>5 minutos</span>
+                <div className="flex items-center gap-2 text-sm text-foreground/70">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="font-medium">5 minutos</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Award className="w-4 h-4 text-primary" />
-                  <span>Reporte PDF</span>
+                <div className="flex items-center gap-2 text-sm text-foreground/70">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Award className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="font-medium">Reporte PDF</span>
                 </div>
               </div>
             </div>
 
-            {/* CTA Button - Minimalist with neon accent */}
+            {/* CTA Button - Premium */}
             <Button 
               onClick={() => setStep('name')} 
               size="lg" 
-              className="w-full h-14 text-lg font-semibold rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all duration-300 group"
+              className="w-full h-14 text-lg font-bold rounded-2xl bg-primary text-primary-foreground hover:brightness-110 transition-all duration-300 shadow-lg shadow-primary/25 group"
             >
               Comenzar Evaluación
-              <Sparkles className="ml-2 w-5 h-5 text-primary" />
+              <Sparkles className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
             </Button>
+            
+            {/* Subtext */}
+            <p className="text-xs text-muted-foreground/60">
+              Sin registro · Resultados inmediatos · Basado en 17,025 casos
+            </p>
           </div>
         );
 
@@ -971,17 +991,18 @@ const PatientQuestionnaire = () => {
           />
         </div>
 
-        {/* Header - Premium Dark */}
-        <header className="fixed top-0 left-0 right-0 z-50 border-b border-rose-gold/20 bg-black/60 backdrop-blur-md">
-          <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="font-display text-xl text-ivory font-light tracking-wide">
-                Implant<span className="text-rose-gold font-normal">X</span>™
+        {/* Header - Premium Dark con mejor branding */}
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-black/80 backdrop-blur-xl">
+          <div className="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-lg sm:text-xl text-foreground font-bold tracking-tight">
+                Implant<span className="text-primary">X</span>
               </span>
+              <span className="text-foreground/30 text-xs font-light">™</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-              <span className="text-xs font-medium text-primary tracking-wider">humanaia.cl</span>
+              <span className="text-[10px] sm:text-xs font-medium text-primary tracking-wide">IA Activa</span>
             </div>
           </div>
         </header>
@@ -1015,21 +1036,35 @@ const PatientQuestionnaire = () => {
           </div>
         </main>
 
-        {/* Footer - Premium Dark */}
-        <footer className="border-t border-rose-gold/10 py-6" style={{ background: 'rgba(10, 10, 10, 0.5)' }}>
-          <div className="container mx-auto px-6">
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-[0.65rem] tracking-[0.3em] uppercase text-primary/50">
-                Powered by <a href="https://humanaia.cl" target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline">humana.ia</a>
-              </p>
-              <div className="text-center">
-                <p className="text-xs text-warm-taupe/70">
-                  Propiedad Intelectual · <span className="font-medium text-warm-taupe">Dr. Carlos Montoya</span> · <span className="font-medium text-warm-taupe">Clínica Miró</span>
-                </p>
-                <p className="text-xs text-warm-taupe/50 mt-1">
-                  © 2025 ImplantX. Todos los derechos reservados.
-                </p>
+        {/* Footer - Premium Dark con mejor branding */}
+        <footer className="border-t border-primary/10 py-6 bg-black/60 backdrop-blur-sm">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="flex flex-col items-center gap-4">
+              {/* Logo pequeño */}
+              <div className="flex items-center gap-1.5">
+                <span className="font-display text-sm text-foreground/60 font-medium">
+                  Implant<span className="text-primary">X</span>
+                </span>
+                <span className="text-foreground/20 text-[10px]">™</span>
               </div>
+              
+              {/* Powered by */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                <span>Powered by</span>
+                <a 
+                  href="https://humanaia.cl" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-primary font-semibold hover:text-primary/80 transition-colors"
+                >
+                  humana.ia
+                </a>
+              </div>
+              
+              {/* Copyright */}
+              <p className="text-[10px] text-muted-foreground/40">
+                © 2025 ImplantX · Todos los derechos reservados
+              </p>
             </div>
           </div>
         </footer>
