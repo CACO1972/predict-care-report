@@ -170,6 +170,10 @@ const PatientQuestionnaire = () => {
       if (value === 'no') return '/audio/rio-nobruxa.mp3';
       if (value === 'yes' || value === 'unsure') return '/audio/rio-sibruxa.mp3';
     }
+    if (questionId === 'diabetes') {
+      if (value === 'controlled') return '/audio/rio-diabetes-controlada.mp3';
+      if (value === 'uncontrolled') return '/audio/rio-diabetes-nocontrolada.mp3';
+    }
     return undefined;
   };
 
@@ -697,6 +701,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message="Tu salud general influye mucho en el éxito del tratamiento."
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-diabetes-pregunta.mp3"
             />
             <QuestionCard
               question="¿Tienes diabetes?"
