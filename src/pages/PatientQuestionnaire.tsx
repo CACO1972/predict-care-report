@@ -171,6 +171,7 @@ const PatientQuestionnaire = () => {
       if (value === 'yes' || value === 'unsure') return '/audio/rio-sibruxa.mp3';
     }
     if (questionId === 'diabetes') {
+      if (value === 'no') return '/audio/rio-nodiabetes.mp3';
       if (value === 'controlled') return '/audio/rio-diabetes-controlada.mp3';
       if (value === 'uncontrolled') return '/audio/rio-diabetes-nocontrolada.mp3';
     }
