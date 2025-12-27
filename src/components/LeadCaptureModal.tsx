@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Mail, Phone, Loader2, Shield, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface LeadCaptureModalProps {
   isOpen: boolean;
@@ -50,10 +52,30 @@ const LeadCaptureModal = ({ isOpen, onSubmit, patientName }: LeadCaptureModalPro
     }
     
     setIsSubmitting(true);
-    // Simulate brief processing
-    await new Promise(resolve => setTimeout(resolve, 800));
-    onSubmit({ email, phone });
-    setIsSubmitting(false);
+    
+    try {
+      // Save lead to database
+      const { error } = await supabase.from('leads').insert({
+        email: email.trim(),
+        phone: phone.trim(),
+        patient_name: patientName || null,
+        source: 'questionnaire'
+      });
+      
+      if (error) {
+        console.error('Error saving lead:', error);
+        toast.error('Error al guardar tus datos. Por favor intenta de nuevo.');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      onSubmit({ email, phone });
+    } catch (err) {
+      console.error('Error saving lead:', err);
+      toast.error('Error de conexión. Por favor intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
