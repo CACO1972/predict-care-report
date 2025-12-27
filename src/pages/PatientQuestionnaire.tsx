@@ -831,13 +831,9 @@ const PatientQuestionnaire = () => {
               question="¿Cuántos dientes te faltan o necesitas reemplazar?"
               type="radio"
               options={[
-                { value: '1', label: 'Solo 1 diente' },
-                { value: '2-3', label: '2 a 3 dientes' },
-                { value: '4-6', label: '4 a 6 dientes' },
-                { value: '7-plus', label: '7 o más dientes' },
-                { value: 'all-upper', label: 'Todos los dientes de arriba' },
-                { value: 'all-lower', label: 'Todos los dientes de abajo' },
-                { value: 'all', label: 'Todos los dientes (arriba y abajo)' },
+                { value: '1-2', label: '1 a 2 dientes' },
+                { value: '3-8', label: '3 a 8 dientes' },
+                { value: 'all', label: 'Todos los dientes' },
               ]}
               value={implantAnswers.teethToReplace}
               onChange={(value) => {
