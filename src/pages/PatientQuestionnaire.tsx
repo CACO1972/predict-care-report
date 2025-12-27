@@ -869,7 +869,8 @@ const PatientQuestionnaire = () => {
               userProfile.age
             );
             setAssessmentResult(result);
-            setStep('results');
+            // Show lead capture before results
+            setShowLeadCapture(true);
           }, 3000);
         };
 
@@ -1026,7 +1027,7 @@ const PatientQuestionnaire = () => {
                   Propiedad Intelectual · <span className="font-medium text-warm-taupe">Dr. Carlos Montoya</span> · <span className="font-medium text-warm-taupe">Clínica Miró</span>
                 </p>
                 <p className="text-xs text-warm-taupe/50 mt-1">
-                  © 2024 ImplantX. Todos los derechos reservados.
+                  © 2025 ImplantX. Todos los derechos reservados.
                 </p>
               </div>
             </div>
