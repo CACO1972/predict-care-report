@@ -76,6 +76,7 @@ const PatientQuestionnaire = () => {
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
   const [showLeadCapture, setShowLeadCapture] = useState(false);
   const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(null);
+  const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | undefined>(undefined);
 
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
   const { getExpressionFromFeedback } = useRioExpression();
@@ -158,6 +159,16 @@ const PatientQuestionnaire = () => {
     }
   };
 
+  // Get custom audio URL for specific question answers
+  const getCustomAudioForFeedback = (questionId: string, value: string): string | undefined => {
+    if (questionId === 'smoking') {
+      if (value === 'no') return '/audio/rio-nofuma.mp3';
+      if (value === 'less-10') return '/audio/rio-menosde10.mp3';
+      if (value === '10-plus') return '/audio/rio-masde10.mp3';
+    }
+    return undefined;
+  };
+
   const handleAnswerWithRioFeedback = async (
     questionId: string,
     value: string,
@@ -169,6 +180,10 @@ const PatientQuestionnaire = () => {
     // Set expression based on answer feedback type
     const feedbackType = getFeedbackTypeFromAnswer(questionId, value);
     setCurrentExpression(getExpressionFromFeedback(feedbackType));
+    
+    // Set custom audio URL if available for this question/answer
+    const customAudio = getCustomAudioForFeedback(questionId, value);
+    setFeedbackAudioUrl(customAudio);
     
     setShowRioResponse(true);
     setPendingNextStep(() => nextStepFn);
@@ -299,6 +314,7 @@ const PatientQuestionnaire = () => {
           onContinue={handleContinueFromRio}
           showContinue={true}
           expression={currentExpression}
+          customAudioUrl={feedbackAudioUrl}
         />
       );
     }

@@ -1,7 +1,7 @@
 import { Loader2, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import RioAvatarExpressive from "./RioAvatarExpressive";
 import { RioExpression } from "@/hooks/useRioExpression";
 import { useRioTTS } from "@/hooks/useRioTTS";
@@ -14,6 +14,7 @@ interface RioConversationalProps {
   expression?: RioExpression;
   className?: string;
   autoSpeak?: boolean;
+  customAudioUrl?: string;
 }
 
 const RioConversational = ({ 
@@ -23,22 +24,52 @@ const RioConversational = ({
   showContinue,
   expression = 'encouraging',
   className,
-  autoSpeak = true
+  autoSpeak = true,
+  customAudioUrl
 }: RioConversationalProps) => {
-  const { isPlaying, isLoading: isLoadingAudio, speak, stop } = useRioTTS();
+  const { isPlaying: isTTSPlaying, isLoading: isLoadingAudio, speak, stop } = useRioTTS();
   const lastSpokenRef = useRef<string>("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isCustomPlaying, setIsCustomPlaying] = useState(false);
+
+  const isPlaying = customAudioUrl ? isCustomPlaying : isTTSPlaying;
+
+  const playCustomAudio = () => {
+    if (!customAudioUrl) return;
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    audioRef.current = new Audio(customAudioUrl);
+    audioRef.current.onplay = () => setIsCustomPlaying(true);
+    audioRef.current.onended = () => setIsCustomPlaying(false);
+    audioRef.current.onpause = () => setIsCustomPlaying(false);
+    audioRef.current.play().catch(console.error);
+  };
+
+  const stopCustomAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsCustomPlaying(false);
+  };
   
   // Auto-speak when message arrives
   useEffect(() => {
     if (autoSpeak && message && !isLoadingMessage && message !== lastSpokenRef.current) {
       lastSpokenRef.current = message;
-      speak(message);
+      if (customAudioUrl) {
+        playCustomAudio();
+      } else {
+        speak(message);
+      }
     }
-  }, [message, isLoadingMessage, autoSpeak, speak]);
+  }, [message, isLoadingMessage, autoSpeak, speak, customAudioUrl]);
 
   // Stop audio when component unmounts or message changes
   useEffect(() => {
     return () => {
+      stopCustomAudio();
       stop();
     };
   }, [stop]);
@@ -49,10 +80,18 @@ const RioConversational = ({
   const currentExpression: RioExpression = isLoadingMessage ? 'thinking' : expression;
 
   const handleAudioToggle = () => {
-    if (isPlaying) {
-      stop();
-    } else if (message) {
-      speak(message);
+    if (customAudioUrl) {
+      if (isCustomPlaying) {
+        stopCustomAudio();
+      } else {
+        playCustomAudio();
+      }
+    } else {
+      if (isTTSPlaying) {
+        stop();
+      } else if (message) {
+        speak(message);
+      }
     }
   };
 
