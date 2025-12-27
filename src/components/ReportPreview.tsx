@@ -270,7 +270,35 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           </div>
         )}
 
-        {/* Qué significa tu resultado - NUEVO */}
+        {/* Validez Clínica del Análisis */}
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <Stethoscope className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground">Sobre esta evaluación</h4>
+              <p className="text-xs text-muted-foreground">Herramienta de preevaluación con base científica</p>
+            </div>
+          </div>
+          
+          <div className="text-sm text-muted-foreground space-y-3 leading-relaxed">
+            <p>
+              Si bien esta es una <strong className="text-foreground">orientación y preevaluación</strong>, el análisis de factores de riesgo que realizamos está <strong className="text-foreground">clínicamente validado</strong> y representa una herramienta confiable para tener una idea clara de tus posibilidades de éxito con implantes dentales.
+            </p>
+            
+            <div className="bg-background/50 rounded-lg p-3 border border-primary/10">
+              <p className="flex items-start gap-2">
+                <Bone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-foreground">El factor más importante</strong> es la calidad y cantidad de hueso disponible. Nuestra app analiza esto <em>indirectamente sin necesidad de radiografía</em>, a través de tus respuestas sobre la <strong className="text-foreground">zona a implantar</strong> y el <strong className="text-foreground">tiempo transcurrido desde la pérdida dental</strong>.
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Qué significa tu resultado */}
         <div className="bg-muted/30 rounded-xl p-5 space-y-3">
           <h4 className="font-semibold text-foreground">¿Qué significa tu resultado?</h4>
           <div className="text-sm text-muted-foreground space-y-2">
