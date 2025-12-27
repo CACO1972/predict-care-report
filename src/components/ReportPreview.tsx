@@ -438,15 +438,26 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
                 Hasta 3 cuotas sin interés
               </p>
               
-              <a 
-                href="https://mpago.li/2jpxDi2" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-semibold text-lg shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02]"
-              >
-                <Crown className="w-5 h-5" />
-                Obtener Reporte Premium
-              </a>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <a 
+                  href="https://mpago.li/2jpxDi2" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#009ee3] text-white hover:bg-[#007bb5] transition-all duration-300 font-semibold shadow-lg hover:scale-[1.02]"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Pagar con MercadoPago
+                </a>
+                <a 
+                  href="https://www.flow.cl/uri/htBg1Fpys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#00b140] text-white hover:bg-[#009933] transition-all duration-300 font-semibold shadow-lg hover:scale-[1.02]"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Pagar con Flow
+                </a>
+              </div>
             </div>
           </div>
         </div>
