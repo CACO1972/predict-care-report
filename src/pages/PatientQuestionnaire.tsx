@@ -185,6 +185,11 @@ const PatientQuestionnaire = () => {
       if (value === 'periodontitis') return '/audio/rio-causa-periodontitis.mp3';
       if (value === 'trauma') return '/audio/rio-causa-trauma.mp3';
     }
+    if (questionId === 'toothLossTime') {
+      if (value === 'less-1') return '/audio/rio-tiempo-menos1.mp3';
+      if (value === '1-3') return '/audio/rio-tiempo-1a3.mp3';
+      if (value === 'more-3') return '/audio/rio-tiempo-masde3.mp3';
+    }
     return undefined;
   };
 
@@ -794,6 +799,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message="Saber cuánto tiempo ha pasado nos ayuda a evaluar el hueso disponible."
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-tiempo-pregunta.mp3"
             />
             <QuestionCard
               question={`¿Hace cuánto tiempo perdiste el diente, ${userProfile.name}?`}
