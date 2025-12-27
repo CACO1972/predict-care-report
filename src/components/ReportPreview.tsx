@@ -15,6 +15,7 @@ import SuccessGauge from "./SuccessGauge";
 import RiskFactorBars from "./RiskFactorBars";
 import NextStepsCards from "./NextStepsCards";
 import PremiumReportSection from "./PremiumReportSection";
+import ImprovementPotential from "./ImprovementPotential";
 import { supabase } from "@/integrations/supabase/client";
 
 // Función para obtener el rango de éxito
@@ -289,6 +290,13 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
             </p>
           </div>
         </div>
+
+        {/* Aclaración sobre situación actual y potencial de mejora */}
+        <ImprovementPotential 
+          currentProbability={evaluation.successProbability}
+          factors={evaluation.factors}
+          synergies={evaluation.synergies}
+        />
 
         {/* Share Buttons - Virality */}
         <ShareButtons 
