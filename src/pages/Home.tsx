@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Quote, FileText, ExternalLink, Zap, Shield, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Quote, FileText, ExternalLink, Zap, Shield, Clock, Sparkles, MapPin } from "lucide-react";
 import { useRevealAnimation } from "@/hooks/useRevealAnimation";
 import SplashScreen from "@/components/SplashScreen";
 import LandingNavbar from "@/components/LandingNavbar";
@@ -111,16 +111,23 @@ const Home = () => {
               ))}
             </div>
 
-            {/* Remote Areas Callout */}
+            {/* Remote Areas Callout - Destacado */}
             <div className="flex justify-center mb-8 sm:mb-12">
               <button 
                 onClick={() => setShowRemoteOverlay(true)}
-                className="group relative text-xs sm:text-sm text-muted-foreground/60 hover:text-primary transition-colors duration-500 cursor-pointer"
+                className="group relative flex items-center gap-3 px-5 py-3 rounded-full bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/30 hover:border-primary/60 hover:from-primary/20 transition-all duration-500 cursor-pointer"
               >
-                <span className="border-b border-dashed border-muted-foreground/20 group-hover:border-primary/50 pb-0.5 transition-colors duration-500">
+                {/* Animated pulse dot */}
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                </span>
+                
+                <span className="text-sm sm:text-base font-medium text-foreground group-hover:text-primary transition-colors">
                   ¿Vives en una zona alejada?
                 </span>
-                <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse" />
+                
+                <ArrowRight className="w-4 h-4 text-primary/60 group-hover:text-primary group-hover:translate-x-1 transition-all" />
               </button>
               
               {showRemoteOverlay && (
@@ -128,15 +135,22 @@ const Home = () => {
                   className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm animate-fade-in p-4"
                   onClick={() => setShowRemoteOverlay(false)}
                 >
-                  <div className="max-w-md mx-4 p-6 sm:p-8 rounded-xl bg-card/80 border border-primary/20 text-center animate-fade-in">
+                  <div className="max-w-md mx-4 p-6 sm:p-8 rounded-2xl bg-card border border-primary/30 text-center animate-fade-in shadow-xl shadow-primary/10">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                      <MapPin className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-3">Diseñada para ti</h3>
                     <p className="text-muted-foreground leading-relaxed text-sm">
-                      Esta app fue diseñada especialmente para quienes no tienen acceso a orientación dental especializada y deben gastar miles de pesos solo para saber si son o no candidatos a implantes.
+                      Esta app fue creada especialmente para quienes <strong className="text-foreground">no tienen acceso a orientación dental especializada</strong> y deben gastar miles de pesos solo para saber si son o no candidatos a implantes.
+                    </p>
+                    <p className="text-primary text-sm mt-4 font-medium">
+                      Ahora puedes saberlo gratis, desde cualquier lugar.
                     </p>
                     <button 
                       onClick={() => setShowRemoteOverlay(false)}
-                      className="mt-6 text-xs text-primary/80 hover:text-primary transition-colors"
+                      className="mt-6 px-6 py-2 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-medium"
                     >
-                      Cerrar
+                      Entendido
                     </button>
                   </div>
                 </div>
