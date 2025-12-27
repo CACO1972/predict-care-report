@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { 
   FileText, Download, CheckCircle2, AlertCircle, TrendingUp, 
   Calendar, User, Heart, Bone, Stethoscope, ArrowRight, Phone,
-  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard
+  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import SynergyFactors from "./SynergyFactors";
 import TreatmentInfographic from "./TreatmentInfographic";
+import ShareButtons from "./ShareButtons";
+import UrgencyCounter from "./UrgencyCounter";
 
 // Component for structured image analysis display
 const ImageAnalysisSections = ({ analysis }: { analysis: string }) => {
@@ -246,6 +248,13 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           </div>
         </div>
 
+        {/* Share Buttons - Virality */}
+        <ShareButtons 
+          patientName={evaluation.patient}
+          successProbability={evaluation.successProbability}
+          pronosticoLabel={evaluation.pronosticoLabel}
+        />
+
         {/* Imagen y análisis de IA estructurado */}
         {evaluation.uploadedImage && (
           <div className="space-y-4">
@@ -398,7 +407,7 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           </div>
         </div>
 
-        {/* Premium Report CTA */}
+        {/* Premium Report CTA with Paywall */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 space-y-4">
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -407,18 +416,39 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           <div className="relative">
             <div className="flex items-center justify-center gap-2 mb-3">
               <Crown className="w-6 h-6 text-primary" />
-              <h4 className="text-xl font-bold text-foreground">Reporte Premium</h4>
+              <h4 className="text-xl font-bold text-foreground">Reporte Premium Completo</h4>
+            </div>
+            
+            {/* Blurred preview of premium content */}
+            <div className="relative mb-4 rounded-xl overflow-hidden">
+              <div className="blur-sm opacity-50 pointer-events-none p-4 bg-muted/30 space-y-2">
+                <div className="h-4 bg-primary/20 rounded w-3/4 mx-auto" />
+                <div className="h-3 bg-primary/10 rounded w-full" />
+                <div className="h-3 bg-primary/10 rounded w-5/6 mx-auto" />
+                <div className="h-3 bg-primary/10 rounded w-4/5" />
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="h-16 bg-primary/10 rounded" />
+                  <div className="h-16 bg-primary/10 rounded" />
+                </div>
+              </div>
+              {/* Lock overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+                <div className="text-center">
+                  <Lock className="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p className="text-sm font-medium text-foreground">Contenido Premium</p>
+                </div>
+              </div>
             </div>
             
             <p className="text-center text-muted-foreground text-sm mb-4">
-              Obtén un análisis completo con recomendaciones personalizadas del especialista
+              Desbloquea el análisis completo con recomendaciones del especialista
             </p>
 
-            <ul className="space-y-2 mb-6">
+            <ul className="space-y-2 mb-4">
               {[
                 "Análisis detallado de tu caso clínico",
-                "Plan de tratamiento personalizado",
-                "Estimación de costos y tiempos",
+                "Plan de tratamiento paso a paso",
+                "Estimación de costos y tiempos reales",
                 "Consulta prioritaria con el especialista"
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
@@ -427,11 +457,16 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
                 </li>
               ))}
             </ul>
+            
+            {/* Urgency Counter */}
+            <UrgencyCounter className="mb-4" />
 
             <div className="text-center space-y-3">
               <div className="flex items-center justify-center gap-2">
+                <span className="text-sm text-muted-foreground line-through">$49.990</span>
                 <span className="text-3xl font-bold text-foreground">$29.990</span>
                 <span className="text-sm text-muted-foreground">CLP</span>
+                <span className="px-2 py-0.5 bg-red-500/20 text-red-500 text-xs font-bold rounded-full">-40%</span>
               </div>
               <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                 <CreditCard className="w-3 h-3" />
