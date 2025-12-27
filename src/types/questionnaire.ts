@@ -25,7 +25,7 @@ export interface ImplantXAnswers {
   gumBleeding: 'never' | 'sometimes' | 'frequently';
   oralHygiene: 'less-once' | 'once' | 'twice-plus';
   implantZones: string[]; // Array of tooth numbers
-  teethToReplace: '1' | '2-3' | '4-6' | '7-plus' | 'all-upper' | 'all-lower' | 'all'; // Number of teeth to replace
+  teethToReplace: '1-2' | '3-8' | 'all'; // Number of teeth to replace
 }
 
 export interface AssessmentResult {
