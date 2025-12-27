@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   FileText, Download, CheckCircle2, AlertCircle, TrendingUp, 
   Calendar, User, Heart, Bone, Stethoscope, ArrowRight,
-  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard, Lock, ChevronDown
+  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard, Lock, ChevronDown, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,18 @@ import SuccessGauge from "./SuccessGauge";
 import RiskFactorBars from "./RiskFactorBars";
 import NextStepsCards from "./NextStepsCards";
 import PremiumReportSection from "./PremiumReportSection";
+import { supabase } from "@/integrations/supabase/client";
+
+// Función para obtener el rango de éxito
+const getSuccessRange = (percentage: number): string => {
+  if (percentage >= 95) return "95-98%";
+  if (percentage >= 90) return "90-95%";
+  if (percentage >= 85) return "85-92%";
+  if (percentage >= 80) return "80-88%";
+  if (percentage >= 70) return "70-82%";
+  if (percentage >= 60) return "60-75%";
+  return "50-65%";
+};
 
 // Component for structured image analysis display
 const ImageAnalysisSections = ({ analysis }: { analysis: string }) => {
@@ -141,28 +154,77 @@ interface ReportPreviewProps {
 }
 
 const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
-  const handleDownload = () => {
-    toast.success("Generando reporte PDF", {
-      description: "El reporte clínico se descargará en unos momentos"
-    });
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-pdf-report', {
+        body: {
+          id: evaluation.id,
+          date: evaluation.date,
+          patientName: evaluation.patient,
+          pronosticoLabel: evaluation.pronosticoLabel || 'Favorable',
+          pronosticoMessage: evaluation.pronosticoMessage || 'Tu perfil muestra buenas condiciones para el tratamiento.',
+          successRange: getSuccessRange(evaluation.successProbability),
+          factors: evaluation.factors,
+          recommendations: evaluation.recommendations,
+          synergies: evaluation.synergies
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data.html) {
+        // Create blob and download
+        const blob = new Blob([data.html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = data.downloadName || `ImplantX_Reporte_${evaluation.id}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast.success("Reporte descargado", {
+          description: "Abre el archivo y usa Ctrl+P para guardarlo como PDF"
+        });
+      }
+    } catch (err) {
+      console.error('Error downloading report:', err);
+      toast.error("Error al generar el reporte", {
+        description: "Intenta nuevamente en unos momentos"
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const pronosticoColor = evaluation.pronosticoColor || 'success';
   const isWarning = pronosticoColor === 'warning';
 
-  // Remove old nextStepsInfo - now using NextStepsCards component
-
   return (
-    <Card className="overflow-hidden border border-border rounded-2xl shadow-sm">
-      {/* Header minimalista */}
-      <div className="p-6 border-b border-border bg-background">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center">
-              <FileText className="h-5 w-5 text-background" />
+    <Card className="overflow-hidden border border-primary/20 rounded-2xl shadow-xl shadow-primary/5">
+      {/* Header con branding premium */}
+      <div className="relative p-6 border-b border-primary/20 bg-gradient-to-r from-background via-primary/5 to-background overflow-hidden">
+        {/* Glow decorativo */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-32 bg-primary/10 rounded-full blur-3xl" />
+        
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* Logo ImplantX */}
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="text-primary-foreground font-bold text-lg">IX</span>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Reporte de Evaluación</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-bold text-foreground text-lg">Reporte ImplantX</h3>
+                <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full">
+                  OFICIAL
+                </span>
+              </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>ID: {evaluation.id}</span>
                 <span>•</span>
@@ -170,19 +232,33 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
               </div>
             </div>
           </div>
-          <Button onClick={handleDownload} size="sm" className="gap-2 rounded-xl bg-foreground text-background hover:bg-foreground/90">
-            <Download className="h-4 w-4" />
-            Descargar PDF
+          <Button 
+            onClick={handleDownload} 
+            size="sm" 
+            disabled={isDownloading}
+            className="gap-2 rounded-xl bg-primary text-primary-foreground hover:brightness-110 disabled:opacity-50 shadow-md"
+          >
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {isDownloading ? 'Generando...' : 'Descargar Reporte'}
           </Button>
         </div>
       </div>
 
       <div className="p-6 space-y-6 bg-background">
-        {/* Paciente */}
+        {/* Paciente con mejor estilo */}
         {evaluation.patient && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <User className="w-4 h-4" />
-            <span>Paciente: <strong className="text-foreground">{evaluation.patient}</strong></span>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <User className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Paciente</p>
+              <p className="font-semibold text-foreground">{evaluation.patient}</p>
+            </div>
           </div>
         )}
 
@@ -479,23 +555,37 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           </div>
         </div>
 
-        {/* CTA - Agendar consulta */}
-        <div className="bg-foreground rounded-xl p-6 text-center space-y-4">
-          <p className="text-background font-medium">
+        {/* CTA - Agendar consulta - Sin referencia a clínica específica */}
+        <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-6 text-center space-y-4 shadow-lg shadow-primary/20">
+          <div className="w-12 h-12 mx-auto rounded-full bg-primary-foreground/20 flex items-center justify-center mb-2">
+            <Calendar className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <p className="text-primary-foreground font-bold text-lg">
             ¿Listo para dar el siguiente paso?
           </p>
-          <p className="text-background/70 text-sm">
-            Agenda tu consulta y el especialista ya tendrá tus resultados estudiados.
+          <p className="text-primary-foreground/80 text-sm max-w-sm mx-auto">
+            Comparte este reporte con tu dentista de confianza. Ya tendrá toda la información que necesita para evaluarte.
           </p>
-          <a 
-            href="https://www.dentalink.cl/clinicamiro" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-background text-foreground hover:bg-background/90 transition-colors font-medium"
-          >
-            <Calendar className="w-4 h-4" />
-            Agendar Consulta Online
-          </a>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button 
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Mi Evaluación ImplantX',
+                    text: `Mi evaluación de implantes dentales - ${evaluation.pronosticoLabel}`,
+                    url: window.location.href
+                  });
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Enlace copiado al portapapeles");
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary-foreground text-primary hover:bg-primary-foreground/90 transition-colors font-semibold"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Compartir con mi Dentista
+            </button>
+          </div>
         </div>
 
         {/* Footer */}

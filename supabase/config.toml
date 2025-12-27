@@ -2,3 +2,6 @@ project_id = "vawfalhuffbdpxyassyi"
 
 [functions.simulate-smile]
 verify_jwt = false
+
+[functions.generate-pdf-report]
+verify_jwt = false
