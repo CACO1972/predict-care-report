@@ -87,7 +87,7 @@ const Home = () => {
               </div>
 
               {/* Main Question - Más legible */}
-              <h2 className="text-xl sm:text-2xl lg:text-4xl text-foreground font-semibold leading-tight mb-3 sm:mb-4">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground font-bold leading-tight mb-3 sm:mb-4">
                 ¿Te faltan dientes?
               </h2>
               <p className="text-lg sm:text-xl lg:text-2xl text-foreground/70 font-light mb-6 sm:mb-8">
