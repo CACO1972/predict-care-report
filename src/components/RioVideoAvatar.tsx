@@ -33,7 +33,7 @@ const RioVideoAvatar = ({
       <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
         <video
           ref={videoRef}
-          src="/rio-welcome-video.mp4"
+          src="/rio-avatar-implantx.mp4"
           autoPlay={autoPlay}
           muted={muted}
           loop={loop}
