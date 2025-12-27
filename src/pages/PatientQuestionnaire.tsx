@@ -402,6 +402,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message={`¡Un gusto, ${userProfile.name}! Ahora necesito algunos datos básicos para personalizar tu evaluación.`}
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-edad.mp3"
             />
             <QuestionCard
               question="¿Cuál es tu edad?"
