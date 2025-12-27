@@ -153,6 +153,26 @@ const PremiumReportSection = ({
           ))}
         </div>
 
+        {/* Guía Interactiva de Implantes */}
+        <div className="mb-5 p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-primary/10 border border-blue-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Book className="w-5 h-5 text-blue-400" />
+            <span className="text-sm font-semibold text-foreground">Guía Completa sobre Implantes Dentales</span>
+          </div>
+          <div className="rounded-lg overflow-hidden border border-border bg-background">
+            <iframe 
+              src="https://gamma.app/embed/krnbk9hgyfr0ypj" 
+              style={{ width: '100%', height: '350px' }}
+              allow="fullscreen" 
+              title="Guía sobre Implantes Dentales para Pacientes"
+              className="border-0"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            📖 Desliza para explorar la guía completa
+          </p>
+        </div>
+
         {/* Smile Simulation Preview */}
         {uploadedImage && (
           <div className="mb-5 p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-primary/10 border border-purple-500/20">
