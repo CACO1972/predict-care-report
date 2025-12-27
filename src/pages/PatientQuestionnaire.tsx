@@ -180,6 +180,11 @@ const PatientQuestionnaire = () => {
       if (value === 'success') return '/audio/rio-implante-bien.mp3';
       if (value === 'failed') return '/audio/rio-implante-fallaron.mp3';
     }
+    if (questionId === 'toothLossCause') {
+      if (value === 'cavity') return '/audio/rio-causa-caries.mp3';
+      if (value === 'periodontitis') return '/audio/rio-causa-periodontitis.mp3';
+      if (value === 'trauma') return '/audio/rio-causa-trauma.mp3';
+    }
     return undefined;
   };
 
@@ -761,6 +766,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message="Entender por qué perdiste tus dientes nos da pistas importantes."
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-causa-pregunta.mp3"
             />
             <QuestionCard
               question={`¿Cuál fue el motivo principal, ${userProfile.name}?`}
