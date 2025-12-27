@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import RioAvatarExpressive from "./RioAvatarExpressive";
 import { RioExpression } from "@/hooks/useRioExpression";
 import { useRioTTS } from "@/hooks/useRioTTS";
@@ -11,6 +11,7 @@ interface RioAvatarProps {
   expression?: RioExpression;
   className?: string;
   autoSpeak?: boolean;
+  customAudioUrl?: string;
 }
 
 const RioAvatar = ({ 
@@ -18,27 +19,72 @@ const RioAvatar = ({
   userName, 
   expression = 'encouraging', 
   className,
-  autoSpeak = true 
+  autoSpeak = true,
+  customAudioUrl
 }: RioAvatarProps) => {
-  const { isPlaying, isLoading, speak, stop } = useRioTTS();
+  const { isPlaying: isTTSPlaying, isLoading, speak, stop } = useRioTTS();
   const lastSpokenRef = useRef<string>("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isCustomPlaying, setIsCustomPlaying] = useState(false);
   
   // Replace {name} placeholder with actual user name
   const processedMessage = userName ? message.replace(/{name}/g, userName) : message;
+
+  const isPlaying = customAudioUrl ? isCustomPlaying : isTTSPlaying;
+
+  // Play custom audio
+  const playCustomAudio = () => {
+    if (!customAudioUrl) return;
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    audioRef.current = new Audio(customAudioUrl);
+    audioRef.current.onplay = () => setIsCustomPlaying(true);
+    audioRef.current.onended = () => setIsCustomPlaying(false);
+    audioRef.current.onpause = () => setIsCustomPlaying(false);
+    audioRef.current.play().catch(console.error);
+  };
+
+  const stopCustomAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsCustomPlaying(false);
+  };
 
   // Auto-speak when message changes
   useEffect(() => {
     if (autoSpeak && processedMessage && processedMessage !== lastSpokenRef.current) {
       lastSpokenRef.current = processedMessage;
-      speak(processedMessage);
+      if (customAudioUrl) {
+        playCustomAudio();
+      } else {
+        speak(processedMessage);
+      }
     }
-  }, [processedMessage, autoSpeak, speak]);
+  }, [processedMessage, autoSpeak, speak, customAudioUrl]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCustomAudio();
+    };
+  }, []);
 
   const handleAudioToggle = () => {
-    if (isPlaying) {
-      stop();
+    if (customAudioUrl) {
+      if (isCustomPlaying) {
+        stopCustomAudio();
+      } else {
+        playCustomAudio();
+      }
     } else {
-      speak(processedMessage);
+      if (isTTSPlaying) {
+        stop();
+      } else {
+        speak(processedMessage);
+      }
     }
   };
 
