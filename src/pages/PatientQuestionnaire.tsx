@@ -9,6 +9,7 @@ import QuestionCard from "@/components/QuestionCard";
 import ReportPreview from "@/components/ReportPreview";
 import ImageUpload from "@/components/ImageUpload";
 import AnswersSummary from "@/components/AnswersSummary";
+import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { UserProfile, DensityProAnswers, ImplantXAnswers, QuestionnaireStep } from "@/types/questionnaire";
 import { calculateRiskAssessment, EnhancedAssessmentResult } from "@/utils/riskCalculation";
 import { getQuestionConfig } from "@/utils/questionConfig";
@@ -73,6 +74,8 @@ const PatientQuestionnaire = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
+  const [showLeadCapture, setShowLeadCapture] = useState(false);
+  const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(null);
 
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
   const { getExpressionFromFeedback } = useRioExpression();
@@ -236,7 +239,8 @@ const PatientQuestionnaire = () => {
           userProfile.age
         );
         setAssessmentResult(result);
-        setStep('results');
+        // Show lead capture before results
+        setShowLeadCapture(true);
       }, 3000);
     }
   };
@@ -277,7 +281,8 @@ const PatientQuestionnaire = () => {
             userProfile.age
           );
           setAssessmentResult(result);
-          setStep('results');
+          // Show lead capture before results
+          setShowLeadCapture(true);
         }, 3000);
       },
     };
@@ -955,78 +960,92 @@ const PatientQuestionnaire = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(165deg, #0a0a0a 0%, #0d0d0d 30%, #1a1510 70%, #0d0d0d 100%)' }}>
-      {/* Premium Background Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div 
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] opacity-20"
-          style={{ background: 'radial-gradient(circle, rgba(201, 168, 124, 0.15) 0%, transparent 60%)' }}
-        />
+    <>
+      <div className="min-h-screen" style={{ background: 'linear-gradient(165deg, #0a0a0a 0%, #0d0d0d 30%, #1a1510 70%, #0d0d0d 100%)' }}>
+        {/* Premium Background Effects */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div 
+            className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] opacity-20"
+            style={{ background: 'radial-gradient(circle, rgba(201, 168, 124, 0.15) 0%, transparent 60%)' }}
+          />
+        </div>
+
+        {/* Header - Premium Dark */}
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-rose-gold/20 bg-black/60 backdrop-blur-md">
+          <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-display text-xl text-ivory font-light tracking-wide">
+                Implant<span className="text-rose-gold font-normal">X</span>™
+              </span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="text-xs font-medium text-primary tracking-wider">humanaia.cl</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="relative z-10 pt-20 pb-16">
+          <div className="container mx-auto px-4 sm:px-6">
+            {step !== 'welcome' && step !== 'results' && !showRioResponse && (
+              <div className="mb-6 max-w-xl mx-auto">
+                {/* Back Button */}
+                {canGoBack() && (
+                  <button
+                    onClick={handleBack}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group"
+                  >
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                    <span>Volver</span>
+                  </button>
+                )}
+                <ProgressBar
+                  currentStep={getStepNumber()}
+                  totalSteps={getTotalSteps()}
+                  currentPhase={getCurrentPhase()}
+                />
+              </div>
+            )}
+
+            <div className="max-w-xl mx-auto">
+              {renderContent()}
+            </div>
+          </div>
+        </main>
+
+        {/* Footer - Premium Dark */}
+        <footer className="border-t border-rose-gold/10 py-6" style={{ background: 'rgba(10, 10, 10, 0.5)' }}>
+          <div className="container mx-auto px-6">
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-[0.65rem] tracking-[0.3em] uppercase text-primary/50">
+                Powered by <a href="https://humanaia.cl" target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline">humana.ia</a>
+              </p>
+              <div className="text-center">
+                <p className="text-xs text-warm-taupe/70">
+                  Propiedad Intelectual · <span className="font-medium text-warm-taupe">Dr. Carlos Montoya</span> · <span className="font-medium text-warm-taupe">Clínica Miró</span>
+                </p>
+                <p className="text-xs text-warm-taupe/50 mt-1">
+                  © 2024 ImplantX. Todos los derechos reservados.
+                </p>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
-
-      {/* Header - Premium Dark */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-rose-gold/20 bg-black/60 backdrop-blur-md">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-display text-xl text-ivory font-light tracking-wide">
-              Implant<span className="text-rose-gold font-normal">X</span>™
-            </span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-            <span className="text-xs font-medium text-primary tracking-wider">humanaia.cl</span>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="relative z-10 pt-20 pb-16">
-        <div className="container mx-auto px-4 sm:px-6">
-          {step !== 'welcome' && step !== 'results' && !showRioResponse && (
-            <div className="mb-6 max-w-xl mx-auto">
-              {/* Back Button */}
-              {canGoBack() && (
-                <button
-                  onClick={handleBack}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group"
-                >
-                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                  <span>Volver</span>
-                </button>
-              )}
-              <ProgressBar
-                currentStep={getStepNumber()}
-                totalSteps={getTotalSteps()}
-                currentPhase={getCurrentPhase()}
-              />
-            </div>
-          )}
-
-          <div className="max-w-xl mx-auto">
-            {renderContent()}
-          </div>
-        </div>
-      </main>
-
-      {/* Footer - Premium Dark */}
-      <footer className="border-t border-rose-gold/10 py-6" style={{ background: 'rgba(10, 10, 10, 0.5)' }}>
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col items-center gap-3">
-            <p className="text-[0.65rem] tracking-[0.3em] uppercase text-primary/50">
-              Powered by <a href="https://humanaia.cl" target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline">humana.ia</a>
-            </p>
-            <div className="text-center">
-              <p className="text-xs text-warm-taupe/70">
-                Propiedad Intelectual · <span className="font-medium text-warm-taupe">Dr. Carlos Montoya</span> · <span className="font-medium text-warm-taupe">Clínica Miró</span>
-              </p>
-              <p className="text-xs text-warm-taupe/50 mt-1">
-                © 2024 ImplantX. Todos los derechos reservados.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+      
+      {/* Lead Capture Modal */}
+      <LeadCaptureModal
+        isOpen={showLeadCapture}
+        onSubmit={(data) => {
+          setLeadData(data);
+          setShowLeadCapture(false);
+          setStep('results');
+          triggerConfetti();
+        }}
+        patientName={userProfile.name}
+      />
+    </>
   );
 };
 

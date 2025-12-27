@@ -5,7 +5,7 @@ interface SplashScreenProps {
   minDuration?: number;
 }
 
-const SplashScreen = ({ onComplete, minDuration = 4000 }: SplashScreenProps) => {
+const SplashScreen = ({ onComplete, minDuration = 2500 }: SplashScreenProps) => {
   const [isHiding, setIsHiding] = useState(false);
   const [progress, setProgress] = useState(0);
 
