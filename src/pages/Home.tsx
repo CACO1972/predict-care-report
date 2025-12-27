@@ -65,31 +65,37 @@ const Home = () => {
               ref={heroReveal.ref}
               className={`max-w-2xl mx-auto text-center pt-12 sm:pt-20 lg:pt-28 pb-8 sm:pb-12 reveal ${heroReveal.isVisible ? 'reveal-active' : ''}`}
             >
-              {/* Hero Title */}
-              <h1 className="font-display text-5xl sm:text-6xl lg:text-8xl font-extralight tracking-tight mb-4 sm:mb-6">
-                <span className="text-shimmer">Implant</span><span className="text-shimmer-gold">X</span><span className="text-muted-foreground/40">™</span>
+              {/* Hero Title - Más impactante */}
+              <h1 className="font-display text-5xl sm:text-6xl lg:text-8xl font-bold tracking-tight mb-4 sm:mb-6 relative">
+                <span className="bg-gradient-to-b from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent drop-shadow-sm">
+                  Implant
+                </span>
+                <span className="bg-gradient-to-b from-primary via-primary to-primary/70 bg-clip-text text-transparent">X</span>
+                <span className="text-foreground/30 font-light">™</span>
+                {/* Glow effect behind */}
+                <span className="absolute inset-0 blur-3xl bg-primary/10 -z-10 scale-150" />
               </h1>
 
               {/* Status Indicator */}
               <div className="flex items-center justify-center gap-3 sm:gap-4 mb-10 sm:mb-16">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                  <span className="text-[0.65rem] sm:text-[0.7rem] text-primary/80 uppercase tracking-widest">IA Activa</span>
+                  <span className="text-[0.65rem] sm:text-[0.7rem] text-primary uppercase tracking-widest font-medium">IA Activa</span>
                 </div>
-                <span className="text-muted-foreground/30">·</span>
-                <span className="text-[0.65rem] sm:text-[0.7rem] text-muted-foreground/50 uppercase tracking-widest">Validado Clínicamente</span>
+                <span className="text-foreground/20">·</span>
+                <span className="text-[0.65rem] sm:text-[0.7rem] text-foreground/60 uppercase tracking-widest">Validado Clínicamente</span>
               </div>
 
-              {/* Main Question */}
-              <h2 className="text-xl sm:text-2xl lg:text-4xl text-foreground font-light leading-tight mb-3 sm:mb-4">
+              {/* Main Question - Más legible */}
+              <h2 className="text-xl sm:text-2xl lg:text-4xl text-foreground font-semibold leading-tight mb-3 sm:mb-4">
                 ¿Te faltan dientes?
               </h2>
-              <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground/70 font-extralight mb-6 sm:mb-8">
+              <p className="text-lg sm:text-xl lg:text-2xl text-foreground/70 font-light mb-6 sm:mb-8">
                 Descubre si los implantes son para ti
               </p>
 
-              {/* Description */}
-              <p className="text-sm sm:text-base text-muted-foreground/50 font-light max-w-md mx-auto leading-relaxed px-4">
+              {/* Description - Más visible */}
+              <p className="text-sm sm:text-base text-foreground/50 font-normal max-w-md mx-auto leading-relaxed px-4">
                 Te guiará y enseñará todo lo que debes saber antes de sentarte en el sillón dental.
               </p>
             </div>
