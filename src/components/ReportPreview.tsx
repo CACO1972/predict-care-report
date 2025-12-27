@@ -11,6 +11,9 @@ import SynergyFactors from "./SynergyFactors";
 import TreatmentInfographic from "./TreatmentInfographic";
 import ShareButtons from "./ShareButtons";
 import UrgencyCounter from "./UrgencyCounter";
+import SuccessGauge from "./SuccessGauge";
+import RiskFactorBars from "./RiskFactorBars";
+import NextStepsCards from "./NextStepsCards";
 
 // Component for structured image analysis display
 const ImageAnalysisSections = ({ analysis }: { analysis: string }) => {
@@ -147,24 +150,7 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
   const pronosticoColor = evaluation.pronosticoColor || 'success';
   const isWarning = pronosticoColor === 'warning';
 
-  // Información educativa sobre el proceso
-  const nextStepsInfo = [
-    {
-      icon: Calendar,
-      title: "Agenda tu consulta",
-      description: "Lleva este reporte a tu cita con el especialista para una evaluación presencial completa."
-    },
-    {
-      icon: Stethoscope,
-      title: "Evaluación clínica",
-      description: "El especialista realizará un examen físico y radiográfico para confirmar el diagnóstico."
-    },
-    {
-      icon: Heart,
-      title: "Plan personalizado",
-      description: "Recibirás un plan de tratamiento adaptado a tus necesidades específicas."
-    }
-  ];
+  // Remove old nextStepsInfo - now using NextStepsCards component
 
   return (
     <Card className="overflow-hidden border border-border rounded-2xl shadow-sm">
@@ -200,51 +186,31 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           </div>
         )}
 
-        {/* Resultado Principal - Pronóstico */}
+        {/* Resultado Principal - Gauge Animado */}
         <div className={cn(
-          "rounded-2xl p-6 text-center border",
+          "rounded-2xl p-8 text-center border relative overflow-hidden",
           isWarning 
-            ? "bg-warning/5 border-warning/20" 
-            : "bg-primary/5 border-primary/20"
+            ? "bg-gradient-to-br from-warning/10 via-warning/5 to-background border-warning/20" 
+            : "bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20"
         )}>
-          <div className="flex items-center justify-center gap-2 mb-3">
-            {isWarning ? (
-              <AlertCircle className="h-6 w-6 text-warning" />
-            ) : (
-              <CheckCircle2 className="h-6 w-6 text-primary" />
-            )}
-            <span className={cn(
-              "text-xl sm:text-2xl font-bold",
-              isWarning ? "text-warning" : "text-primary"
-            )}>
-              {evaluation.pronosticoLabel || 'Pronóstico Favorable'}
-            </span>
-          </div>
+          {/* Decorative glow */}
+          <div className={cn(
+            "absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-30",
+            isWarning ? "bg-warning" : "bg-primary"
+          )} />
           
-          <p className="text-foreground/80 text-sm sm:text-base leading-relaxed max-w-lg mx-auto mb-4">
-            {evaluation.pronosticoMessage || 'Tu perfil muestra buenas condiciones para el tratamiento con implantes.'}
-          </p>
-
-          {/* Indicador visual */}
-          <div className="flex items-center justify-center gap-1 mb-3">
-            {[1, 2, 3, 4].map((level) => (
-              <div
-                key={level}
-                className={cn(
-                  "w-8 sm:w-10 h-2 rounded-full transition-all",
-                  level <= (isWarning ? 2 : 3)
-                    ? (isWarning ? "bg-warning" : "bg-primary")
-                    : "bg-muted"
-                )}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <TrendingUp className="h-4 w-4" />
-            <span className="text-sm">
-              Éxito esperado: <span className={cn("font-semibold", isWarning ? "text-warning" : "text-primary")}>{evaluation.successProbability}%</span>
-            </span>
+          <div className="relative">
+            {/* Animated Gauge */}
+            <SuccessGauge 
+              percentage={evaluation.successProbability}
+              isWarning={isWarning}
+              label={evaluation.pronosticoLabel || 'Pronóstico Favorable'}
+            />
+            
+            {/* Message */}
+            <p className="text-foreground/80 text-sm sm:text-base leading-relaxed max-w-md mx-auto mt-4">
+              {evaluation.pronosticoMessage || 'Tu perfil muestra buenas condiciones para el tratamiento con implantes.'}
+            </p>
           </div>
         </div>
 
@@ -344,68 +310,42 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           />
         </div>
 
-        {/* Factores Evaluados */}
+        {/* Factores Evaluados - Gráfico de Barras */}
         {evaluation.factors.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-foreground">Factores analizados</h4>
-            <div className="grid gap-2">
-              {evaluation.factors.map((factor, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
-                >
-                  <span className="text-sm text-foreground">{factor.name}</span>
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-medium",
-                    factor.value === 'Alto' 
-                      ? "bg-warning/20 text-warning" 
-                      : factor.value === 'Medio'
-                      ? "bg-primary/20 text-primary"
-                      : "bg-green-500/20 text-green-600"
-                  )}>
-                    {factor.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <RiskFactorBars factors={evaluation.factors} />
         )}
 
-        {/* Recomendaciones */}
+        {/* Recomendaciones con Cards */}
         {evaluation.recommendations.length > 0 && (
           <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-foreground">Recomendaciones personalizadas</h4>
-            <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Recomendaciones Personalizadas
+            </h4>
+            <div className="grid gap-3">
               {evaluation.recommendations.map((rec, i) => (
                 <div 
                   key={i} 
-                  className="p-4 bg-primary/5 rounded-xl border-l-2 border-primary"
+                  className="group relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10"
                 >
-                  <p className="font-medium text-sm text-foreground mb-1">{rec.text}</p>
-                  <p className="text-xs text-muted-foreground">{rec.evidence}</p>
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform" />
+                  <div className="relative flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-foreground mb-1">{rec.text}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{rec.evidence}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Próximos pasos - NUEVO */}
-        <div className="space-y-3">
-          <h4 className="font-semibold text-sm text-foreground">Próximos pasos</h4>
-          <div className="space-y-3">
-            {nextStepsInfo.map((step, i) => (
-              <div key={i} className="flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center flex-shrink-0">
-                  <step.icon className="w-4 h-4 text-background" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Próximos pasos - Cards con iconos grandes */}
+        <NextStepsCards />
 
         {/* Premium Report CTA with Paywall */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 space-y-4">
