@@ -10,9 +10,10 @@ interface ImageUploadProps {
   onContinue: () => void;
   showSkip?: boolean;
   patientName?: string;
+  isPremium?: boolean;
 }
 
-const ImageUpload = ({ onImageSelect, onContinue, showSkip = true, patientName }: ImageUploadProps) => {
+const ImageUpload = ({ onImageSelect, onContinue, showSkip = true, patientName, isPremium = false }: ImageUploadProps) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -22,26 +23,40 @@ const ImageUpload = ({ onImageSelect, onContinue, showSkip = true, patientName }
   const analyzeImage = async (imageBase64: string) => {
     setIsAnalyzing(true);
     try {
+      console.log('Iniciando análisis de imagen...', { isPremium, patientName });
+      
       const { data, error } = await supabase.functions.invoke('analyze-dental-image', {
-        body: { imageBase64, patientName }
+        body: { imageBase64, patientName, isPremium }
       });
+
+      console.log('Respuesta del análisis:', { data, error });
 
       if (error) {
         console.error('Error analyzing image:', error);
-        toast.error("No se pudo analizar la imagen, pero puedes continuar");
+        toast.error("No se pudo analizar la imagen, pero puedes continuar", {
+          description: "Intenta con una imagen más pequeña o diferente formato"
+        });
         return null;
       }
 
       if (data?.success && data?.analysis) {
         setAnalysis(data.analysis);
-        toast.success("Imagen analizada exitosamente");
+        toast.success(isPremium ? "Análisis premium completado" : "Análisis básico completado", {
+          description: data.disclaimer
+        });
         return data.analysis;
+      }
+      
+      if (data?.error) {
+        toast.error(data.error);
       }
       
       return null;
     } catch (error) {
-      console.error('Error:', error);
-      toast.error("Error al analizar la imagen");
+      console.error('Error en análisis:', error);
+      toast.error("Error al conectar con el servicio de análisis", {
+        description: "Verifica tu conexión e intenta nuevamente"
+      });
       return null;
     } finally {
       setIsAnalyzing(false);
