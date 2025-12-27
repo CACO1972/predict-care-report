@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import rioAvatar from "@/assets/rio-avatar-new.png";
+import rioAvatar from "@/assets/avatar-implantx.png";
 import { RioExpression } from "@/hooks/useRioExpression";
 
 interface RioAvatarExpressiveProps {

@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.generate-pdf-report]
 verify_jwt = false
+
+[functions.rio-feedback]
+verify_jwt = false
+
+[functions.rio-tts]
+verify_jwt = false
