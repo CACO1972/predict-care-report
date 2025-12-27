@@ -100,16 +100,21 @@ const PremiumReportSection = ({
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 space-y-5">
+    <div className="relative overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-background p-6 space-y-5 shadow-xl shadow-primary/10">
       {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-40 h-40 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
       
       <div className="relative">
-        {/* Header */}
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <Crown className="w-7 h-7 text-primary animate-pulse" />
-          <h4 className="text-xl font-bold text-foreground">Reporte Premium Completo</h4>
+        {/* Header con branding */}
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
+            <Crown className="w-7 h-7 text-primary-foreground" />
+          </div>
+          <div className="text-center">
+            <h4 className="text-xl font-bold text-foreground">Reporte Premium</h4>
+            <p className="text-sm text-muted-foreground">Análisis completo de tu caso</p>
+          </div>
         </div>
 
         {/* Premium Features Grid */}
