@@ -153,10 +153,14 @@ const Home = () => {
                       Ahora puedes saberlo gratis, desde cualquier lugar.
                     </p>
                     <button 
-                      onClick={() => setShowRemoteOverlay(false)}
-                      className="mt-6 px-6 py-2 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-medium"
+                      onClick={() => {
+                        setShowRemoteOverlay(false);
+                        navigate('/evaluacion');
+                      }}
+                      className="mt-6 px-6 py-3 rounded-full bg-primary text-primary-foreground hover:brightness-110 transition-all text-sm font-medium flex items-center gap-2 mx-auto"
                     >
-                      Entendido
+                      Comenzar Evaluación
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
