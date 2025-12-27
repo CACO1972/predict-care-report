@@ -72,7 +72,7 @@ const RioAvatarExpressive = ({
   const style = expressionStyles[expression];
 
   return (
-    <div className={cn("relative flex-shrink-0", className)}>
+    <div className={cn("relative flex-shrink-0 motion-safe:animate-[pulse_10s_ease-in-out_infinite]", className)}>
       {/* Dynamic glow effect based on expression */}
       <div 
         className={cn(
