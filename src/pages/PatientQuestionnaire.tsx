@@ -175,6 +175,11 @@ const PatientQuestionnaire = () => {
       if (value === 'controlled') return '/audio/rio-diabetes-controlada.mp3';
       if (value === 'uncontrolled') return '/audio/rio-diabetes-nocontrolada.mp3';
     }
+    if (questionId === 'implantHistory') {
+      if (value === 'no') return '/audio/rio-primer-implante.mp3';
+      if (value === 'success') return '/audio/rio-implante-bien.mp3';
+      if (value === 'failed') return '/audio/rio-implante-fallaron.mp3';
+    }
     return undefined;
   };
 
@@ -729,6 +734,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message="Saber tu experiencia previa nos ayuda a entender mejor tu caso."
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-implante-pregunta.mp3"
             />
             <QuestionCard
               question="¿Has tenido implantes dentales anteriormente?"
