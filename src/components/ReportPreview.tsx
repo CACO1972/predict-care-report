@@ -16,6 +16,7 @@ import RiskFactorBars from "./RiskFactorBars";
 import NextStepsCards from "./NextStepsCards";
 import PremiumReportSection from "./PremiumReportSection";
 import ImprovementPotential from "./ImprovementPotential";
+import WhatIfSimulator from "./WhatIfSimulator";
 import { supabase } from "@/integrations/supabase/client";
 
 // Función para obtener el rango de éxito
@@ -293,6 +294,13 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
 
         {/* Aclaración sobre situación actual y potencial de mejora */}
         <ImprovementPotential 
+          currentProbability={evaluation.successProbability}
+          factors={evaluation.factors}
+          synergies={evaluation.synergies}
+        />
+
+        {/* Simulador interactivo ¿Qué pasa si? */}
+        <WhatIfSimulator
           currentProbability={evaluation.successProbability}
           factors={evaluation.factors}
           synergies={evaluation.synergies}
