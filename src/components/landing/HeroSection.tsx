@@ -80,7 +80,7 @@ const HeroSection = () => {
           {/* Play/Pause overlay button */}
           <button
             onClick={togglePlay}
-            className={`absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-[2px] transition-all duration-300 ${
+            className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
               isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'
             }`}
           >
