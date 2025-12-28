@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
-  currentPhase: 'base' | 'density' | 'health' | 'oral' | 'mapping' | 'complete';
+  currentPhase: 'base' | 'density' | 'health' | 'irp' | 'oral' | 'mapping' | 'complete';
 }
 
 const phases = [
