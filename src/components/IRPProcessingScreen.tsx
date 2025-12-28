@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Loader2, Brain, Activity, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ interface IRPProcessingScreenProps {
 
 const IRPProcessingScreen = ({ patientName, onComplete }: IRPProcessingScreenProps) => {
   const [step, setStep] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const steps = [
     { icon: Brain, text: "Analizando respuestas periodontales..." },
@@ -17,6 +18,12 @@ const IRPProcessingScreen = ({ patientName, onComplete }: IRPProcessingScreenPro
   ];
 
   useEffect(() => {
+    // Reproducir audio de feedback
+    audioRef.current = new Audio('/audio/rio-feedback-encias.mp3');
+    audioRef.current.play().catch(() => {
+      // Ignorar errores de autoplay
+    });
+
     // Simular progreso del análisis
     const timers = [
       setTimeout(() => setStep(1), 1200),
@@ -24,7 +31,13 @@ const IRPProcessingScreen = ({ patientName, onComplete }: IRPProcessingScreenPro
       setTimeout(() => onComplete(), 3600),
     ];
 
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      timers.forEach(clearTimeout);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, [onComplete]);
 
   return (
