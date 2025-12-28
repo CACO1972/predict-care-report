@@ -318,18 +318,6 @@ const Home = () => {
                     humana.ia
                   </a>
                 </p>
-                <a
-                  href="https://www.safecreative.org/work/2510073245348"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="opacity-40 hover:opacity-70 transition-opacity"
-                >
-                  <img
-                    src="https://resources.safecreative.org/work/2510073245348/label/standard-300"
-                    alt="Safe Creative"
-                    className="h-6 sm:h-7"
-                  />
-                </a>
                 <p className="text-[9px] sm:text-[10px] text-muted-foreground/50 text-center px-4">
                   Propiedad Intelectual y Patent Pending registrada a nombre de Dr.
                   Carlos Montoya
