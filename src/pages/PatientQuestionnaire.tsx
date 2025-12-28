@@ -309,13 +309,12 @@ const PatientQuestionnaire = () => {
         }
       },
       'bruxism-guard': () => setStep('diabetes'),
-      'diabetes': () => setStep('implant-history'),
+      'diabetes': () => setStep('gum-health'),
+      'gum-health': () => setStep('implant-history'),
       'implant-history': () => setStep('tooth-loss'),
       'tooth-loss': () => setStep('tooth-loss-time'),
       'tooth-loss-time': () => setStep('teeth-count'),
-      'teeth-count': () => setStep('gum-health'),
-      'gum-health': () => setStep('hygiene'),
-      'hygiene': () => setStep('odontogram'),
+      'teeth-count': () => setStep('odontogram'),
       'odontogram': () => {
         setStep('processing');
         triggerConfetti();
