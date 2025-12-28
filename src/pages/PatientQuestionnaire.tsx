@@ -848,6 +848,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message={`${userProfile.name}, ¿cuántos dientes necesitas reemplazar? Esto nos ayuda a orientar el tipo de tratamiento más adecuado para ti.`}
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-cuantos-dientes.mp3"
             />
             <QuestionCard
               question="¿Cuántos dientes te faltan o necesitas reemplazar?"
