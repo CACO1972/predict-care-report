@@ -1,7 +1,7 @@
 import { ArrowRight, Play, Pause } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
-import rioThumbnail from "@/assets/rio-video-thumbnail.jpg";
+import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 
 const HeroSection = () => {
   const navigate = useNavigate();
