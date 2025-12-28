@@ -10,8 +10,11 @@ import ReportPreview from "@/components/ReportPreview";
 import ImageUpload from "@/components/ImageUpload";
 import AnswersSummary from "@/components/AnswersSummary";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
+import IRPProcessingScreen from "@/components/IRPProcessingScreen";
+import IRPResultScreen from "@/components/IRPResultScreen";
 import { UserProfile, DensityProAnswers, ImplantXAnswers, QuestionnaireStep } from "@/types/questionnaire";
 import { calculateRiskAssessment, EnhancedAssessmentResult } from "@/utils/riskCalculation";
+import { calculateIRP, IRPResult } from "@/utils/irpCalculation";
 import { getQuestionConfig } from "@/utils/questionConfig";
 import { useRioFeedback } from "@/hooks/useRioFeedback";
 import { useRioExpression, RioExpression, getFeedbackTypeFromAnswer } from "@/hooks/useRioExpression";
@@ -69,6 +72,7 @@ const PatientQuestionnaire = () => {
   const [densityAnswers, setDensityAnswers] = useState<Partial<DensityProAnswers>>({});
   const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>({});
   const [assessmentResult, setAssessmentResult] = useState<EnhancedAssessmentResult | null>(null);
+  const [irpResult, setIrpResult] = useState<IRPResult | null>(null);
   const [showRioResponse, setShowRioResponse] = useState(false);
   const [pendingNextStep, setPendingNextStep] = useState<(() => void) | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -90,13 +94,14 @@ const PatientQuestionnaire = () => {
     const baseSteps: QuestionnaireStep[] = ['welcome', 'name', 'demographics'];
     const densitySteps: QuestionnaireStep[] = ['density-intro', 'density-q1', 'density-q2', 'density-q3', 'density-q4', 'density-q5', 'density-complete'];
     const healthSteps: QuestionnaireStep[] = ['smoking', 'bruxism', 'bruxism-guard', 'diabetes'];
-    const oralSteps: QuestionnaireStep[] = ['implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'gum-health', 'hygiene', 'odontogram', 'summary'];
+    const irpSteps: QuestionnaireStep[] = ['gum-health', 'irp-processing', 'irp-result'];
+    const oralSteps: QuestionnaireStep[] = ['implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'odontogram', 'summary'];
     
     let allSteps = [...baseSteps];
     if (requiresDensityPro) {
       allSteps = [...allSteps, ...densitySteps];
     }
-    allSteps = [...allSteps, ...healthSteps, ...oralSteps];
+    allSteps = [...allSteps, ...healthSteps, ...irpSteps, ...oralSteps];
     
     // Handle bruxism-guard conditional step
     if (step === 'diabetes' && implantAnswers.bruxism !== 'yes') {
@@ -113,6 +118,11 @@ const PatientQuestionnaire = () => {
       return 'bruxism';
     }
     
+    // No volver atrás desde IRP result
+    if (step === 'irp-result' || step === 'irp-processing') {
+      return null;
+    }
+    
     return prevStep;
   };
 
@@ -126,7 +136,7 @@ const PatientQuestionnaire = () => {
   };
 
   const canGoBack = (): boolean => {
-    const noBackSteps: QuestionnaireStep[] = ['welcome', 'processing', 'results'];
+    const noBackSteps: QuestionnaireStep[] = ['welcome', 'processing', 'results', 'irp-processing', 'irp-result'];
     return !noBackSteps.includes(step) && getPreviousStep() !== null;
   };
 
@@ -135,19 +145,20 @@ const PatientQuestionnaire = () => {
     if (requiresDensityPro) {
       steps.push('density-intro', 'density-q1', 'density-q2', 'density-q3', 'density-q4', 'density-q5', 'density-complete');
     }
-    steps.push('smoking', 'bruxism', 'bruxism-guard', 'diabetes', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'gum-health', 'hygiene', 'odontogram', 'summary', 'processing', 'results');
+    steps.push('smoking', 'bruxism', 'bruxism-guard', 'diabetes', 'gum-health', 'irp-processing', 'irp-result', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'odontogram', 'summary', 'processing', 'results');
     return steps.indexOf(step) + 1;
   };
 
   const getTotalSteps = (): number => {
-    return requiresDensityPro ? 22 : 16;
+    return requiresDensityPro ? 24 : 18;
   };
 
-  const getCurrentPhase = (): 'base' | 'density' | 'health' | 'oral' | 'mapping' | 'complete' => {
+  const getCurrentPhase = (): 'base' | 'density' | 'health' | 'irp' | 'oral' | 'mapping' | 'complete' => {
     if (['welcome', 'name', 'demographics'].includes(step)) return 'base';
     if (step.startsWith('density')) return 'density';
     if (['smoking', 'bruxism', 'bruxism-guard', 'diabetes'].includes(step)) return 'health';
-    if (['implant-history', 'tooth-loss', 'tooth-loss-time', 'gum-health', 'hygiene'].includes(step)) return 'oral';
+    if (['gum-health', 'irp-processing', 'irp-result'].includes(step)) return 'irp';
+    if (['implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count'].includes(step)) return 'oral';
     if (step === 'odontogram' || step === 'summary') return 'mapping';
     return 'complete';
   };
@@ -269,7 +280,8 @@ const PatientQuestionnaire = () => {
     }
     else if (step === 'bruxism-guard') setStep('diabetes');
     else if (step === 'diabetes') setStep('gum-health');
-    else if (step === 'gum-health') setStep('implant-history');
+    else if (step === 'gum-health') setStep('irp-processing');
+    else if (step === 'irp-result') setStep('implant-history');
     else if (step === 'implant-history') setStep('tooth-loss');
     else if (step === 'tooth-loss') setStep('tooth-loss-time');
     else if (step === 'tooth-loss-time') setStep('teeth-count');
@@ -310,7 +322,8 @@ const PatientQuestionnaire = () => {
       },
       'bruxism-guard': () => setStep('diabetes'),
       'diabetes': () => setStep('gum-health'),
-      'gum-health': () => setStep('implant-history'),
+      'gum-health': () => setStep('irp-processing'),
+      'irp-result': () => setStep('implant-history'),
       'implant-history': () => setStep('tooth-loss'),
       'tooth-loss': () => setStep('tooth-loss-time'),
       'tooth-loss-time': () => setStep('teeth-count'),
@@ -909,7 +922,8 @@ const PatientQuestionnaire = () => {
                 value={implantAnswers.oralHygiene}
                 onChange={(value) => {
                   setImplantAnswers({ ...implantAnswers, oralHygiene: value as any });
-                  handleAnswerWithRioFeedback('gumBleeding', implantAnswers.gumBleeding as string, getNextStepFunction('gum-health'));
+                  // Ir a procesamiento IRP después de las 3 preguntas periodontales
+                  setStep('irp-processing');
                 }}
                 onNext={() => {}}
                 hideNextButton={true}
@@ -917,6 +931,39 @@ const PatientQuestionnaire = () => {
             )}
           </div>
         );
+
+      case 'irp-processing':
+        return (
+          <IRPProcessingScreen
+            patientName={userProfile.name || 'Paciente'}
+            onComplete={() => {
+              // Calcular IRP basado en respuestas periodontales
+              const result = calculateIRP({
+                gumBleeding: implantAnswers.gumBleeding || 'never',
+                looseTeethLoss: implantAnswers.looseTeethLoss || 'no',
+                oralHygiene: implantAnswers.oralHygiene || 'twice-plus'
+              });
+              setIrpResult(result);
+              setStep('irp-result');
+            }}
+          />
+        );
+
+      case 'irp-result':
+        return irpResult ? (
+          <IRPResultScreen
+            irpResult={irpResult}
+            patientName={userProfile.name || 'Paciente'}
+            onContinueFree={() => {
+              // Por ahora, continuar con el flujo normal
+              setStep('implant-history');
+            }}
+            onPurchasePlan={() => {
+              // TODO: Integrar MercadoPago - por ahora continuar
+              setStep('implant-history');
+            }}
+          />
+        ) : null;
 
       case 'odontogram':
         const handleImageContinue = () => {

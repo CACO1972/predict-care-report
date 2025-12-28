@@ -63,12 +63,13 @@ export type QuestionnaireStep =
   | 'bruxism'
   | 'bruxism-guard' // Nueva pregunta: ¿usa férula?
   | 'diabetes'
+  | 'gum-health' // Preguntas periodontales (3 en 1)
+  | 'irp-processing' // Procesamiento IA del IRP
+  | 'irp-result' // Resultado del IRP con upsell
   | 'implant-history'
   | 'tooth-loss'
   | 'tooth-loss-time'
   | 'teeth-count'
-  | 'gum-health'
-  | 'hygiene'
   | 'odontogram'
   | 'summary'
   | 'processing'
