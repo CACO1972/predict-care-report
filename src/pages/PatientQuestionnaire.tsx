@@ -926,19 +926,42 @@ const PatientQuestionnaire = () => {
         return (
           <div className="space-y-6 animate-fade-in">
             <RioAvatar 
-              message={`Última pregunta, ${userProfile.name}. Si tienes una foto o radiografía de la zona, nuestra IA la analizará para darte información útil.`}
+              message={`${userProfile.name}, ¿en qué zona de tu boca necesitas el implante?`}
               userName={userProfile.name}
             />
-            <ImageUpload
-              onImageSelect={(file, preview, analysis) => {
-                setUploadedImage(preview);
-                setImageAnalysis(analysis);
+            <QuestionCard
+              question="¿En qué zona necesitas el implante?"
+              type="radio"
+              options={[
+                { value: 'frontal-superior', label: 'Frontal superior' },
+                { value: 'frontal-inferior', label: 'Frontal inferior' },
+                { value: 'lateral-superior-derecho', label: 'Lateral superior derecho' },
+                { value: 'lateral-superior-izquierdo', label: 'Lateral superior izquierdo' },
+                { value: 'lateral-inferior-derecho', label: 'Lateral inferior derecho' },
+                { value: 'lateral-inferior-izquierdo', label: 'Lateral inferior izquierdo' },
+              ]}
+              value={implantAnswers.implantZones?.[0] || ''}
+              onChange={(value) => {
+                setImplantAnswers({ ...implantAnswers, implantZones: [value as string] });
               }}
-              onContinue={handleImageContinue}
-              showSkip={true}
-              patientName={userProfile.name}
-              isPremium={!!leadData}
+              onNext={() => {}}
+              hideNextButton={true}
             />
+            {implantAnswers.implantZones?.length > 0 && (
+              <div className="space-y-4">
+                <p className="text-muted-foreground text-center">Si tienes una foto o radiografía de la zona, nuestra IA la analizará (opcional)</p>
+                <ImageUpload
+                  onImageSelect={(file, preview, analysis) => {
+                    setUploadedImage(preview);
+                    setImageAnalysis(analysis);
+                  }}
+                  onContinue={handleImageContinue}
+                  showSkip={true}
+                  patientName={userProfile.name}
+                  isPremium={!!leadData}
+                />
+              </div>
+            )}
           </div>
         );
 
