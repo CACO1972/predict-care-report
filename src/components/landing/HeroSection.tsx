@@ -1,6 +1,7 @@
 import { ArrowRight, Play, Pause } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
+import rioThumbnail from "@/assets/rio-video-thumbnail.jpg";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ const HeroSection = () => {
           <video
             ref={videoRef}
             src="/rio-welcome-video.mp4"
+            poster={rioThumbnail}
             playsInline
             preload="auto"
             onEnded={handleVideoEnded}
