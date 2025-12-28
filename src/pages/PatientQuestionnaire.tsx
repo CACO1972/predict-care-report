@@ -268,12 +268,12 @@ const PatientQuestionnaire = () => {
       }
     }
     else if (step === 'bruxism-guard') setStep('diabetes');
-    else if (step === 'diabetes') setStep('implant-history');
+    else if (step === 'diabetes') setStep('gum-health');
+    else if (step === 'gum-health') setStep('implant-history');
     else if (step === 'implant-history') setStep('tooth-loss');
     else if (step === 'tooth-loss') setStep('tooth-loss-time');
     else if (step === 'tooth-loss-time') setStep('teeth-count');
-    else if (step === 'teeth-count') setStep('gum-health');
-    else if (step === 'gum-health') setStep('odontogram');
+    else if (step === 'teeth-count') setStep('odontogram');
     else if (step === 'odontogram') {
       setStep('processing');
       triggerConfetti();
