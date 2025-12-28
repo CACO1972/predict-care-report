@@ -23,6 +23,7 @@ export interface ImplantXAnswers {
   toothLossCause: 'cavity' | 'periodontitis' | 'trauma' | 'other';
   toothLossTime: 'less-1' | '1-3' | 'more-3';
   gumBleeding: 'never' | 'sometimes' | 'frequently';
+  looseTeethLoss: 'no' | '1-2' | 'several'; // Dientes perdidos por movilidad
   oralHygiene: 'less-once' | 'once' | 'twice-plus';
   implantZones: string[]; // Array of tooth numbers
   teethToReplace: '1-2' | '3-8' | 'all'; // Number of teeth to replace

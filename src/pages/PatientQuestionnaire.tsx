@@ -868,7 +868,7 @@ const PatientQuestionnaire = () => {
               userName={userProfile.name}
             />
             <QuestionCard
-              question="¿Sangran cuando te cepillas los dientes?"
+              question="1. ¿Sangran cuando te cepillas los dientes?"
               type="radio"
               options={[
                 { value: 'never', label: 'Nunca o casi nunca' },
@@ -878,11 +878,28 @@ const PatientQuestionnaire = () => {
               value={implantAnswers.gumBleeding}
               onChange={(value) => {
                 setImplantAnswers({ ...implantAnswers, gumBleeding: value as any });
-                handleAnswerWithRioFeedback('gumBleeding', value as string, getNextStepFunction('gum-health'));
               }}
               onNext={() => {}}
               hideNextButton={true}
             />
+            {implantAnswers.gumBleeding && (
+              <QuestionCard
+                question="2. ¿Has perdido algún diente porque se movía o se 'soltó' solo, sin causa aparente como un golpe o caries grande?"
+                type="radio"
+                options={[
+                  { value: 'no', label: 'No' },
+                  { value: '1-2', label: 'Sí, 1 o 2 dientes' },
+                  { value: 'several', label: 'Sí, varios dientes' },
+                ]}
+                value={implantAnswers.looseTeethLoss}
+                onChange={(value) => {
+                  setImplantAnswers({ ...implantAnswers, looseTeethLoss: value as any });
+                  handleAnswerWithRioFeedback('gumBleeding', implantAnswers.gumBleeding as string, getNextStepFunction('gum-health'));
+                }}
+                onNext={() => {}}
+                hideNextButton={true}
+              />
+            )}
           </div>
         );
 
