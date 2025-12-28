@@ -877,6 +877,7 @@ const PatientQuestionnaire = () => {
             <RioAvatar 
               message="Veamos ahora la salud de tus encías."
               userName={userProfile.name}
+              customAudioUrl="/audio/rio-pregunta-encias.mp3"
             />
             <QuestionCard
               question="1. ¿Sangran cuando te cepillas los dientes?"
