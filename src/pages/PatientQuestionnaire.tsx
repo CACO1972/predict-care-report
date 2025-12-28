@@ -192,6 +192,11 @@ const PatientQuestionnaire = () => {
       if (value === '1-3') return '/audio/rio-tiempo-1a3.mp3';
       if (value === 'more-3') return '/audio/rio-tiempo-masde3.mp3';
     }
+    if (questionId === 'teethCount') {
+      if (value === '1-2') return '/audio/rio-feedback-1a2.mp3';
+      if (value === '3-8') return '/audio/rio-feedback-puente.mp3';
+      if (value === 'all') return '/audio/rio-feedback-todos.mp3';
+    }
     return undefined;
   };
 
