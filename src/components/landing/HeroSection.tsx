@@ -67,8 +67,9 @@ const HeroSection = () => {
         {/* Video container with 9:16 aspect ratio */}
         <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background aspect-[9/16]">
           <video
+            key="hero-intro-v5"
             ref={videoRef}
-            src="/rio-welcome-video.mp4"
+            src="/hero-intro-v5.mp4"
             poster={rioThumbnail}
             playsInline
             preload="auto"
