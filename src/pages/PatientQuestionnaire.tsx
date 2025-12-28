@@ -273,8 +273,7 @@ const PatientQuestionnaire = () => {
     else if (step === 'tooth-loss') setStep('tooth-loss-time');
     else if (step === 'tooth-loss-time') setStep('teeth-count');
     else if (step === 'teeth-count') setStep('gum-health');
-    else if (step === 'gum-health') setStep('hygiene');
-    else if (step === 'hygiene') setStep('odontogram');
+    else if (step === 'gum-health') setStep('odontogram');
     else if (step === 'odontogram') {
       setStep('processing');
       triggerConfetti();
@@ -894,38 +893,29 @@ const PatientQuestionnaire = () => {
                 value={implantAnswers.looseTeethLoss}
                 onChange={(value) => {
                   setImplantAnswers({ ...implantAnswers, looseTeethLoss: value as any });
+                }}
+                onNext={() => {}}
+                hideNextButton={true}
+              />
+            )}
+            {implantAnswers.looseTeethLoss && (
+              <QuestionCard
+                question="3. ¿Cuántas veces al día te cepillas los dientes?"
+                type="radio"
+                options={[
+                  { value: 'less-once', label: 'Menos de una vez' },
+                  { value: 'once', label: 'Una vez' },
+                  { value: 'twice-plus', label: 'Dos o más veces' },
+                ]}
+                value={implantAnswers.oralHygiene}
+                onChange={(value) => {
+                  setImplantAnswers({ ...implantAnswers, oralHygiene: value as any });
                   handleAnswerWithRioFeedback('gumBleeding', implantAnswers.gumBleeding as string, getNextStepFunction('gum-health'));
                 }}
                 onNext={() => {}}
                 hideNextButton={true}
               />
             )}
-          </div>
-        );
-
-      case 'hygiene':
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <RioAvatar 
-              message={`¡Casi terminamos, ${userProfile.name}! Hablemos de tu rutina diaria.`}
-              userName={userProfile.name}
-            />
-            <QuestionCard
-              question="¿Cuántas veces al día te cepillas los dientes?"
-              type="radio"
-              options={[
-                { value: 'less-once', label: 'Menos de una vez' },
-                { value: 'once', label: 'Una vez' },
-                { value: 'twice-plus', label: 'Dos o más veces' },
-              ]}
-              value={implantAnswers.oralHygiene}
-              onChange={(value) => {
-                setImplantAnswers({ ...implantAnswers, oralHygiene: value as any });
-                handleAnswerWithRioFeedback('oralHygiene', value as string, getNextStepFunction('hygiene'));
-              }}
-              onNext={() => {}}
-              hideNextButton={true}
-            />
           </div>
         );
 
