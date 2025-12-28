@@ -31,7 +31,7 @@ const TrustSection = () => {
         </h2>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-3 gap-4 mb-8">
         {trustPoints.map((point) => (
           <div
             key={point.title}
@@ -44,6 +44,28 @@ const TrustSection = () => {
             <p className="text-xs text-muted-foreground leading-relaxed">{point.description}</p>
           </div>
         ))}
+      </div>
+
+      {/* Safe Creative Certificate */}
+      <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-b from-card/60 to-card/30 border border-primary/20">
+        <p className="text-xs text-muted-foreground mb-4 text-center">
+          Propiedad Intelectual registrada y protegida
+        </p>
+        <a
+          href="https://www.safecreative.org/work/2510073245348"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:opacity-80 transition-opacity"
+        >
+          <img
+            src="https://resources.safecreative.org/work/2510073245348/label/standard-300"
+            alt="Safe Creative - Propiedad Intelectual Registrada"
+            className="h-16 sm:h-20"
+          />
+        </a>
+        <p className="text-[0.65rem] sm:text-xs text-muted-foreground/70 mt-3 text-center">
+          Patent Pending · Dr. Carlos Montoya
+        </p>
       </div>
     </div>
   );
