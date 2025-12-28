@@ -59,19 +59,20 @@ const HeroSection = () => {
       </p>
 
       {/* Video Avatar Section */}
-      <div className="relative max-w-xs sm:max-w-sm md:max-w-md mx-auto mb-8 sm:mb-10">
+      <div className="relative max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto mb-8 sm:mb-10">
         {/* Glow effect */}
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/20 blur-2xl scale-105 opacity-60" />
         
         {/* Video container */}
-        <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background/50 backdrop-blur-sm">
+        <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background">
           <video
             ref={videoRef}
             src="/rio-welcome-video.mp4"
             playsInline
-            preload="metadata"
+            preload="auto"
             onEnded={handleVideoEnded}
-            className="w-full h-auto object-contain bg-gradient-to-b from-background to-muted/30"
+            className="w-full h-auto object-cover"
+            style={{ imageRendering: 'auto' }}
           />
           
           {/* Play/Pause overlay button */}
