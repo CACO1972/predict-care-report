@@ -59,13 +59,13 @@ const HeroSection = () => {
         Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada.
       </p>
 
-      {/* Video Avatar Section */}
-      <div className="relative max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto mb-8 sm:mb-10">
+      {/* Video Avatar Section - Vertical 9:16 */}
+      <div className="relative w-48 sm:w-56 md:w-64 lg:w-72 mx-auto mb-8 sm:mb-10">
         {/* Glow effect */}
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/20 blur-2xl scale-105 opacity-60" />
         
-        {/* Video container */}
-        <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background">
+        {/* Video container with 9:16 aspect ratio */}
+        <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background aspect-[9/16]">
           <video
             ref={videoRef}
             src="/rio-welcome-video.mp4"
@@ -73,7 +73,7 @@ const HeroSection = () => {
             playsInline
             preload="auto"
             onEnded={handleVideoEnded}
-            className="w-full h-auto object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
             style={{ imageRendering: 'auto' }}
           />
           
