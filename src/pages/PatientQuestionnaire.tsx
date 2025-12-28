@@ -348,40 +348,43 @@ const PatientQuestionnaire = () => {
         return (
           <div className="space-y-8 animate-fade-in text-center">
             {/* Premium Welcome Card */}
-            <div className="relative bg-gradient-to-b from-card to-card/80 border border-primary/20 rounded-3xl p-8 sm:p-12 shadow-2xl shadow-primary/5 overflow-hidden">
+            <div className="relative bg-gradient-to-b from-card to-card/80 border border-primary/20 rounded-3xl p-6 sm:p-10 shadow-2xl shadow-primary/5 overflow-hidden">
               {/* Glow effect */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 rounded-full blur-3xl" />
               
               {/* Accent line */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
               
-              {/* Río (imagen estática) + audio de bienvenida */}
-              <div className="relative inline-block mb-8">
-                <RioWelcomeAvatar
-                  audioUrl="/audio/hola-soy-rio.mp3?v=3"
-                  autoPlayAudio={true}
-                  className="mx-auto"
-                />
+              {/* Video de bienvenida */}
+              <div className="relative w-full max-w-sm mx-auto mb-6">
+                <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-xl shadow-primary/10 bg-background aspect-[9/16]">
+                  <video
+                    src="/rio-consent-video.mp4"
+                    autoPlay
+                    playsInline
+                    muted
+                    loop
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
               </div>
-              
-              {/* Brand badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 mb-6">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs font-semibold text-primary tracking-wide">EVALUACIÓN IMPLANTX</span>
+
+              {/* Consent Section */}
+              <div className="mt-6 p-4 bg-background/50 border border-border/50 rounded-2xl">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Al continuar, acepto que mis datos serán procesados de forma anónima y segura para generar mi evaluación personalizada.
+                </p>
+                <Button
+                  onClick={() => setStep('name')}
+                  className="w-full h-14 text-base font-semibold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25"
+                >
+                  <Shield className="w-5 h-5 mr-2" />
+                  Acepto y Continúo
+                </Button>
               </div>
-              
-              <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-                ¡Hola! Soy <span className="text-primary">Río</span>
-              </h1>
-              <p className="text-lg text-foreground/80 mb-2 font-medium">
-                Tu Asistente de Evaluación con IA
-              </p>
-              <p className="text-base text-muted-foreground leading-relaxed max-w-md mx-auto">
-                Te guiaré en una evaluación rápida que será analizada por <strong className="text-foreground">IA Predictiva</strong> para conocer tus posibilidades de colocarte implantes dentales.
-              </p>
 
               {/* Trust badges - Premium */}
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-8 pt-6 border-t border-border/50">
+              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-6 pt-6 border-t border-border/50">
                 <div className="flex items-center gap-2 text-sm text-foreground/70">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Shield className="w-4 h-4 text-primary" />
