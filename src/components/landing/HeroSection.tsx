@@ -1,13 +1,31 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Play, Pause } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
 
 const HeroSection = () => {
   const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+  };
 
   return (
-    <div className="max-w-3xl mx-auto text-center pt-12 sm:pt-20 lg:pt-24 pb-8 sm:pb-12">
+    <div className="max-w-5xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16 pb-8 sm:pb-12">
       {/* Trust Badges */}
-      <div className="flex items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+      <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
           <span className="text-[0.65rem] sm:text-[0.7rem] text-primary uppercase tracking-widest font-medium">
@@ -21,7 +39,7 @@ const HeroSection = () => {
       </div>
 
       {/* Emotional Hook */}
-      <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4 sm:mb-6 leading-tight">
+      <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4 leading-tight">
         <span className="bg-gradient-to-b from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
           Recupera tu sonrisa
         </span>
@@ -32,13 +50,56 @@ const HeroSection = () => {
       </h1>
 
       {/* Value Proposition */}
-      <p className="text-lg sm:text-xl lg:text-2xl text-foreground/80 font-medium mb-3 sm:mb-4">
+      <p className="text-base sm:text-lg lg:text-xl text-foreground/80 font-medium mb-2 sm:mb-3">
         Descubre en 5 minutos si eres candidato a implantes dentales
       </p>
 
-      <p className="text-sm sm:text-base text-foreground/50 font-normal max-w-lg mx-auto leading-relaxed px-4 mb-8 sm:mb-10">
-        Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada antes de ir al dentista.
+      <p className="text-sm text-foreground/50 font-normal max-w-lg mx-auto leading-relaxed px-4 mb-6 sm:mb-8">
+        Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada.
       </p>
+
+      {/* Video Avatar Section */}
+      <div className="relative max-w-xs sm:max-w-sm md:max-w-md mx-auto mb-8 sm:mb-10">
+        {/* Glow effect */}
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/20 blur-2xl scale-105 opacity-60" />
+        
+        {/* Video container */}
+        <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background/50 backdrop-blur-sm">
+          <video
+            ref={videoRef}
+            src="/rio-welcome-video.mp4"
+            playsInline
+            preload="metadata"
+            onEnded={handleVideoEnded}
+            className="w-full h-auto object-contain bg-gradient-to-b from-background to-muted/30"
+          />
+          
+          {/* Play/Pause overlay button */}
+          <button
+            onClick={togglePlay}
+            className={`absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-[2px] transition-all duration-300 ${
+              isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'
+            }`}
+          >
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-transform hover:scale-110">
+              {isPlaying ? (
+                <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+              ) : (
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground ml-1" />
+              )}
+            </div>
+          </button>
+          
+          {/* Video label */}
+          {!isPlaying && (
+            <div className="absolute bottom-2 sm:bottom-3 left-2 right-2 sm:left-3 sm:right-3 flex items-center justify-center">
+              <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-[0.65rem] sm:text-xs font-medium text-foreground/80">
+                🎬 Conoce a Río, tu asistente de IA
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Main CTA */}
       <div className="max-w-xs sm:max-w-sm mx-auto mb-6">
