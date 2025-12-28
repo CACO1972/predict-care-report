@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import RioAvatar from "@/components/RioAvatar";
 import RioConversational from "@/components/RioConversational";
@@ -15,7 +15,7 @@ import { calculateRiskAssessment, EnhancedAssessmentResult } from "@/utils/riskC
 import { getQuestionConfig } from "@/utils/questionConfig";
 import { useRioFeedback } from "@/hooks/useRioFeedback";
 import { useRioExpression, RioExpression, getFeedbackTypeFromAnswer } from "@/hooks/useRioExpression";
-import { Loader2, Sparkles, Shield, Clock, Award, ArrowLeft } from "lucide-react";
+import { Loader2, Sparkles, Shield, Clock, Award, ArrowLeft, Volume2, VolumeX } from "lucide-react";
 import logoMiro from "@/assets/logo-miro-largo-blanco.png";
 import { triggerConfetti } from "@/utils/confetti";
 
@@ -76,6 +76,8 @@ const PatientQuestionnaire = () => {
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
   const [showLeadCapture, setShowLeadCapture] = useState(false);
   const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const welcomeVideoRef = useRef<HTMLVideoElement>(null);
   const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | undefined>(undefined);
 
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
@@ -359,13 +361,31 @@ const PatientQuestionnaire = () => {
               <div className="relative w-full max-w-sm mx-auto mb-6">
                 <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-xl shadow-primary/10 bg-background aspect-[9/16]">
                   <video
+                    ref={welcomeVideoRef}
                     src="/rio-consent-video.mp4"
                     autoPlay
                     playsInline
-                    muted
+                    muted={isMuted}
                     loop
                     className="absolute inset-0 w-full h-full object-cover"
                   />
+                  
+                  {/* Sound toggle button */}
+                  <button
+                    onClick={() => {
+                      setIsMuted(!isMuted);
+                      if (welcomeVideoRef.current) {
+                        welcomeVideoRef.current.muted = !isMuted;
+                      }
+                    }}
+                    className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-background transition-colors"
+                  >
+                    {isMuted ? (
+                      <VolumeX className="w-5 h-5 text-foreground/70" />
+                    ) : (
+                      <Volume2 className="w-5 h-5 text-primary" />
+                    )}
+                  </button>
                 </div>
               </div>
 
