@@ -78,16 +78,20 @@ const HeroSection = () => {
             style={{ imageRendering: 'auto' }}
           />
           
-          {/* Play/Pause overlay button */}
+          {/* Play/Pause button - moves to corner when playing */}
           <button
             onClick={togglePlay}
-            className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
-              isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'
+            className={`absolute transition-all duration-500 ease-out ${
+              isPlaying 
+                ? 'bottom-2 right-2 sm:bottom-3 sm:right-3 opacity-70 hover:opacity-100' 
+                : 'inset-0 flex items-center justify-center'
             }`}
           >
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-transform hover:scale-110">
+            <div className={`rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-110 ${
+              isPlaying ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-14 h-14 sm:w-16 sm:h-16'
+            }`}>
               {isPlaying ? (
-                <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+                <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
               ) : (
                 <Play className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground ml-1" />
               )}
