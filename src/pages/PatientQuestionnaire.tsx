@@ -426,20 +426,6 @@ const PatientQuestionnaire = () => {
               </div>
             </div>
 
-            {/* CTA Button - Premium */}
-            <Button 
-              onClick={() => setStep('name')} 
-              size="lg" 
-              className="w-full h-14 text-lg font-bold rounded-2xl bg-primary text-primary-foreground hover:brightness-110 transition-all duration-300 shadow-lg shadow-primary/25 group"
-            >
-              Comenzar Evaluación
-              <Sparkles className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
-            </Button>
-            
-            {/* Subtext */}
-            <p className="text-xs text-muted-foreground/60">
-              Sin registro · Resultados inmediatos · Basado en 17,025 casos
-            </p>
           </div>
         );
 
