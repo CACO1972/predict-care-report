@@ -446,7 +446,7 @@ const PatientQuestionnaire = () => {
       case 'name':
         return (
           <div className="space-y-6 animate-fade-in">
-            <RioAvatar message="Para empezar, por favor dime tu nombre." customAudioUrl="/audio/hola-soy-rio.mp3?v=3" />
+            <RioAvatar message="Para empezar, por favor dime tu nombre." customAudioUrl="/audio/rio-nombre.mp3" />
             <QuestionCard
               question="¿Cuál es tu nombre?"
               type="text"
