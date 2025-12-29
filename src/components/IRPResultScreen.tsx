@@ -15,6 +15,9 @@ interface IRPResultScreenProps {
   onPurchasePlan: () => void;
 }
 
+const MERCADOPAGO_PLAN_ACCION = "https://mpago.la/2eWC5q6"; // $14.990
+const MERCADOPAGO_PREMIUM = "https://mpago.li/2jpxDi2"; // $29.990
+
 const IRPResultScreen = ({ 
   irpResult, 
   patientName,
@@ -23,6 +26,11 @@ const IRPResultScreen = ({
 }: IRPResultScreenProps) => {
   const [isHoveringPremium, setIsHoveringPremium] = useState(false);
   const colorClasses = getIRPColorClass(irpResult.level);
+
+  const handlePurchasePlan = () => {
+    window.open(MERCADOPAGO_PLAN_ACCION, '_blank');
+    onPurchasePlan();
+  };
 
   // Beneficios del Plan de Acción
   const planBenefits = [
@@ -129,7 +137,7 @@ const IRPResultScreen = ({
           )}
           onMouseEnter={() => setIsHoveringPremium(true)}
           onMouseLeave={() => setIsHoveringPremium(false)}
-          onClick={onPurchasePlan}
+          onClick={handlePurchasePlan}
         >
           {/* Badge recomendado */}
           <div className="absolute top-0 right-0">
