@@ -1123,11 +1123,17 @@ const PatientQuestionnaire = () => {
 
         return (
           <div className="space-y-6 animate-fade-in">
-            <RioAvatar 
-              message={`¡Excelente, ${userProfile.name}! Hemos completado tu evaluación. Tu reporte personalizado está listo. Este documento será muy valioso para ti y tu especialista.`}
-              userName={userProfile.name}
+            <ReportPreview 
+              evaluation={{
+                ...evaluationData,
+                irpResult: irpResult ? {
+                  score: irpResult.score,
+                  level: irpResult.level,
+                  message: irpResult.message
+                } : undefined
+              }} 
+              purchaseLevel={purchaseLevel}
             />
-            <ReportPreview evaluation={evaluationData} />
           </div>
         );
 
