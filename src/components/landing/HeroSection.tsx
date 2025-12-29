@@ -72,10 +72,9 @@ const HeroSection = () => {
             src="/hero-intro-v5.mp4"
             poster={rioThumbnail}
             playsInline
-            preload="auto"
+            preload="metadata"
             onEnded={handleVideoEnded}
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ imageRendering: 'auto' }}
           />
           
           {/* Play/Pause button - moves to corner when playing */}

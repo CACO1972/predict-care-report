@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 
 interface RioVideoAvatarProps {
   autoPlay?: boolean;
@@ -34,10 +35,12 @@ const RioVideoAvatar = ({
         <video
           ref={videoRef}
           src="/rio-avatar-implantx.mp4"
+          poster={rioThumbnail}
           autoPlay={autoPlay}
           muted={muted}
           loop={loop}
           playsInline
+          preload="metadata"
           className="w-full h-[120%] object-cover object-[center_25%]"
         />
       </div>

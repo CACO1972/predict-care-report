@@ -1,6 +1,7 @@
 import { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
+import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 
 interface WelcomeStepProps {
   isMuted: boolean;
@@ -21,8 +22,10 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
             <video
               ref={welcomeVideoRef}
               src="/rio-consent-video.mp4"
+              poster={rioThumbnail}
               autoPlay
               playsInline
+              preload="metadata"
               muted={isMuted}
               loop
               className="absolute inset-0 w-full h-full object-cover"
