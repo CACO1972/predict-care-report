@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import RioAvatar from "@/components/RioAvatar";
 import RioConversational from "@/components/RioConversational";
@@ -1247,11 +1248,48 @@ const PatientQuestionnaire = () => {
       {/* Lead Capture Modal */}
       <LeadCaptureModal
         isOpen={showLeadCapture}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           setLeadData(data);
           setShowLeadCapture(false);
           setStep('results');
           triggerConfetti();
+          
+          // Envío automático del email con el reporte
+          if (purchaseLevel === 'free' && assessmentResult) {
+            try {
+              const reportId = `EV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+              const { error } = await supabase.functions.invoke('send-report-email', {
+                body: {
+                  email: data.email,
+                  patientName: userProfile.name || 'Paciente',
+                  reportId,
+                  date: new Date().toLocaleDateString('es-ES'),
+                  successRange: `${assessmentResult.successProbability}%`,
+                  purchaseLevel: 'free',
+                  irpScore: irpResult?.score,
+                  irpLevel: irpResult?.level,
+                  pronosticoLabel: assessmentResult.pronosticoLabel,
+                  factors: assessmentResult.riskFactors?.slice(0, 3).map(rf => ({
+                    name: rf.name,
+                    value: rf.impact === 'high' ? 'Alto' : rf.impact === 'medium' ? 'Medio' : 'Bajo',
+                    impact: rf.impact === 'high' ? 15 : rf.impact === 'medium' ? 10 : 5
+                  })),
+                  recommendations: assessmentResult.recommendations?.slice(0, 2).map(rec => ({
+                    text: rec.title,
+                    evidence: rec.description
+                  }))
+                }
+              });
+              
+              if (error) {
+                console.error('Error sending email:', error);
+              } else {
+                console.log('Email sent automatically to:', data.email);
+              }
+            } catch (err) {
+              console.error('Error invoking send-report-email:', err);
+            }
+          }
         }}
         patientName={userProfile.name}
       />
