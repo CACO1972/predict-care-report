@@ -458,6 +458,7 @@ const PatientQuestionnaire = () => {
               onChange={(value) => setUserProfile({ ...userProfile, name: value as string })}
               onNext={handleNext}
               nextButtonText="Continuar"
+              hideNextButton={true}
             />
           </div>
         );
@@ -486,19 +487,12 @@ const PatientQuestionnaire = () => {
                 value={userProfile.gender}
                 onChange={(value) => {
                   setUserProfile({ ...userProfile, gender: value as 'male' | 'female' | 'other' });
+                  // Auto-avanzar después de un breve delay para que el usuario vea su selección
+                  setTimeout(() => handleNext(), 500);
                 }}
                 onNext={() => {}}
                 hideNextButton={true}
               />
-            )}
-            {userProfile.age && userProfile.gender && (
-              <Button 
-                onClick={handleNext}
-                size="lg" 
-                className="w-full h-12 text-base font-medium rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all"
-              >
-                Continuar →
-              </Button>
             )}
           </div>
         );
