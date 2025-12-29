@@ -48,7 +48,7 @@ const generateEmailHTML = (data: ReportEmailRequest): string => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tu Reporte ImplantX</title>
+  <title>Tu informe ImplantX + Recursos extra</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0a0f1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -82,10 +82,10 @@ const generateEmailHTML = (data: ReportEmailRequest): string => {
               
               <!-- Greeting -->
               <h1 style="margin: 0 0 10px 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-                ¡Hola ${data.patientName}! 👋
+                ¡Hola ${data.patientName}! 📄
               </h1>
               <p style="margin: 0 0 30px 0; color: #94a3b8; font-size: 16px; line-height: 1.6;">
-                Aquí tienes tu reporte de evaluación dental personalizado.
+                Aquí tienes tu informe de evaluación dental personalizado junto con recursos adicionales para prepararte mejor.
               </p>
               
               <!-- Report Card -->
@@ -171,20 +171,123 @@ const generateEmailHTML = (data: ReportEmailRequest): string => {
               </div>
               ` : ''}
               
+              <!-- Resources Section (for all users) -->
+              <div style="margin-top: 30px; padding: 24px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+                  📚 Recursos Extra Incluidos
+                </h3>
+                <table role="presentation" style="width: 100%;">
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                      <table role="presentation" style="width: 100%;">
+                        <tr>
+                          <td style="width: 40px; vertical-align: top;">
+                            <span style="font-size: 20px;">📖</span>
+                          </td>
+                          <td>
+                            <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">Guía: "Prepárate para tu implante"</p>
+                            <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Todo lo que necesitas saber antes de tu tratamiento</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                      <table role="presentation" style="width: 100%;">
+                        <tr>
+                          <td style="width: 40px; vertical-align: top;">
+                            <span style="font-size: 20px;">✅</span>
+                          </td>
+                          <td>
+                            <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">Checklist pre-operatorio</p>
+                            <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Lista de verificación para el día de tu procedimiento</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0;">
+                      <table role="presentation" style="width: 100%;">
+                        <tr>
+                          <td style="width: 40px; vertical-align: top;">
+                            <span style="font-size: 20px;">❓</span>
+                          </td>
+                          <td>
+                            <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">Preguntas clave para tu dentista</p>
+                            <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Las 10 preguntas más importantes antes del tratamiento</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              
               ${data.purchaseLevel === 'free' ? `
-              <!-- Upsell for Free -->
-              <div style="margin-top: 30px; padding: 24px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3); text-align: center;">
-                <p style="margin: 0 0 8px 0; color: #F59E0B; font-size: 14px; font-weight: 600;">
-                  🔓 Desbloquea tu Reporte Completo
+              <!-- Premium Upsell CTA - Destacado -->
+              <div style="margin-top: 30px; padding: 32px 24px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border-radius: 16px; border: 2px solid rgba(245, 158, 11, 0.4); text-align: center;">
+                <div style="margin-bottom: 16px;">
+                  <span style="font-size: 32px;">🎯</span>
+                </div>
+                <h3 style="margin: 0 0 8px 0; color: #F59E0B; font-size: 20px; font-weight: bold;">
+                  ¿Listo para tu plan personalizado?
+                </h3>
+                <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+                  Tu IRP de ${data.irpScore || 'tu perfil'} tiene potencial de mejora
                 </p>
-                <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 13px;">
-                  Obtén tu IRP detallado, plan de acción personalizado y recomendaciones de especialistas.
+                <p style="margin: 0 0 20px 0; color: #94a3b8; font-size: 14px; line-height: 1.5;">
+                  Obtén un plan de acción paso a paso para optimizar tu perfil antes del tratamiento y aumentar significativamente tus probabilidades de éxito.
                 </p>
-                <a href="https://mpago.la/2eWC5q6" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #F59E0B, #D97706); color: #000; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 8px;">
-                  Obtener Plan de Acción - $14.990
+                
+                <!-- Benefits list -->
+                <table role="presentation" style="width: 100%; margin-bottom: 24px;">
+                  <tr>
+                    <td style="padding: 6px 0;">
+                      <span style="color: #22c555;">✓</span>
+                      <span style="color: #ffffff; font-size: 13px; margin-left: 8px;">Plan de acción personalizado semana a semana</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0;">
+                      <span style="color: #22c555;">✓</span>
+                      <span style="color: #ffffff; font-size: 13px; margin-left: 8px;">Recomendaciones específicas según tu IRP</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0;">
+                      <span style="color: #22c555;">✓</span>
+                      <span style="color: #ffffff; font-size: 13px; margin-left: 8px;">Checklist pre-operatorio completo</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0;">
+                      <span style="color: #22c555;">✓</span>
+                      <span style="color: #ffffff; font-size: 13px; margin-left: 8px;">Documento para compartir con tu dentista</span>
+                    </td>
+                  </tr>
+                </table>
+                
+                <a href="https://mpago.la/2eWC5q6" style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #F59E0B, #D97706); color: #000; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);">
+                  Obtener Plan de Acción - $14.900
                 </a>
+                
+                <p style="margin: 16px 0 0 0; color: #64748b; font-size: 11px;">
+                  🔒 Pago seguro con MercadoPago • Acceso inmediato
+                </p>
               </div>
               ` : ''}
+              
+              <!-- Help Section -->
+              <div style="margin-top: 30px; padding: 20px; background: rgba(0, 191, 165, 0.05); border-radius: 12px; border: 1px solid rgba(0, 191, 165, 0.2);">
+                <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">
+                  💡 ¿Tienes dudas sobre tu resultado?
+                </p>
+                <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
+                  Este informe está diseñado para que lo compartas con tu dentista. Él o ella podrá usar esta información para planificar mejor tu tratamiento.
+                </p>
+              </div>
               
             </td>
           </tr>
@@ -193,10 +296,13 @@ const generateEmailHTML = (data: ReportEmailRequest): string => {
           <tr>
             <td style="padding: 30px; background: linear-gradient(135deg, #0d1520 0%, #1a2332 100%); border-radius: 0 0 16px 16px; border: 1px solid rgba(0, 191, 165, 0.2); border-top: none; text-align: center;">
               <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px;">
-                Este reporte fue generado por ImplantX®
+                Este informe fue generado por ImplantX®
               </p>
               <p style="margin: 0; color: #64748b; font-size: 11px;">
                 © 2024 ImplantX - Tecnología de Inteligencia Artificial para Evaluación Dental
+              </p>
+              <p style="margin: 12px 0 0 0; color: #475569; font-size: 10px;">
+                Si no solicitaste este correo, puedes ignorarlo de forma segura.
               </p>
             </td>
           </tr>
@@ -226,8 +332,12 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Email y nombre del paciente son requeridos");
     }
 
-    const levelLabel = getLevelLabel(data.purchaseLevel);
     const html = generateEmailHTML(data);
+    
+    // Subject line based on purchase level
+    const subject = data.purchaseLevel === 'free' 
+      ? `Tu informe ImplantX + Recursos extra 📄`
+      : `Tu Reporte ImplantX ${getLevelLabel(data.purchaseLevel)} - ${data.patientName}`;
 
     console.log("Sending email to:", data.email);
     
@@ -240,7 +350,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "ImplantX <onboarding@resend.dev>",
         to: [data.email],
-        subject: `Tu Reporte ImplantX ${levelLabel} - ${data.patientName}`,
+        subject,
         html,
       }),
     });
