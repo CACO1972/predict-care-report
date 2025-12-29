@@ -50,18 +50,13 @@ const TrustSection = () => {
       <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-card/80 to-card/40 border border-primary/20">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-8">
           {/* Badge */}
-          <a
-            href="https://www.safecreative.org/work/2510073245348"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:scale-105 transition-transform shrink-0"
-          >
+          <div className="shrink-0">
             <img
               src="https://resources.safecreative.org/work/2510073245348/label/standard2-72"
               alt="Safe Creative - Propiedad Intelectual Registrada"
               className="h-24 sm:h-28 lg:h-32"
             />
-          </a>
+          </div>
 
           {/* Info */}
           <div className="flex-1 text-center lg:text-left">
