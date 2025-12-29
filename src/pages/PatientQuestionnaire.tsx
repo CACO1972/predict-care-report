@@ -12,7 +12,8 @@ import AnswersSummary from "@/components/AnswersSummary";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
 import IRPProcessingScreen from "@/components/IRPProcessingScreen";
 import IRPResultScreen from "@/components/IRPResultScreen";
-import { UserProfile, DensityProAnswers, ImplantXAnswers, QuestionnaireStep } from "@/types/questionnaire";
+import UpsellPremiumScreen from "@/components/UpsellPremiumScreen";
+import { UserProfile, DensityProAnswers, ImplantXAnswers, QuestionnaireStep, PurchaseLevel } from "@/types/questionnaire";
 import { calculateRiskAssessment, EnhancedAssessmentResult } from "@/utils/riskCalculation";
 import { calculateIRP, IRPResult } from "@/utils/irpCalculation";
 import { getQuestionConfig } from "@/utils/questionConfig";
@@ -73,6 +74,7 @@ const PatientQuestionnaire = () => {
   const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>({});
   const [assessmentResult, setAssessmentResult] = useState<EnhancedAssessmentResult | null>(null);
   const [irpResult, setIrpResult] = useState<IRPResult | null>(null);
+  const [purchaseLevel, setPurchaseLevel] = useState<PurchaseLevel>('free');
   const [showRioResponse, setShowRioResponse] = useState(false);
   const [pendingNextStep, setPendingNextStep] = useState<(() => void) | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -956,15 +958,34 @@ const PatientQuestionnaire = () => {
             irpResult={irpResult}
             patientName={userProfile.name || 'Paciente'}
             onContinueFree={() => {
-              // Por ahora, continuar con el flujo normal
+              // Usuario elige opción gratuita
+              setPurchaseLevel('free');
               setStep('implant-history');
             }}
             onPurchasePlan={() => {
-              // TODO: Integrar MercadoPago - por ahora continuar
-              setStep('implant-history');
+              // Usuario compró Plan de Acción - mostrar upsell
+              setPurchaseLevel('plan-accion');
+              setStep('upsell-premium');
             }}
           />
         ) : null;
+
+      case 'upsell-premium':
+        return (
+          <UpsellPremiumScreen
+            patientName={userProfile.name || 'Paciente'}
+            onUpgrade={() => {
+              // Usuario compró Premium
+              setPurchaseLevel('premium');
+              triggerConfetti();
+              setStep('implant-history');
+            }}
+            onSkip={() => {
+              // Usuario rechazó upsell, continua con Plan de Acción
+              setStep('implant-history');
+            }}
+          />
+        );
 
       case 'odontogram':
         const handleImageContinue = () => {

@@ -65,7 +65,8 @@ export type QuestionnaireStep =
   | 'diabetes'
   | 'gum-health' // Preguntas periodontales (3 en 1)
   | 'irp-processing' // Procesamiento IA del IRP
-  | 'irp-result' // Resultado del IRP con upsell
+  | 'irp-result' // Resultado del IRP con upsell Plan de Acción
+  | 'upsell-premium' // Upsell a Informe Premium después del pago
   | 'implant-history'
   | 'tooth-loss'
   | 'tooth-loss-time'
@@ -74,3 +75,5 @@ export type QuestionnaireStep =
   | 'summary'
   | 'processing'
   | 'results';
+
+export type PurchaseLevel = 'free' | 'plan-accion' | 'premium';
