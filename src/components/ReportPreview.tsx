@@ -137,6 +137,8 @@ const ImageAnalysisSections = ({ analysis }: { analysis: string }) => {
   );
 };
 
+type PurchaseLevel = 'free' | 'plan-accion' | 'premium';
+
 interface ReportPreviewProps {
   evaluation: {
     id: string;
@@ -151,11 +153,17 @@ interface ReportPreviewProps {
     uploadedImage?: string | null;
     imageAnalysis?: string | null;
     synergies?: string[];
-    nTeeth?: number; // Number of teeth to rehabilitate
+    nTeeth?: number;
+    irpResult?: {
+      score: number;
+      level: string;
+      message: string;
+    };
   };
+  purchaseLevel?: PurchaseLevel;
 }
 
-const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
+const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -172,7 +180,9 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
           successRange: getSuccessRange(evaluation.successProbability),
           factors: evaluation.factors,
           recommendations: evaluation.recommendations,
-          synergies: evaluation.synergies
+          synergies: evaluation.synergies,
+          purchaseLevel: purchaseLevel,
+          irpResult: evaluation.irpResult
         }
       });
 
@@ -206,7 +216,29 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
 
   const pronosticoColor = evaluation.pronosticoColor || 'success';
   const isWarning = pronosticoColor === 'warning';
-
+  
+  const getLevelBadge = () => {
+    if (purchaseLevel === 'premium') {
+      return (
+        <span className="px-3 py-1 bg-gradient-to-r from-yellow-500/20 to-primary/20 text-yellow-500 text-[10px] font-bold rounded-full border border-yellow-500/30 flex items-center gap-1">
+          <Crown className="w-3 h-3" />
+          PREMIUM
+        </span>
+      );
+    }
+    if (purchaseLevel === 'plan-accion') {
+      return (
+        <span className="px-3 py-1 bg-primary/20 text-primary text-[10px] font-bold rounded-full border border-primary/30">
+          📋 PLAN DE ACCIÓN
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full">
+        BÁSICO
+      </span>
+    );
+  };
   return (
     <Card className="overflow-hidden border border-primary/20 rounded-2xl shadow-xl shadow-primary/5">
       {/* Header con branding premium */}
@@ -221,11 +253,9 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
               <span className="text-primary-foreground font-bold text-lg">IX</span>
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h3 className="font-bold text-foreground text-lg">Reporte ImplantX</h3>
-                <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full">
-                  OFICIAL
-                </span>
+                {getLevelBadge()}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>ID: {evaluation.id}</span>
@@ -291,6 +321,97 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
             </p>
           </div>
         </div>
+
+        {/* IRP Section - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && evaluation.irpResult && (
+          <div className="rounded-2xl p-6 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Target className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h4 className="font-bold text-foreground">Tu Índice de Riesgo Personalizado (IRP)</h4>
+                <p className="text-xs text-muted-foreground">Análisis detallado de tu perfil</p>
+              </div>
+            </div>
+            <div className="text-center py-4">
+              <div className="text-5xl font-bold text-primary mb-2">{evaluation.irpResult.score}</div>
+              <span className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-semibold",
+                evaluation.irpResult.level === 'Bajo' && "bg-green-500/20 text-green-500",
+                evaluation.irpResult.level === 'Moderado' && "bg-yellow-500/20 text-yellow-500",
+                evaluation.irpResult.level === 'Alto' && "bg-red-500/20 text-red-500"
+              )}>
+                Riesgo {evaluation.irpResult.level}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground text-center">{evaluation.irpResult.message}</p>
+          </div>
+        )}
+
+        {/* Plan de Acción Personalizado - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <div className="rounded-2xl p-6 bg-muted/30 border border-border space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h4 className="font-bold text-foreground">Tu Plan de Acción Personalizado</h4>
+                <p className="text-xs text-muted-foreground">Pasos concretos hacia tu tratamiento</p>
+              </div>
+            </div>
+            <div className="relative pl-6 space-y-4">
+              <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-primary/30" />
+              {[
+                { week: 'Semana 1-2', title: 'Preparación', desc: 'Optimiza tu salud bucal con las recomendaciones específicas de tu perfil.' },
+                { week: 'Semana 3', title: 'Consulta Especializada', desc: 'Lleva este reporte a tu consulta. Tu dentista tendrá toda la información clínica necesaria.' },
+                { week: 'Evaluación', title: 'Evaluación Clínica', desc: 'Tu especialista realizará radiografías y exámenes complementarios según tu perfil de riesgo.' },
+                { week: 'Tratamiento', title: 'Tratamiento Personalizado', desc: 'Recibe un plan de tratamiento adaptado a tus factores específicos.' }
+              ].map((step, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0 relative z-10">
+                    {i + 1}
+                  </div>
+                  <div>
+                    <p className="text-xs text-primary font-medium">{step.week}</p>
+                    <p className="font-semibold text-foreground text-sm">{step.title}</p>
+                    <p className="text-xs text-muted-foreground">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Checklist Preoperatorio - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <div className="rounded-2xl p-6 bg-green-500/5 border border-green-500/20 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-foreground">Checklist Preoperatorio</h4>
+                <p className="text-xs text-muted-foreground">Prepárate para tu tratamiento</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[
+                'Limpieza dental profesional realizada',
+                'Control de factores de riesgo (tabaco, diabetes, etc.)',
+                'Radiografía panorámica actualizada',
+                'Evaluación periodontal completada',
+                'Exámenes de sangre (si aplica)'
+              ].map((item, i) => (
+                <label key={i} className="flex items-center gap-3 p-3 rounded-lg bg-green-500/5 hover:bg-green-500/10 cursor-pointer transition-colors">
+                  <input type="checkbox" className="w-5 h-5 accent-green-500 rounded" />
+                  <span className="text-sm text-foreground">{item}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Aclaración sobre situación actual y potencial de mejora */}
         <ImprovementPotential 
@@ -494,12 +615,137 @@ const ReportPreview = ({ evaluation }: ReportPreviewProps) => {
         {/* Próximos pasos - Cards con iconos grandes */}
         <NextStepsCards />
 
-        {/* Premium Report Section with Ebook + Smile Simulation */}
-        <PremiumReportSection 
-          patientName={evaluation.patient}
-          uploadedImage={evaluation.uploadedImage}
-          pronosticoLabel={evaluation.pronosticoLabel}
-        />
+        {/* Contenido Exclusivo Premium */}
+        {purchaseLevel === 'premium' && (
+          <div className="rounded-2xl p-6 bg-gradient-to-br from-yellow-500/10 to-primary/10 border-2 border-yellow-500/30 space-y-6">
+            <div className="text-center">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-primary text-primary-foreground rounded-full text-sm font-bold">
+                <Crown className="w-4 h-4" />
+                CONTENIDO EXCLUSIVO PREMIUM
+              </span>
+            </div>
+
+            {/* Análisis Avanzado */}
+            <div className="bg-background/50 rounded-xl p-5 border border-yellow-500/20 space-y-3">
+              <h4 className="font-bold text-foreground flex items-center gap-2">
+                <Activity className="w-5 h-5 text-yellow-500" />
+                Análisis Avanzado de tu Caso
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Basado en tus respuestas y el análisis de 17,025 casos similares, hemos identificado los siguientes patrones específicos para tu perfil:
+              </p>
+              <ul className="space-y-2 text-sm text-foreground">
+                <li className="flex items-start gap-2">
+                  <ArrowRight className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  Tu combinación de factores tiene un comportamiento documentado en estudios longitudinales.
+                </li>
+                <li className="flex items-start gap-2">
+                  <ArrowRight className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  Los casos similares al tuyo muestran tasas de éxito dentro del rango {getSuccessRange(evaluation.successProbability)}.
+                </li>
+                <li className="flex items-start gap-2">
+                  <ArrowRight className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  La evidencia sugiere que siguiendo las recomendaciones, puedes optimizar tu pronóstico.
+                </li>
+              </ul>
+            </div>
+
+            {/* Estimación de Inversión */}
+            <div className="bg-background/50 rounded-xl p-5 border border-yellow-500/20 space-y-3">
+              <h4 className="font-bold text-foreground flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-yellow-500" />
+                Estimación de Inversión
+              </h4>
+              <div className="text-center py-4 bg-primary/5 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">Basado en tu caso, la inversión estimada en Chile es:</p>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-2xl font-bold text-primary">$800.000</span>
+                  <span className="text-muted-foreground">-</span>
+                  <span className="text-2xl font-bold text-primary">$1.500.000 CLP</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 italic">*Por implante. Incluye corona. Puede variar según complejidad y profesional.</p>
+              </div>
+            </div>
+
+            {/* Cronograma */}
+            <div className="bg-background/50 rounded-xl p-5 border border-yellow-500/20 space-y-3">
+              <h4 className="font-bold text-foreground flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-yellow-500" />
+                Cronograma Típico de Tratamiento
+              </h4>
+              <div className="space-y-2">
+                {[
+                  { time: 'Día 1', event: 'Cirugía de colocación del implante' },
+                  { time: 'Semana 1-2', event: 'Cicatrización inicial y control' },
+                  { time: 'Mes 2-4', event: 'Osteointegración (fusión con el hueso)' },
+                  { time: 'Mes 4-6', event: 'Colocación de la corona definitiva' }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 p-3 bg-primary/5 rounded-lg">
+                    <span className="font-semibold text-primary min-w-[100px] text-sm">{item.time}</span>
+                    <span className="text-sm text-foreground">{item.event}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Preguntas para tu Especialista */}
+            <div className="bg-background/50 rounded-xl p-5 border border-yellow-500/20 space-y-3">
+              <h4 className="font-bold text-foreground flex items-center gap-2">
+                <Stethoscope className="w-5 h-5 text-yellow-500" />
+                Preguntas para tu Especialista
+              </h4>
+              <ul className="space-y-2 text-sm text-foreground">
+                {[
+                  '¿Qué marca y tipo de implante recomienda para mi caso?',
+                  '¿Necesito algún procedimiento previo (injerto óseo, elevación de seno)?',
+                  '¿Cuál es el protocolo de carga en mi caso (inmediata vs. diferida)?',
+                  '¿Qué tipo de mantenimiento necesitaré a largo plazo?',
+                  '¿Ofrece garantía sobre el tratamiento?'
+                ].map((q, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-primary">❓</span>
+                    {q}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Upsell Banner - Solo para versión gratuita */}
+        {purchaseLevel === 'free' && (
+          <div className="rounded-2xl p-6 border-2 border-dashed border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 space-y-4">
+            <div className="flex items-start gap-4">
+              <span className="text-4xl">🚀</span>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-bold text-foreground text-lg">¿Quieres un Plan de Acción Personalizado?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Obtén tu checklist preoperatorio, cronograma detallado, IRP completo y guía paso a paso para prepararte para tu tratamiento.
+                  </p>
+                </div>
+                <a 
+                  href="https://mpago.la/2eWC5q6"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:brightness-110 transition-all"
+                >
+                  Obtener Plan de Acción
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Premium Report Section with Ebook + Smile Simulation - Solo si no es premium */}
+        {purchaseLevel !== 'premium' && (
+          <PremiumReportSection 
+            patientName={evaluation.patient}
+            uploadedImage={evaluation.uploadedImage}
+            pronosticoLabel={evaluation.pronosticoLabel}
+          />
+        )}
 
         {/* FAQ Section */}
         <div className="bg-muted/30 rounded-xl p-6 space-y-4">
