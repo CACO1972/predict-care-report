@@ -458,7 +458,7 @@ const PatientQuestionnaire = () => {
               onChange={(value) => setUserProfile({ ...userProfile, name: value as string })}
               onNext={handleNext}
               nextButtonText="Continuar"
-              hideNextButton={true}
+              hideNextButton={false}
             />
           </div>
         );
