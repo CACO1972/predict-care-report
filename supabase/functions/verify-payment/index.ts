@@ -23,10 +23,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create Supabase client
+    // Create Supabase client with service role for secure access
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Build query to find approved payments
     let query = supabase
