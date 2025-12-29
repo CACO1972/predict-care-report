@@ -1,4 +1,11 @@
 import { Shield, Award, Users, CheckCircle2, FileCheck, ExternalLink } from "lucide-react";
+import { useEffect, useRef } from "react";
+
+declare global {
+  interface Window {
+    SCLabelLoader: (workId: string, userId: string, options: object) => void;
+  }
+}
 
 const trustPoints = [
   {
@@ -19,6 +26,36 @@ const trustPoints = [
 ];
 
 const TrustSection = () => {
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const scriptLoaded = useRef(false);
+
+  useEffect(() => {
+    if (scriptLoaded.current) return;
+    scriptLoaded.current = true;
+
+    const script = document.createElement("script");
+    script.src = `https://s3.eu-west-1.amazonaws.com/sc-widgets/scLabelLoader.js?${Date.now()}`;
+    script.type = "text/javascript";
+    script.charset = "utf-8";
+    script.async = true;
+
+    script.onload = () => {
+      if (window.SCLabelLoader && widgetRef.current) {
+        window.SCLabelLoader("2510073245348", "2504145010774", {
+          tplName: "license",
+          locale: "es",
+          logo: "safecreative",
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto mb-12 sm:mb-16">
       <div className="text-center mb-8">
@@ -49,13 +86,9 @@ const TrustSection = () => {
       {/* Safe Creative Certificate - Enhanced */}
       <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-card/80 to-card/40 border border-primary/20">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-8">
-          {/* Badge */}
-          <div className="shrink-0">
-            <img
-              src="https://resources.safecreative.org/work/2510073245348/label/standard2-72"
-              alt="Safe Creative - Propiedad Intelectual Registrada"
-              className="h-24 sm:h-28 lg:h-32"
-            />
+          {/* Safe Creative Widget */}
+          <div ref={widgetRef} className="shrink-0">
+            <div id="scwdt2510073245348" className="scWidget scWidget-license"></div>
           </div>
 
           {/* Info */}
