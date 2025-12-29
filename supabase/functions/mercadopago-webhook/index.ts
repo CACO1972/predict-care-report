@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-signature, x-request-id',
 };
 
 interface MercadoPagoPayment {
@@ -18,6 +19,69 @@ interface MercadoPagoPayment {
     first_name?: string;
     last_name?: string;
   };
+}
+
+/**
+ * Verify MercadoPago webhook signature
+ * @see https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks#verificarorigenfirmadigital
+ */
+function verifyWebhookSignature(
+  xSignature: string | null,
+  xRequestId: string | null,
+  dataId: string,
+  webhookSecret: string
+): boolean {
+  if (!xSignature || !xRequestId) {
+    console.error('Missing x-signature or x-request-id headers');
+    return false;
+  }
+
+  // Parse x-signature header: "ts=...,v1=..."
+  const parts = xSignature.split(',');
+  let ts: string | null = null;
+  let v1: string | null = null;
+
+  for (const part of parts) {
+    const [key, value] = part.split('=');
+    if (key === 'ts') ts = value;
+    if (key === 'v1') v1 = value;
+  }
+
+  if (!ts || !v1) {
+    console.error('Invalid x-signature format');
+    return false;
+  }
+
+  // Build the manifest string as per MercadoPago documentation
+  // Format: id:[data.id];request-id:[x-request-id];ts:[ts];
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+
+  // Generate HMAC-SHA256 signature
+  const hmac = createHmac('sha256', webhookSecret);
+  hmac.update(manifest);
+  const generatedSignature = hmac.digest('hex');
+
+  // Constant-time comparison to prevent timing attacks
+  if (generatedSignature.length !== v1.length) {
+    return false;
+  }
+  
+  let result = 0;
+  for (let i = 0; i < generatedSignature.length; i++) {
+    result |= generatedSignature.charCodeAt(i) ^ v1.charCodeAt(i);
+  }
+  
+  const isValid = result === 0;
+  
+  if (!isValid) {
+    console.error('Signature verification failed', { 
+      manifest,
+      expected: v1,
+      generated: generatedSignature.substring(0, 10) + '...'
+    });
+  }
+
+  return isValid;
 }
 
 Deno.serve(async (req) => {
@@ -53,6 +117,37 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
+    }
+
+    // Verify webhook signature
+    const webhookSecret = Deno.env.get('MERCADOPAGO_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      const xSignature = req.headers.get('x-signature');
+      const xRequestId = req.headers.get('x-request-id');
+      
+      const isValid = verifyWebhookSignature(
+        xSignature,
+        xRequestId,
+        paymentId.toString(),
+        webhookSecret
+      );
+
+      if (!isValid) {
+        console.error('Invalid webhook signature - possible forgery attempt', {
+          paymentId,
+          xSignature: xSignature?.substring(0, 20) + '...',
+          xRequestId,
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip')
+        });
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        });
+      }
+      
+      console.log('Webhook signature verified successfully');
+    } else {
+      console.warn('MERCADOPAGO_WEBHOOK_SECRET not configured - signature verification skipped (NOT RECOMMENDED FOR PRODUCTION)');
     }
 
     // Fetch payment details from MercadoPago API
