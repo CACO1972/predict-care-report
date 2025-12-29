@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { 
   FileText, Download, CheckCircle2, AlertCircle, TrendingUp, 
   Calendar, User, Heart, Bone, Stethoscope, ArrowRight,
-  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard, Lock, ChevronDown, Loader2
+  Scan, Activity, Target, CircleAlert, Sparkles, Crown, CreditCard, Lock, ChevronDown, Loader2, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -165,6 +165,8 @@ interface ReportPreviewProps {
 
 const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -211,6 +213,59 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
       });
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const getSuccessRangeLocal = (percentage: number): string => {
+    if (percentage >= 95) return "95-98%";
+    if (percentage >= 90) return "90-95%";
+    if (percentage >= 85) return "85-92%";
+    if (percentage >= 80) return "80-88%";
+    if (percentage >= 70) return "70-82%";
+    if (percentage >= 60) return "60-75%";
+    return "50-65%";
+  };
+
+  const handleSendEmail = async () => {
+    // We need to get the email from somewhere - for now prompt user
+    const email = prompt("Ingresa tu email para recibir el reporte:");
+    if (!email || !email.includes('@')) {
+      toast.error("Email inválido", { description: "Por favor ingresa un email válido" });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-report-email', {
+        body: {
+          email,
+          patientName: evaluation.patient || 'Paciente',
+          reportId: evaluation.id,
+          date: evaluation.date,
+          successRange: getSuccessRangeLocal(evaluation.successProbability),
+          purchaseLevel,
+          irpScore: evaluation.irpResult?.score,
+          irpLevel: evaluation.irpResult?.level,
+          pronosticoLabel: evaluation.pronosticoLabel,
+          factors: evaluation.factors,
+          recommendations: evaluation.recommendations,
+        }
+      });
+
+      if (error) throw error;
+
+      setEmailSent(true);
+      toast.success("¡Reporte enviado!", {
+        description: `Tu reporte ha sido enviado a ${email}`
+      });
+    } catch (err) {
+      console.error('Error sending email:', err);
+      toast.error("Error al enviar email", {
+        description: "Intenta nuevamente en unos momentos"
+      });
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -264,19 +319,37 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
               </div>
             </div>
           </div>
-          <Button 
-            onClick={handleDownload} 
-            size="sm" 
-            disabled={isDownloading}
-            className="gap-2 rounded-xl bg-primary text-primary-foreground hover:brightness-110 disabled:opacity-50 shadow-md"
-          >
-            {isDownloading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            {isDownloading ? 'Generando...' : 'Descargar Reporte'}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              onClick={handleSendEmail} 
+              size="sm" 
+              variant="outline"
+              disabled={isSendingEmail || emailSent}
+              className="gap-2 rounded-xl disabled:opacity-50"
+            >
+              {isSendingEmail ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : emailSent ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              {isSendingEmail ? 'Enviando...' : emailSent ? 'Enviado' : 'Enviar por Email'}
+            </Button>
+            <Button 
+              onClick={handleDownload} 
+              size="sm" 
+              disabled={isDownloading}
+              className="gap-2 rounded-xl bg-primary text-primary-foreground hover:brightness-110 disabled:opacity-50 shadow-md"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isDownloading ? 'Generando...' : 'Descargar'}
+            </Button>
+          </div>
         </div>
       </div>
 
