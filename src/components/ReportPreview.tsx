@@ -486,29 +486,33 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
           </div>
         )}
 
-        {/* Aclaración sobre situación actual y potencial de mejora */}
-        <ImprovementPotential 
-          currentProbability={evaluation.successProbability}
-          factors={evaluation.factors}
-          synergies={evaluation.synergies}
-        />
+        {/* Aclaración sobre situación actual y potencial de mejora - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <ImprovementPotential 
+            currentProbability={evaluation.successProbability}
+            factors={evaluation.factors}
+            synergies={evaluation.synergies}
+          />
+        )}
 
-        {/* Simulador interactivo ¿Qué pasa si? */}
-        <WhatIfSimulator
-          currentProbability={evaluation.successProbability}
-          factors={evaluation.factors}
-          synergies={evaluation.synergies}
-        />
+        {/* Simulador interactivo ¿Qué pasa si? - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <WhatIfSimulator
+            currentProbability={evaluation.successProbability}
+            factors={evaluation.factors}
+            synergies={evaluation.synergies}
+          />
+        )}
 
-        {/* Share Buttons - Virality */}
+        {/* Share Buttons - Virality - Disponible para todos */}
         <ShareButtons 
           patientName={evaluation.patient}
           successProbability={evaluation.successProbability}
           pronosticoLabel={evaluation.pronosticoLabel}
         />
 
-        {/* Imagen y análisis de IA estructurado */}
-        {evaluation.uploadedImage && (
+        {/* Imagen y análisis de IA estructurado - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && evaluation.uploadedImage && (
           <div className="space-y-4">
             <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
               <Bone className="h-4 w-4 text-primary" />
@@ -556,7 +560,7 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
           </div>
         )}
 
-        {/* Metodología Científica y Validez Clínica */}
+        {/* Metodología Científica y Validez Clínica - Disponible para todos */}
         <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5 space-y-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -629,35 +633,39 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
           </div>
         </div>
 
-        {/* Synergy Factors Section */}
-        <div className="space-y-3">
-          <h4 className="font-semibold text-sm text-foreground">Análisis de Factores Combinados</h4>
-          <SynergyFactors 
-            synergies={evaluation.synergies || []} 
-          />
-        </div>
+        {/* Synergy Factors Section - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <div className="space-y-3">
+            <h4 className="font-semibold text-sm text-foreground">Análisis de Factores Combinados</h4>
+            <SynergyFactors 
+              synergies={evaluation.synergies || []} 
+            />
+          </div>
+        )}
 
-        {/* Treatment Infographic */}
-        <div className="space-y-3">
-          <h4 className="font-semibold text-sm text-foreground">Tu Guía de Tratamiento</h4>
-          <TreatmentInfographic
-            synergies={evaluation.synergies || []}
-            successProbability={evaluation.successProbability}
-            pronosticoLabel={evaluation.pronosticoLabel || 'Favorable'}
-            patientContext={{
-              nTeeth: evaluation.nTeeth || 1,
-              imageAnalysis: evaluation.imageAnalysis || undefined
-            }}
-          />
-        </div>
+        {/* Treatment Infographic - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <div className="space-y-3">
+            <h4 className="font-semibold text-sm text-foreground">Tu Guía de Tratamiento</h4>
+            <TreatmentInfographic
+              synergies={evaluation.synergies || []}
+              successProbability={evaluation.successProbability}
+              pronosticoLabel={evaluation.pronosticoLabel || 'Favorable'}
+              patientContext={{
+                nTeeth: evaluation.nTeeth || 1,
+                imageAnalysis: evaluation.imageAnalysis || undefined
+              }}
+            />
+          </div>
+        )}
 
-        {/* Factores Evaluados - Gráfico de Barras */}
-        {evaluation.factors.length > 0 && (
+        {/* Factores Evaluados - Gráfico de Barras - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && evaluation.factors.length > 0 && (
           <RiskFactorBars factors={evaluation.factors} />
         )}
 
-        {/* Recomendaciones con Cards */}
-        {evaluation.recommendations.length > 0 && (
+        {/* Recomendaciones con Cards - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && evaluation.recommendations.length > 0 && (
           <div className="space-y-3">
             <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
@@ -685,8 +693,10 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
           </div>
         )}
 
-        {/* Próximos pasos - Cards con iconos grandes */}
-        <NextStepsCards />
+        {/* Próximos pasos - Cards con iconos grandes - Solo Plan de Acción y Premium */}
+        {(purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && (
+          <NextStepsCards />
+        )}
 
         {/* Contenido Exclusivo Premium */}
         {purchaseLevel === 'premium' && (
