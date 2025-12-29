@@ -952,9 +952,20 @@ const PatientQuestionnaire = () => {
             irpResult={irpResult}
             patientName={userProfile.name || 'Paciente'}
             onContinueFree={() => {
-              // Usuario elige opción gratuita
+              // Usuario elige opción gratuita - generar reporte directamente
               setPurchaseLevel('free');
-              setStep('implant-history');
+              setStep('processing');
+              triggerConfetti();
+              setTimeout(() => {
+                const result = calculateRiskAssessment(
+                  requiresDensityPro ? densityAnswers as DensityProAnswers : null,
+                  implantAnswers as ImplantXAnswers,
+                  userProfile.age
+                );
+                setAssessmentResult(result);
+                // Mostrar lead capture antes de resultados
+                setShowLeadCapture(true);
+              }, 3000);
             }}
             onPurchasePlan={(level: PurchaseLevel) => {
               // Usuario verificó pago exitosamente
