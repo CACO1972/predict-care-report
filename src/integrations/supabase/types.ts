@@ -41,6 +41,60 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: string | null
+          external_reference: string | null
+          id: string
+          mercadopago_id: string
+          payer_email: string | null
+          payer_name: string | null
+          payment_type: string | null
+          purchase_level: string
+          raw_data: Json | null
+          status: string
+          status_detail: string | null
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          external_reference?: string | null
+          id?: string
+          mercadopago_id: string
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_type?: string | null
+          purchase_level: string
+          raw_data?: Json | null
+          status?: string
+          status_detail?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          external_reference?: string | null
+          id?: string
+          mercadopago_id?: string
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_type?: string | null
+          purchase_level?: string
+          raw_data?: Json | null
+          status?: string
+          status_detail?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
