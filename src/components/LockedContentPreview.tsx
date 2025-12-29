@@ -88,17 +88,23 @@ const LockedContentPreview = ({ onUpgrade }: LockedContentPreviewProps) => {
             {lockedFeatures.map((feature, index) => (
               <div
                 key={index}
-                className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30 opacity-75"
+                onClick={onUpgrade}
+                className="group flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30 
+                  opacity-75 cursor-pointer transition-all duration-300 ease-out
+                  hover:opacity-100 hover:bg-primary/10 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10
+                  hover:scale-[1.02] hover:-translate-y-0.5"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="w-4 h-4 text-muted-foreground" />
+                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0
+                  transition-all duration-300 group-hover:bg-primary/20 group-hover:scale-110">
+                  <feature.icon className="w-4 h-4 text-muted-foreground transition-colors duration-300 group-hover:text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground/70">{feature.title}</p>
-                    <Lock className="w-3 h-3 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground/70 transition-colors duration-300 group-hover:text-foreground">{feature.title}</p>
+                    <Lock className="w-3 h-3 text-muted-foreground transition-all duration-300 group-hover:text-primary group-hover:animate-pulse" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 transition-colors duration-300 group-hover:text-foreground/60">
                     {feature.description}
                   </p>
                 </div>
