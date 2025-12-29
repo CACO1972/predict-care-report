@@ -962,10 +962,17 @@ const PatientQuestionnaire = () => {
               setPurchaseLevel('free');
               setStep('implant-history');
             }}
-            onPurchasePlan={() => {
-              // Usuario compró Plan de Acción - mostrar upsell
-              setPurchaseLevel('plan-accion');
-              setStep('upsell-premium');
+            onPurchasePlan={(level: PurchaseLevel) => {
+              // Usuario verificó pago exitosamente
+              setPurchaseLevel(level);
+              if (level === 'plan-accion') {
+                // Mostrar upsell a premium
+                setStep('upsell-premium');
+              } else {
+                // Ya es premium, continuar
+                triggerConfetti();
+                setStep('implant-history');
+              }
             }}
           />
         ) : null;
