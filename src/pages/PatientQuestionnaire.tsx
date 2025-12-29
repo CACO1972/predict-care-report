@@ -1040,7 +1040,7 @@ const PatientQuestionnaire = () => {
                   onContinue={handleImageContinue}
                   showSkip={true}
                   patientName={userProfile.name}
-                  isPremium={!!leadData}
+                  isPremium={purchaseLevel === 'premium'}
                 />
               </div>
             )}

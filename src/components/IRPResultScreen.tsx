@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 interface IRPResultScreenProps {
   irpResult: IRPResult;
   patientName: string;
-  sessionId?: string;
   onContinueFree: () => void;
   onPurchasePlan: (level: PurchaseLevel) => void;
 }
@@ -25,7 +24,6 @@ const MERCADOPAGO_PREMIUM = "https://mpago.li/2jpxDi2"; // $29.990
 const IRPResultScreen = ({ 
   irpResult, 
   patientName,
-  sessionId,
   onContinueFree,
   onPurchasePlan 
 }: IRPResultScreenProps) => {
