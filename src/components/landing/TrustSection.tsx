@@ -57,7 +57,7 @@ const TrustSection = () => {
             className="hover:scale-105 transition-transform shrink-0"
           >
             <img
-              src="https://resources.safecreative.org/work/2510073245348/label/standard-300"
+              src="https://resources.safecreative.org/work/2510073245348/label/standard2-72"
               alt="Safe Creative - Propiedad Intelectual Registrada"
               className="h-24 sm:h-28 lg:h-32"
             />
