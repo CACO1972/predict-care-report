@@ -284,7 +284,7 @@ export const useQuestionnaireFlow = () => {
     return transitions[currentStep] || (() => {});
   }, [implantAnswers, requiresDensityPro, densityAnswers, userProfile.age]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback((selectedGender?: 'male' | 'female' | 'other') => {
     setShowRioResponse(false);
     clearFeedback();
     
@@ -293,11 +293,16 @@ export const useQuestionnaireFlow = () => {
       return;
     }
     
-    if (step === 'demographics' && requiresDensityPro) {
-      setStep('density-intro');
-      return;
-    } else if (step === 'demographics') {
-      setStep('smoking');
+    if (step === 'demographics') {
+      // Use the passed gender parameter for immediate decision
+      const genderToCheck = selectedGender || userProfile.gender;
+      const shouldDoDensity = genderToCheck === 'female' && (userProfile.age || 0) >= 50;
+      
+      if (shouldDoDensity) {
+        setStep('density-intro');
+      } else {
+        setStep('smoking');
+      }
       return;
     }
 
