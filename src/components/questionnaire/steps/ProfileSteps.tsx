@@ -26,7 +26,7 @@ export const NameStep = ({ userProfile, setUserProfile, onNext }: NameStepProps)
 interface DemographicsStepProps {
   userProfile: Partial<UserProfile>;
   setUserProfile: (profile: Partial<UserProfile>) => void;
-  onNext: () => void;
+  onNext: (gender?: 'male' | 'female' | 'other') => void;
 }
 
 export const DemographicsStep = ({ userProfile, setUserProfile, onNext }: DemographicsStepProps) => (
@@ -51,8 +51,9 @@ export const DemographicsStep = ({ userProfile, setUserProfile, onNext }: Demogr
         type="gender"
         value={userProfile.gender}
         onChange={(value) => {
-          setUserProfile({ ...userProfile, gender: value as 'male' | 'female' | 'other' });
-          setTimeout(() => onNext(), 500);
+          const gender = value as 'male' | 'female' | 'other';
+          setUserProfile({ ...userProfile, gender });
+          setTimeout(() => onNext(gender), 500);
         }}
         onNext={() => {}}
         hideNextButton={true}
