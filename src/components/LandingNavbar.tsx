@@ -12,7 +12,7 @@ const LandingNavbar = () => {
     { label: "Inicio", href: "/" },
     { label: "Evaluación", href: "/evaluacion" },
     { label: "Testimonios", href: "/#testimonios" },
-    { label: "Documentación", href: "/docs/ImplantX_Clinical_Validation_White_Paper.pdf", external: true },
+    { label: "Documentación", href: "/documentacion" },
   ];
 
   const scrollToSection = (href: string) => {
@@ -51,25 +51,13 @@ const LandingNavbar = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
-              link.external ? (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <button
-                  key={link.label}
-                  onClick={() => scrollToSection(link.href)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {link.label}
-                </button>
-              )
+              <button
+                key={link.label}
+                onClick={() => scrollToSection(link.href)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </button>
             ))}
           </nav>
 
@@ -109,26 +97,13 @@ const LandingNavbar = () => {
         <div className="md:hidden absolute top-16 left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border animate-fade-in">
           <nav className="container mx-auto px-4 py-6 flex flex-col gap-4">
             {navLinks.map((link) => (
-              link.external ? (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-lg text-muted-foreground hover:text-foreground transition-colors py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <button
-                  key={link.label}
-                  onClick={() => scrollToSection(link.href)}
-                  className="text-lg text-muted-foreground hover:text-foreground transition-colors py-2 text-left"
-                >
-                  {link.label}
-                </button>
-              )
+              <button
+                key={link.label}
+                onClick={() => scrollToSection(link.href)}
+                className="text-lg text-muted-foreground hover:text-foreground transition-colors py-2 text-left"
+              >
+                {link.label}
+              </button>
             ))}
             
             <div className="pt-4 border-t border-border flex flex-col gap-3">
