@@ -313,6 +313,8 @@ const PatientQuestionnaire = () => {
             assessmentResult={flow.assessmentResult}
             userProfile={flow.userProfile}
             implantAnswers={flow.implantAnswers}
+            densityAnswers={flow.densityAnswers}
+            requiresDensityPro={flow.requiresDensityPro}
             irpResult={flow.irpResult}
             purchaseLevel={flow.purchaseLevel}
             uploadedImage={flow.uploadedImage}

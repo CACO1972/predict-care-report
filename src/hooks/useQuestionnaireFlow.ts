@@ -132,7 +132,7 @@ export const useQuestionnaireFlow = () => {
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
   const { getExpressionFromFeedback } = useRioExpression();
 
-  const requiresDensityPro = userProfile.gender === 'female' && (userProfile.age || 0) > 45;
+  const requiresDensityPro = userProfile.gender === 'female' && (userProfile.age || 0) >= 50;
 
   // Get previous step for back navigation
   const getPreviousStep = useCallback((): QuestionnaireStep | null => {
