@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
   Activity, ArrowRight, CheckCircle2, FileText, Lock, 
-  Sparkles, TrendingUp, Shield, Zap, Crown, Download, Loader2, Mail
+  Sparkles, TrendingUp, Shield, Zap, Crown, Download, Loader2, Mail,
+  X, Car, Plane, Clock, DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IRPResult, getIRPColorClass } from "@/utils/irpCalculation";
@@ -18,7 +19,7 @@ interface IRPResultScreenProps {
   onPurchasePlan: (level: PurchaseLevel) => void;
 }
 
-const MERCADOPAGO_PLAN_ACCION = "https://mpago.la/2eWC5q6"; // $14.990
+const MERCADOPAGO_PLAN_ACCION = "https://mpago.la/2eWC5q6"; // $14.900
 const MERCADOPAGO_PREMIUM = "https://mpago.li/2jpxDi2"; // $29.990
 
 const IRPResultScreen = ({ 
@@ -69,20 +70,42 @@ const IRPResultScreen = ({
     }
   };
 
-  // Beneficios del Plan de Acción
-  const planBenefits = [
-    { icon: CheckCircle2, text: "Lista de acciones personalizadas paso a paso" },
-    { icon: TrendingUp, text: "Análisis predictivo detallado de tu caso" },
-    { icon: Shield, text: "Recomendaciones clínicas específicas" },
-    { icon: Zap, text: "Protocolo de preparación pre-implante" },
-  ];
-
-  // Lo que incluye el IRP gratuito
-  const freeBenefits = [
-    "Tu puntuación IRP",
-    "Nivel de riesgo periodontal", 
-    "1-2 consejos generales"
-  ];
+  // Características de cada plan
+  const planFeatures = {
+    free: [
+      { text: "Tu puntuación IRP", included: true },
+      { text: "Nivel de riesgo periodontal", included: true },
+      { text: "1-2 consejos generales", included: true },
+      { text: "Análisis de factores de riesgo", included: false },
+      { text: "Plan de acción personalizado", included: false },
+      { text: "Recomendaciones clínicas", included: false },
+      { text: "Evaluación de implantes previos", included: false },
+      { text: "Análisis de zona dental", included: false },
+      { text: "Simulación de sonrisa con IA", included: false },
+    ],
+    base: [
+      { text: "Todo lo del plan gratuito", included: true, highlight: true },
+      { text: "Análisis detallado de factores de riesgo", included: true },
+      { text: "Plan de acción paso a paso", included: true },
+      { text: "Recomendaciones clínicas específicas", included: true },
+      { text: "Protocolo de preparación pre-implante", included: true },
+      { text: "Evaluación de implantes previos", included: true },
+      { text: "Análisis por zona dental", included: false },
+      { text: "Simulación de sonrisa con IA", included: false },
+      { text: "Estimación de costos", included: false },
+    ],
+    premium: [
+      { text: "Todo lo del plan base", included: true, highlight: true },
+      { text: "Cuestionario clínico completo", included: true },
+      { text: "Análisis detallado por zona dental", included: true },
+      { text: "Simulación de sonrisa con IA", included: true },
+      { text: "Estimación de costos del tratamiento", included: true },
+      { text: "Timeline del tratamiento", included: true },
+      { text: "Infografía de alternativas", included: true },
+      { text: "Análisis de imagen dental con IA", included: true },
+      { text: "Soporte prioritario", included: true },
+    ],
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -99,64 +122,85 @@ const IRPResultScreen = ({
 
       {/* Gauge del IRP */}
       <Card className={cn(
-        "relative overflow-hidden border-2 p-8",
+        "relative overflow-hidden border-2 p-6",
         colorClasses.border,
         `bg-gradient-to-br ${colorClasses.gradient} to-background`
       )}>
-        {/* Decorative glow */}
         <div className={cn(
           "absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-3xl opacity-20",
           colorClasses.bg
         )} />
 
-        <div className="relative text-center space-y-4">
-          {/* Score circular */}
+        <div className="relative text-center space-y-3">
           <div className="relative inline-flex items-center justify-center">
-            <svg className="w-40 h-40 transform -rotate-90">
-              {/* Background circle */}
+            <svg className="w-32 h-32 transform -rotate-90">
               <circle
-                cx="80"
-                cy="80"
-                r="70"
+                cx="64"
+                cy="64"
+                r="56"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="8"
                 className="text-muted/20"
               />
-              {/* Progress circle */}
               <circle
-                cx="80"
-                cy="80"
-                r="70"
+                cx="64"
+                cy="64"
+                r="56"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="8"
                 strokeLinecap="round"
-                strokeDasharray={`${(irpResult.score / 100) * 440} 440`}
+                strokeDasharray={`${(irpResult.score / 100) * 352} 352`}
                 className={colorClasses.text}
-                style={{
-                  transition: 'stroke-dasharray 1.5s ease-out'
-                }}
+                style={{ transition: 'stroke-dasharray 1.5s ease-out' }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={cn("text-4xl font-bold", colorClasses.text)}>
+              <span className={cn("text-3xl font-bold", colorClasses.text)}>
                 {irpResult.score}
               </span>
               <span className="text-xs text-muted-foreground">puntos</span>
             </div>
           </div>
 
-          {/* Label y mensaje */}
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className={cn(
-              "inline-flex items-center gap-2 px-4 py-2 rounded-full",
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm",
               colorClasses.bg, colorClasses.text
             )}>
               <span className="font-semibold">{irpResult.levelLabel}</span>
             </div>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
               {irpResult.message}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Banner de ahorro */}
+      <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <DollarSign className="w-6 h-6 text-emerald-500" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              💡 Si tuvieras que viajar a Santiago para una evaluación presencial...
+            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Car className="w-3 h-3" /> Transporte: ~$30.000
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Tiempo: 1 día completo
+              </span>
+              <span className="flex items-center gap-1">
+                <Plane className="w-3 h-3" /> Si vuelas: ~$80.000+
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-emerald-600">
+              Con ImplantX ahorras hasta $100.000 y tienes resultados en 5 minutos
             </p>
           </div>
         </div>
@@ -214,64 +258,126 @@ const IRPResultScreen = ({
         </Card>
       )}
 
-      {/* Sección de decisión: Gratis vs Pago */}
+      {/* Comparación de planes */}
       {!showPaymentCheck && (
-        <div className="grid gap-4">
-          {/* Opción Premium - Plan de Acción */}
+        <div className="space-y-4">
+          <h3 className="text-center text-lg font-semibold text-foreground">
+            Elige tu nivel de análisis
+          </h3>
+
+          {/* Plan Premium - Destacado */}
           <Card 
             className={cn(
-              "relative overflow-hidden border-2 transition-all duration-300 cursor-pointer",
+              "relative overflow-hidden border-2 transition-all duration-300",
               isHoveringPremium 
-                ? "border-primary shadow-xl shadow-primary/20 scale-[1.01]" 
-                : "border-primary/50"
+                ? "border-amber-500 shadow-xl shadow-amber-500/20 scale-[1.01]" 
+                : "border-amber-500/50"
             )}
             onMouseEnter={() => setIsHoveringPremium(true)}
             onMouseLeave={() => setIsHoveringPremium(false)}
-            onClick={() => handlePurchasePlan('plan-accion')}
           >
-            {/* Badge recomendado */}
-            <div className="absolute top-0 right-0">
-              <div className="bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1">
-                <Crown className="w-3 h-3" />
-                RECOMENDADO
-              </div>
+            {/* Badge más vendido */}
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold py-1.5 text-center flex items-center justify-center gap-1">
+              <Crown className="w-3.5 h-3.5" />
+              MÁS COMPLETO • RECOMENDADO
             </div>
 
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50" />
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-50" />
 
-            <div className="relative p-6 space-y-4">
+            <div className="relative p-6 pt-10 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    Plan de Acción Personalizado
+                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                    Informe Premium
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Tu guía completa para maximizar el éxito del implante
+                    Análisis completo + Simulación de sonrisa con IA
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">$14.900</div>
-                  <div className="text-xs text-muted-foreground">CLP</div>
+                  <div className="text-xs text-muted-foreground line-through">$49.990</div>
+                  <div className="text-2xl font-bold text-amber-500">$29.990</div>
+                  <div className="text-xs text-emerald-600 font-medium">Ahorras $20.000</div>
                 </div>
               </div>
 
-              {/* Beneficios */}
-              <div className="grid gap-2">
-                {planBenefits.map((benefit, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <benefit.icon className="w-3.5 h-3.5 text-primary" />
-                    </div>
-                    <span className="text-foreground/90">{benefit.text}</span>
+              <div className="grid gap-1.5">
+                {planFeatures.premium.map((feature, i) => (
+                  <div key={i} className={cn(
+                    "flex items-center gap-2 text-sm",
+                    feature.highlight && "font-medium text-amber-600"
+                  )}>
+                    <CheckCircle2 className={cn(
+                      "w-4 h-4 flex-shrink-0",
+                      feature.highlight ? "text-amber-500" : "text-emerald-500"
+                    )} />
+                    <span className="text-foreground/90">{feature.text}</span>
                   </div>
                 ))}
               </div>
 
               <Button 
-                className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
                 size="lg"
+                onClick={() => handlePurchasePlan('premium')}
+              >
+                Obtener Informe Premium
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </Card>
+
+          {/* Plan Base */}
+          <Card className="relative overflow-hidden border-2 border-primary/30 hover:border-primary/60 transition-all">
+            <div className="absolute top-0 right-0">
+              <div className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+                POPULAR
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    Plan de Acción
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Tu guía paso a paso para prepararte
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold text-primary">$14.900</div>
+                  <div className="text-xs text-muted-foreground">CLP</div>
+                </div>
+              </div>
+
+              <div className="grid gap-1.5">
+                {planFeatures.base.map((feature, i) => (
+                  <div key={i} className={cn(
+                    "flex items-center gap-2 text-sm",
+                    feature.highlight && "font-medium text-primary"
+                  )}>
+                    {feature.included ? (
+                      <CheckCircle2 className={cn(
+                        "w-4 h-4 flex-shrink-0",
+                        feature.highlight ? "text-primary" : "text-emerald-500"
+                      )} />
+                    ) : (
+                      <X className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
+                    )}
+                    <span className={cn(
+                      !feature.included && "text-muted-foreground/60"
+                    )}>{feature.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Button 
+                className="w-full gap-2"
+                size="lg"
+                onClick={() => handlePurchasePlan('plan-accion')}
               >
                 Obtener Plan de Acción
                 <ArrowRight className="w-4 h-4" />
@@ -279,31 +385,34 @@ const IRPResultScreen = ({
             </div>
           </Card>
 
-          {/* Opción Gratuita */}
+          {/* Plan Gratuito */}
           <Card className="border border-border/50 bg-muted/5">
             <div className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <h3 className="font-semibold text-foreground flex items-center gap-2">
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     Informe IRP Gratuito
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Resumen básico de tu evaluación periodontal
+                    Resumen básico de tu evaluación
                   </p>
                 </div>
-                <div className="text-lg font-semibold text-muted-foreground">$0</div>
+                <div className="text-lg font-semibold text-emerald-600">GRATIS</div>
               </div>
 
-              {/* Lo que incluye */}
-              <div className="flex flex-wrap gap-2">
-                {freeBenefits.map((benefit, i) => (
-                  <span 
-                    key={i} 
-                    className="px-2 py-1 bg-muted/50 rounded-md text-xs text-muted-foreground"
-                  >
-                    {benefit}
-                  </span>
+              <div className="grid gap-1.5">
+                {planFeatures.free.map((feature, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    {feature.included ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-500" />
+                    ) : (
+                      <X className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
+                    )}
+                    <span className={cn(
+                      !feature.included && "text-muted-foreground/50"
+                    )}>{feature.text}</span>
+                  </div>
                 ))}
               </div>
 
