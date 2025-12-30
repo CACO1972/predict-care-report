@@ -150,6 +150,11 @@ interface ReportPreviewProps {
       level: string;
       message: string;
     };
+    boneHealthResult?: {
+      score: number;
+      level: string;
+      factors: string[];
+    };
   };
   purchaseLevel?: PurchaseLevel;
 }
@@ -402,6 +407,52 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
               </span>
             </div>
             <p className="text-sm text-muted-foreground text-center">{evaluation.irpResult.message}</p>
+          </div>
+        )}
+
+        {/* Bone Health Section - Para todos los niveles si completó el análisis */}
+        {evaluation.boneHealthResult && (
+          <div className="rounded-2xl p-6 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/30 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <Bone className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-foreground">Análisis de Salud Ósea</h4>
+                <p className="text-xs text-muted-foreground">Evaluación DensityPro para mujeres 50+</p>
+              </div>
+            </div>
+            <div className="text-center py-4">
+              <div className="text-5xl font-bold text-purple-500 mb-2">{evaluation.boneHealthResult.score}</div>
+              <span className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-semibold",
+                evaluation.boneHealthResult.level === 'Bajo' && "bg-green-500/20 text-green-500",
+                evaluation.boneHealthResult.level === 'Moderado' && "bg-yellow-500/20 text-yellow-500",
+                evaluation.boneHealthResult.level === 'Alto' && "bg-red-500/20 text-red-500"
+              )}>
+                Riesgo Óseo {evaluation.boneHealthResult.level}
+              </span>
+            </div>
+            {evaluation.boneHealthResult.factors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Factores identificados:</p>
+                <ul className="space-y-1">
+                  {evaluation.boneHealthResult.factors.map((factor, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      {factor}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground text-center">
+              {evaluation.boneHealthResult.level === 'Bajo' 
+                ? 'Tu perfil de salud ósea es favorable para el tratamiento con implantes.'
+                : evaluation.boneHealthResult.level === 'Moderado'
+                ? 'Se recomienda evaluación de densidad ósea antes del tratamiento.'
+                : 'Es importante realizar una densitometría ósea y consultar con tu médico antes del procedimiento.'}
+            </p>
           </div>
         )}
 
