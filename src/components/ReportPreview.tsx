@@ -453,6 +453,51 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
                 ? 'Se recomienda evaluación de densidad ósea antes del tratamiento.'
                 : 'Es importante realizar una densitometría ósea y consultar con tu médico antes del procedimiento.'}
             </p>
+            
+            {/* Recomendaciones específicas de salud ósea */}
+            <div className="mt-4 pt-4 border-t border-purple-500/20 space-y-3">
+              <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Plan de Acción para Salud Ósea</p>
+              <div className="grid gap-3">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-background/50 border border-purple-500/10">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">🥛</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Calcio (1200 mg/día)</p>
+                    <p className="text-xs text-muted-foreground">Lácteos, sardinas, almendras, brócoli. Considera suplementos si tu ingesta dietética es insuficiente.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-background/50 border border-purple-500/10">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">☀️</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Vitamina D (800-1000 UI/día)</p>
+                    <p className="text-xs text-muted-foreground">Exposición solar moderada (15 min/día), pescados grasos, huevos. Consulta niveles séricos con tu médico.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-background/50 border border-purple-500/10">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">🏃‍♀️</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Ejercicio de Carga</p>
+                    <p className="text-xs text-muted-foreground">Caminar 30 min/día, ejercicios de resistencia 2-3 veces/semana. El impacto estimula la formación ósea.</p>
+                  </div>
+                </div>
+                {evaluation.boneHealthResult.level !== 'Bajo' && (
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/30 flex items-center justify-center flex-shrink-0">
+                      <Stethoscope className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Densitometría Ósea (DEXA)</p>
+                      <p className="text-xs text-muted-foreground">Solicita este examen a tu médico para evaluar tu densidad mineral ósea antes del procedimiento.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
