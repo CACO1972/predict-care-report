@@ -97,8 +97,9 @@ const QuestionCard = ({
               { value: 'female', label: 'Femenino' },
               { value: 'other', label: 'Otro' },
             ].map((option) => (
-              <div 
+              <Label
                 key={option.value}
+                htmlFor={option.value}
                 className={cn(
                   "flex items-center space-x-3 p-4 rounded-xl border cursor-pointer transition-all duration-200",
                   "hover:border-primary/50 hover:bg-muted/30",
@@ -112,14 +113,14 @@ const QuestionCard = ({
                   id={option.value} 
                   className="border-2 data-[state=checked]:border-primary data-[state=checked]:text-primary" 
                 />
-                <Label htmlFor={option.value} className="flex-1 cursor-pointer font-medium text-foreground">
+                <span className="flex-1 font-medium text-foreground">
                   {option.label}
-                </Label>
+                </span>
                 <ChevronRight className={cn(
                   "w-4 h-4 transition-all duration-200",
                   selectedOption === option.value ? "text-primary" : "text-muted-foreground/50"
                 )} />
-              </div>
+              </Label>
             ))}
           </RadioGroup>
         )}
@@ -131,8 +132,9 @@ const QuestionCard = ({
             className="space-y-2"
           >
             {options.map((option) => (
-              <div 
+              <Label
                 key={option.value}
+                htmlFor={option.value}
                 className={cn(
                   "flex items-center space-x-3 p-4 rounded-xl border cursor-pointer transition-all duration-200",
                   "hover:border-primary/50 hover:bg-muted/30",
@@ -146,14 +148,14 @@ const QuestionCard = ({
                   id={option.value} 
                   className="border-2 data-[state=checked]:border-primary data-[state=checked]:text-primary" 
                 />
-                <Label htmlFor={option.value} className="flex-1 cursor-pointer font-medium text-foreground">
+                <span className="flex-1 font-medium text-foreground">
                   {option.label}
-                </Label>
+                </span>
                 <ChevronRight className={cn(
                   "w-4 h-4 transition-all duration-200",
                   selectedOption === option.value ? "text-primary" : "text-muted-foreground/50"
                 )} />
-              </div>
+              </Label>
             ))}
           </RadioGroup>
         )}
