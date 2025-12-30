@@ -1,0 +1,284 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Download, Loader2, Play, CheckCircle, XCircle, Volume2 } from "lucide-react";
+import { toast } from "sonner";
+
+interface AudioScript {
+  id: string;
+  filename: string;
+  text: string;
+  description: string;
+  category: string;
+}
+
+// All audio scripts that need to be generated
+const audioScripts: AudioScript[] = [
+  // Welcome & Profile
+  { id: "hola-soy-rio", filename: "hola-soy-rio.mp3", text: "Hola, soy Río, tu asistente virtual de ImplantX. Voy a guiarte en esta evaluación para ayudarte a entender mejor tus posibilidades con los implantes dentales.", description: "Saludo inicial", category: "Bienvenida" },
+  { id: "rio-nombre", filename: "rio-nombre.mp3", text: "Para empezar, por favor dime tu nombre.", description: "Pregunta nombre", category: "Perfil" },
+  { id: "rio-edad", filename: "rio-edad.mp3", text: "¡Un gusto conocerte! Ahora necesito algunos datos básicos para personalizar tu evaluación.", description: "Pregunta edad", category: "Perfil" },
+  
+  // Smoking
+  { id: "rio-fuma", filename: "rio-fuma.mp3", text: "Perfecto. Hablemos ahora de algunos hábitos. Tu honestidad es clave para darte el mejor tratamiento posible.", description: "Pregunta tabaco", category: "Hábitos" },
+  { id: "rio-nofuma", filename: "rio-nofuma.mp3", text: "¡Excelente! No fumar es uno de los factores más importantes para el éxito del implante. La cicatrización será más rápida y el riesgo de complicaciones mucho menor.", description: "Feedback no fuma", category: "Hábitos" },
+  { id: "rio-menosde10", filename: "rio-menosde10.mp3", text: "Fumar reduce el flujo sanguíneo y dificulta la cicatrización. La buena noticia: dejar de fumar incluso dos a tres semanas antes del implante puede mejorar significativamente tus probabilidades de éxito.", description: "Feedback menos de 10", category: "Hábitos" },
+  { id: "rio-masde10", filename: "rio-masde10.mp3", text: "El tabaco es uno de los principales enemigos del implante. Sin embargo, muchos fumadores logran excelentes resultados. Te recomendaríamos reducir o dejar de fumar antes del procedimiento para multiplicar tus posibilidades de éxito.", description: "Feedback más de 10", category: "Hábitos" },
+  
+  // Bruxism
+  { id: "rio-brux-pregunta", filename: "rio-brux-pregunta.mp3", text: "Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas.", description: "Pregunta bruxismo", category: "Hábitos" },
+  { id: "rio-nobruxa", filename: "rio-nobruxa.mp3", text: "Perfecto. No apretar los dientes reduce el estrés sobre el implante y prolonga su vida útil.", description: "Feedback no bruxismo", category: "Hábitos" },
+  { id: "rio-sibruxa", filename: "rio-sibruxa.mp3", text: "El bruxismo genera fuerzas excesivas, pero tiene solución simple: una férula de descarga protege el implante eficazmente. Te haré una pregunta más sobre esto.", description: "Feedback sí bruxismo", category: "Hábitos" },
+  
+  // Diabetes
+  { id: "rio-diabetes-pregunta", filename: "rio-diabetes-pregunta.mp3", text: "Tu salud general influye mucho en el éxito del tratamiento.", description: "Pregunta diabetes", category: "Salud" },
+  { id: "rio-nodiabetes", filename: "rio-nodiabetes.mp3", text: "Excelente. No tener diabetes facilita la cicatrización y reduce el riesgo de infecciones.", description: "Feedback no diabetes", category: "Salud" },
+  { id: "rio-diabetes-controlada", filename: "rio-diabetes-controlada.mp3", text: "La diabetes controlada no es impedimento para un implante exitoso. Con un buen control glucémico, los resultados son similares a pacientes sin diabetes.", description: "Feedback diabetes controlada", category: "Salud" },
+  { id: "rio-diabetes-nocontrolada", filename: "rio-diabetes-nocontrolada.mp3", text: "La diabetes no controlada puede retrasar la cicatrización. Lo importante es trabajar con tu médico para mejorar el control antes del implante. Una vez controlada, las tasas de éxito son excelentes.", description: "Feedback diabetes no controlada", category: "Salud" },
+  
+  // Gum Health
+  { id: "rio-pregunta-encias", filename: "rio-pregunta-encias.mp3", text: "Veamos ahora la salud de tus encías.", description: "Pregunta encías", category: "Encías" },
+  { id: "rio-feedback-encias", filename: "rio-feedback-encias.mp3", text: "Gracias por tu honestidad. La salud de las encías es fundamental para el éxito del implante. Si hay algún problema, lo trataremos primero.", description: "Feedback encías", category: "Encías" },
+  
+  // Implant History
+  { id: "rio-implante-pregunta", filename: "rio-implante-pregunta.mp3", text: "Saber tu experiencia previa nos ayuda a entender mejor tu caso.", description: "Pregunta implantes previos", category: "Historial" },
+  { id: "rio-primer-implante", filename: "rio-primer-implante.mp3", text: "Ser tu primer implante es completamente normal. La mayoría de los implantes son exitosos en el primer intento.", description: "Feedback primer implante", category: "Historial" },
+  { id: "rio-implante-bien", filename: "rio-implante-bien.mp3", text: "¡Perfecto! Tener implantes exitosos previos es el mejor predictor de éxito futuro. Tu cuerpo ya demostró que integra bien los implantes.", description: "Feedback implante exitoso", category: "Historial" },
+  { id: "rio-implante-fallaron", filename: "rio-implante-fallaron.mp3", text: "Un fracaso previo requiere investigar la causa, pero NO significa que volverá a pasar. Muchas veces se debió a factores controlables. Con el diagnóstico correcto, las probabilidades de éxito en un segundo intento son altas.", description: "Feedback implante fracasó", category: "Historial" },
+  
+  // Tooth Loss Cause
+  { id: "rio-causa-pregunta", filename: "rio-causa-pregunta.mp3", text: "Entender por qué perdiste tus dientes nos da pistas importantes.", description: "Pregunta causa pérdida", category: "Historial" },
+  { id: "rio-causa-caries", filename: "rio-causa-caries.mp3", text: "Perder el diente por caries generalmente significa que el hueso y las encías alrededor están sanos, lo cual es ideal para el implante.", description: "Feedback causa caries", category: "Historial" },
+  { id: "rio-causa-periodontitis", filename: "rio-causa-periodontitis.mp3", text: "La periodontitis puede haber afectado el hueso, pero esto NO impide el implante. Con tratamiento periodontal previo y buenos cuidados posteriores, los resultados son muy buenos.", description: "Feedback causa periodontitis", category: "Historial" },
+  { id: "rio-causa-trauma", filename: "rio-causa-trauma.mp3", text: "Perder el diente por un golpe o trauma generalmente significa que el hueso y las encías alrededor están sanos, lo cual es ideal para el implante.", description: "Feedback causa trauma", category: "Historial" },
+  
+  // Tooth Loss Time
+  { id: "rio-tiempo-pregunta", filename: "rio-tiempo-pregunta.mp3", text: "Saber cuánto tiempo ha pasado nos ayuda a evaluar el hueso disponible.", description: "Pregunta tiempo pérdida", category: "Historial" },
+  { id: "rio-tiempo-menos1", filename: "rio-tiempo-menos1.mp3", text: "Menos de un año es un tiempo ideal. Generalmente hay muy buen volumen óseo disponible, lo que facilita el tratamiento.", description: "Feedback menos de 1 año", category: "Historial" },
+  { id: "rio-tiempo-1a3", filename: "rio-tiempo-1a3.mp3", text: "Entre uno y tres años puede haber algo de reabsorción ósea, pero en la mayoría de los casos aún hay buen hueso disponible para el implante.", description: "Feedback 1 a 3 años", category: "Historial" },
+  { id: "rio-tiempo-masde3", filename: "rio-tiempo-masde3.mp3", text: "Después de tres años suele haber mayor reabsorción del hueso, pero hay técnicas como injertos óseos que pueden solucionarlo. Tu especialista evaluará las mejores opciones.", description: "Feedback más de 3 años", category: "Historial" },
+  
+  // Teeth Count
+  { id: "rio-cuantos-dientes", filename: "rio-cuantos-dientes.mp3", text: "¿Cuántos dientes necesitas reemplazar? Esto nos ayuda a orientar el tipo de tratamiento más adecuado para ti.", description: "Pregunta cantidad dientes", category: "Tratamiento" },
+  { id: "rio-1a2-dientes", filename: "rio-1a2-dientes.mp3", text: "Para uno o dos dientes, los implantes unitarios son la solución ideal. Cada implante actúa como una raíz individual.", description: "Feedback 1 a 2 dientes", category: "Tratamiento" },
+  { id: "rio-feedback-1a2", filename: "rio-feedback-1a2.mp3", text: "Para uno o dos dientes, los implantes unitarios son la solución ideal. Cada implante actúa como una raíz individual.", description: "Feedback 1 a 2 dientes alt", category: "Tratamiento" },
+  { id: "rio-feedback-puente", filename: "rio-feedback-puente.mp3", text: "Para tres a ocho dientes, un puente sobre implantes es una excelente opción. Se colocan varios implantes que sostienen una prótesis fija, más estable y cómoda que las prótesis removibles.", description: "Feedback puente", category: "Tratamiento" },
+  { id: "rio-feedback-todos", filename: "rio-feedback-todos.mp3", text: "Para reemplazar todos los dientes, tratamientos como All-on-4 o All-on-6 son los más recomendados. Con solo cuatro a seis implantes puedes tener una dentadura completa y fija.", description: "Feedback todos dientes", category: "Tratamiento" },
+  { id: "rio-todos-dientes", filename: "rio-todos-dientes.mp3", text: "Para reemplazar todos los dientes, tratamientos como All-on-4 o All-on-6 son los más recomendados. Con solo cuatro a seis implantes puedes tener una dentadura completa y fija.", description: "Feedback todos dientes alt", category: "Tratamiento" },
+  { id: "rio-puente-allonfor", filename: "rio-puente-allonfor.mp3", text: "Para rehabilitaciones extensas, existen diferentes técnicas como puentes sobre implantes o el sistema All-on-4 que permiten resultados excelentes con menos implantes.", description: "Feedback puente all-on-4", category: "Tratamiento" },
+];
+
+const AudioGenerator = () => {
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [generated, setGenerated] = useState<Set<string>>(new Set());
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  const generateAudio = async (script: AudioScript) => {
+    setGenerating(script.id);
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: script.text }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Error: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      setAudioUrls(prev => ({ ...prev, [script.id]: audioUrl }));
+      setGenerated(prev => new Set([...prev, script.id]));
+      setFailed(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(script.id);
+        return newSet;
+      });
+      
+      toast.success(`Audio "${script.filename}" generado correctamente`);
+    } catch (error) {
+      console.error("Error generating audio:", error);
+      setFailed(prev => new Set([...prev, script.id]));
+      toast.error(`Error generando "${script.filename}": ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+  const generateAll = async () => {
+    for (const script of audioScripts) {
+      if (!generated.has(script.id)) {
+        await generateAudio(script);
+        // Small delay between requests to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  };
+
+  const playAudio = (id: string) => {
+    const url = audioUrls[id];
+    if (!url) return;
+    
+    const audio = new Audio(url);
+    audio.onplay = () => setPlayingId(id);
+    audio.onended = () => setPlayingId(null);
+    audio.play();
+  };
+
+  const downloadAudio = (id: string, filename: string) => {
+    const url = audioUrls[id];
+    if (!url) return;
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+  };
+
+  const downloadAll = () => {
+    generated.forEach(id => {
+      const script = audioScripts.find(s => s.id === id);
+      if (script) {
+        downloadAudio(id, script.filename);
+      }
+    });
+  };
+
+  const categories = [...new Set(audioScripts.map(s => s.category))];
+
+  return (
+    <div className="min-h-screen bg-background p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Generador de Audios - Río</h1>
+            <p className="text-muted-foreground mt-1">
+              Genera todos los audios para el asistente Río usando ElevenLabs
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button 
+              onClick={generateAll} 
+              disabled={generating !== null}
+              className="gap-2"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4" />
+                  Generar Todos
+                </>
+              )}
+            </Button>
+            
+            {generated.size > 0 && (
+              <Button variant="outline" onClick={downloadAll} className="gap-2">
+                <Download className="w-4 h-4" />
+                Descargar Todos ({generated.size})
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>Total: {audioScripts.length}</span>
+            <span className="text-green-500">✓ Generados: {generated.size}</span>
+            <span className="text-red-500">✗ Fallidos: {failed.size}</span>
+          </div>
+
+          {categories.map(category => (
+            <Card key={category}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">{category}</CardTitle>
+                <CardDescription>
+                  {audioScripts.filter(s => s.category === category).length} audios
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {audioScripts
+                  .filter(s => s.category === category)
+                  .map(script => (
+                    <div 
+                      key={script.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm text-primary">{script.filename}</span>
+                          {generated.has(script.id) && (
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          )}
+                          {failed.has(script.id) && (
+                            <XCircle className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{script.description}</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {generated.has(script.id) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => playAudio(script.id)}
+                              className="gap-1"
+                            >
+                              <Play className={`w-3 h-3 ${playingId === script.id ? 'text-primary' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadAudio(script.id, script.filename)}
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+                        
+                        <Button
+                          variant={generated.has(script.id) ? "outline" : "default"}
+                          size="sm"
+                          onClick={() => generateAudio(script)}
+                          disabled={generating !== null}
+                        >
+                          {generating === script.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : generated.has(script.id) ? (
+                            "Regenerar"
+                          ) : (
+                            "Generar"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AudioGenerator;
