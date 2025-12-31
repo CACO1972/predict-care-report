@@ -28,6 +28,7 @@ const audioScripts: AudioScript[] = [
   // Bruxism
   { id: "rio-brux-pregunta", filename: "rio-brux-pregunta.mp3", text: "Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas.", description: "Pregunta bruxismo", category: "Hábitos" },
   { id: "rio-nobruxa", filename: "rio-nobruxa.mp3", text: "Perfecto. No apretar los dientes reduce el estrés sobre el implante y prolonga su vida útil.", description: "Feedback no bruxismo", category: "Hábitos" },
+  { id: "rio-brux-ferula", filename: "rio-brux-ferula.mp3", text: "El bruxismo puede manejarse muy bien. Una férula de descarga protege tanto tus dientes naturales como los implantes.", description: "Pregunta férula bruxismo", category: "Hábitos" },
   { id: "rio-sibruxa", filename: "rio-sibruxa.mp3", text: "El bruxismo genera fuerzas excesivas, pero tiene solución simple: una férula de descarga protege el implante eficazmente. Te haré una pregunta más sobre esto.", description: "Feedback sí bruxismo", category: "Hábitos" },
   
   // Diabetes
