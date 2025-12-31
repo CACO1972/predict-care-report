@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.verify-payment]
 verify_jwt = false
+
+[functions.dentalink-availability]
+verify_jwt = false
+
+[functions.dentalink-pricing]
+verify_jwt = false
