@@ -208,52 +208,75 @@ const IRPResultScreen = ({
 
       {/* Modal de verificación de pago */}
       {showPaymentCheck && (
-        <Card className="border-2 border-primary/50 p-6 space-y-4 bg-gradient-to-br from-primary/5 to-transparent">
+        <Card className="border-2 border-primary/50 p-6 space-y-4 bg-gradient-to-br from-primary/5 to-transparent animate-fade-in">
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-              <Mail className="w-6 h-6 text-primary" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500/20 to-primary/20 flex items-center justify-center mx-auto animate-pulse">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-            <h3 className="font-semibold text-foreground">¿Ya completaste el pago?</h3>
+            <h3 className="font-bold text-lg text-foreground">¡Casi listo!</h3>
             <p className="text-sm text-muted-foreground">
-              Ingresa el email que usaste en MercadoPago para verificar tu compra
+              Una vez completes el pago en MercadoPago, vuelve aquí e ingresa el email que usaste para verificar tu compra
+            </p>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-2">
+            <p className="text-xs font-medium text-foreground flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">1</span>
+              Completa el pago en la ventana de MercadoPago
+            </p>
+            <p className="text-xs font-medium text-foreground flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">2</span>
+              Vuelve a esta página
+            </p>
+            <p className="text-xs font-medium text-foreground flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">3</span>
+              Ingresa el email que usaste y verifica tu compra
             </p>
           </div>
           
           <div className="space-y-3">
-            <input
-              type="email"
-              placeholder="tu@email.com"
-              value={paymentEmail}
-              onChange={(e) => setPaymentEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Email usado en MercadoPago</label>
+              <input
+                type="email"
+                placeholder="tu@email.com"
+                value={paymentEmail}
+                onChange={(e) => setPaymentEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
             <Button 
-              className="w-full gap-2"
+              className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold"
+              size="lg"
               onClick={handleVerifyPayment}
               disabled={isVerifying}
             >
               {isVerifying ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Verificando...
+                  Verificando tu pago...
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  Verificar mi pago
+                  Verificar mi compra
                 </>
               )}
             </Button>
             <Button 
               variant="ghost" 
-              className="w-full text-muted-foreground"
+              className="w-full text-muted-foreground text-sm"
               onClick={() => {
                 setShowPaymentCheck(false);
                 setPendingLevel(null);
               }}
             >
-              Cancelar
+              Cancelar y volver
             </Button>
+            
+            <p className="text-[10px] text-center text-muted-foreground">
+              ¿Problemas? El pago puede tardar unos segundos en procesarse. Si no funciona, espera un momento e intenta de nuevo.
+            </p>
           </div>
         </Card>
       )}

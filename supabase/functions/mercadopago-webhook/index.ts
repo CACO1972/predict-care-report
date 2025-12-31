@@ -110,14 +110,20 @@ Deno.serve(async (req) => {
     console.log('Webhook body:', JSON.stringify(body, null, 2));
 
     // Get payment ID from the notification
-    const paymentId = body.data?.id || body.id;
+    // MercadoPago can send the ID in different formats:
+    // - body.data.id (new format)
+    // - body.id (legacy format)  
+    // - body.resource (IPN format - just the payment ID as string)
+    const paymentId = body.data?.id || body.id || body.resource;
     if (!paymentId) {
-      console.error('No payment ID in webhook');
+      console.error('No payment ID in webhook. Body:', JSON.stringify(body));
       return new Response(JSON.stringify({ error: 'No payment ID' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
+    
+    console.log('Extracted payment ID:', paymentId);
 
     // Verify webhook signature
     const webhookSecret = Deno.env.get('MERCADOPAGO_WEBHOOK_SECRET');
