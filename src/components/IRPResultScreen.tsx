@@ -11,7 +11,7 @@ import { IRPResult, getIRPColorClass } from "@/utils/irpCalculation";
 import { usePaymentVerification } from "@/hooks/usePaymentVerification";
 import { PurchaseLevel } from "@/types/questionnaire";
 import { useToast } from "@/hooks/use-toast";
-
+import RioAvatar from "./RioAvatar";
 interface IRPResultScreenProps {
   irpResult: IRPResult;
   patientName: string;
@@ -174,8 +174,37 @@ const IRPResultScreen = ({
     ],
   };
 
+  // Estado para el audio de planes
+  const [selectedPlanAudio, setSelectedPlanAudio] = useState<string | null>(null);
+  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+
+  // Reproducir audio de intro al montar
+  useEffect(() => {
+    if (!hasPlayedIntro) {
+      setHasPlayedIntro(true);
+    }
+  }, [hasPlayedIntro]);
+
+  // Función para obtener audio del plan
+  const getPlanAudio = (plan: 'free' | 'base' | 'premium') => {
+    const audioMap = {
+      free: '/audio/rio-plan-gratis.mp3',
+      base: '/audio/rio-plan-accion.mp3',
+      premium: '/audio/rio-plan-premium.mp3',
+    };
+    return audioMap[plan];
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Rio Avatar con intro de resultados */}
+      <RioAvatar 
+        message={`¡${patientName}, ya tengo tus resultados! He analizado tu perfil y calculado tu Índice de Riesgo Personalizado. Ahora te explico qué significa y cómo podemos ayudarte.`}
+        userName={patientName}
+        customAudioUrl="/audio/rio-resultados-intro.mp3"
+        autoSpeak={true}
+      />
+
       {/* Header con resultado IRP */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
@@ -392,6 +421,9 @@ const IRPResultScreen = ({
           <h3 className="text-center text-lg font-semibold text-foreground">
             Elige tu nivel de análisis
           </h3>
+          <p className="text-center text-xs text-muted-foreground">
+            🔊 Toca en cada plan para escuchar a Río explicártelo
+          </p>
 
           {/* Plan Premium - Destacado */}
           <Card 
@@ -445,14 +477,32 @@ const IRPResultScreen = ({
                 ))}
               </div>
 
-              <Button 
-                className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
-                size="lg"
-                onClick={() => handleInitiatePurchase('premium')}
-              >
-                Obtener Informe Premium
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                  onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'premium' ? null : 'premium')}
+                >
+                  🔊 {selectedPlanAudio === 'premium' ? 'Pausar' : 'Escuchar sobre este plan'}
+                </Button>
+                <Button 
+                  className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
+                  size="lg"
+                  onClick={() => handleInitiatePurchase('premium')}
+                >
+                  Obtener Informe Premium
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* Audio player oculto para premium */}
+              {selectedPlanAudio === 'premium' && (
+                <audio 
+                  src={getPlanAudio('premium')} 
+                  autoPlay 
+                  onEnded={() => setSelectedPlanAudio(null)}
+                />
+              )}
             </div>
           </Card>
 
@@ -502,14 +552,32 @@ const IRPResultScreen = ({
                 ))}
               </div>
 
-              <Button 
-                className="w-full gap-2"
-                size="lg"
-                onClick={() => handleInitiatePurchase('plan-accion')}
-              >
-                Obtener Plan de Acción
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 text-xs"
+                  onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'base' ? null : 'base')}
+                >
+                  🔊 {selectedPlanAudio === 'base' ? 'Pausar' : 'Escuchar sobre este plan'}
+                </Button>
+                <Button 
+                  className="w-full gap-2"
+                  size="lg"
+                  onClick={() => handleInitiatePurchase('plan-accion')}
+                >
+                  Obtener Plan de Acción
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Audio player oculto para base */}
+              {selectedPlanAudio === 'base' && (
+                <audio 
+                  src={getPlanAudio('base')} 
+                  autoPlay 
+                  onEnded={() => setSelectedPlanAudio(null)}
+                />
+              )}
             </div>
           </Card>
 
@@ -544,14 +612,32 @@ const IRPResultScreen = ({
                 ))}
               </div>
 
-              <Button 
-                variant="outline" 
-                className="w-full gap-2"
-                onClick={onContinueFree}
-              >
-                Solo quiero mi IRP gratis
-                <Download className="w-4 h-4" />
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  variant="ghost"
+                  className="w-full gap-2 text-xs"
+                  onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'free' ? null : 'free')}
+                >
+                  🔊 {selectedPlanAudio === 'free' ? 'Pausar' : 'Escuchar sobre este plan'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  onClick={onContinueFree}
+                >
+                  Solo quiero mi IRP gratis
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Audio player oculto para free */}
+              {selectedPlanAudio === 'free' && (
+                <audio 
+                  src={getPlanAudio('free')} 
+                  autoPlay 
+                  onEnded={() => setSelectedPlanAudio(null)}
+                />
+              )}
             </div>
           </Card>
         </div>
