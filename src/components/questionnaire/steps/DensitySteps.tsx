@@ -77,70 +77,104 @@ export const DensityQ2Step = ({ densityAnswers, setDensityAnswers, userName, onA
   </div>
 );
 
-export const DensityQ3Step = ({ densityAnswers, setDensityAnswers, userName, onAnswer, getNextStepFunction }: DensityQuestionProps) => (
-  <div className="space-y-6 animate-fade-in">
-    <RioAvatar message="La genética también juega un papel importante." userName={userName} />
-    <QuestionCard
-      question="¿Alguno de tus padres fue diagnosticado con osteoporosis o sufrió una fractura de cadera después de una caída leve?"
-      type="radio"
-      options={[
-        { value: 'no', label: 'No' },
-        { value: 'yes', label: 'Sí' },
-        { value: 'unknown', label: 'No lo sé' },
-      ]}
-      value={densityAnswers.familyHistory}
-      onChange={(value) => {
-        setDensityAnswers({ ...densityAnswers, familyHistory: value as any });
-        onAnswer('familyHistory', value as string, getNextStepFunction('density-q3'));
-      }}
-      onNext={() => {}}
-      hideNextButton={true}
-    />
-  </div>
-);
+export const DensityQ3Step = ({ densityAnswers, setDensityAnswers, userName, onAnswer, getNextStepFunction }: DensityQuestionProps) => {
+  const getAudioForFamilyHistory = (value: string) => {
+    return value === 'yes' ? '/audio/rio-familia-si.mp3' : undefined;
+  };
 
-export const DensityQ4Step = ({ densityAnswers, setDensityAnswers, userName, onAnswer, getNextStepFunction }: DensityQuestionProps) => (
-  <div className="space-y-6 animate-fade-in">
-    <RioAvatar message="Ciertos medicamentos pueden afectar la salud de los huesos." userName={userName} />
-    <QuestionCard
-      question="¿Has tomado o tomas actualmente medicamentos corticoides (como prednisona o cortisona) de forma regular por más de 3 meses?"
-      type="radio"
-      options={[
-        { value: 'no', label: 'No' },
-        { value: 'yes', label: 'Sí' },
-        { value: 'unsure', label: 'No estoy seguro/a' },
-      ]}
-      value={densityAnswers.corticosteroids}
-      onChange={(value) => {
-        setDensityAnswers({ ...densityAnswers, corticosteroids: value as any });
-        onAnswer('corticosteroids', value as string, getNextStepFunction('density-q4'));
-      }}
-      onNext={() => {}}
-      hideNextButton={true}
-    />
-  </div>
-);
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <RioAvatar 
+        message="La genética también juega un papel importante." 
+        userName={userName}
+        customAudioUrl={densityAnswers.familyHistory ? getAudioForFamilyHistory(densityAnswers.familyHistory) : undefined}
+      />
+      <QuestionCard
+        question="¿Alguno de tus padres fue diagnosticado con osteoporosis o sufrió una fractura de cadera después de una caída leve?"
+        type="radio"
+        options={[
+          { value: 'no', label: 'No' },
+          { value: 'yes', label: 'Sí' },
+          { value: 'unknown', label: 'No lo sé' },
+        ]}
+        value={densityAnswers.familyHistory}
+        onChange={(value) => {
+          setDensityAnswers({ ...densityAnswers, familyHistory: value as any });
+          onAnswer('familyHistory', value as string, getNextStepFunction('density-q3'));
+        }}
+        onNext={() => {}}
+        hideNextButton={true}
+      />
+    </div>
+  );
+};
 
-export const DensityQ5Step = ({ densityAnswers, setDensityAnswers, userName, onAnswer, getNextStepFunction }: DensityQuestionProps) => (
-  <div className="space-y-6 animate-fade-in">
-    <RioAvatar message="Finalmente, algunos hábitos de vida." userName={userName} />
-    <QuestionCard
-      question="¿Consumes más de dos bebidas alcohólicas al día de forma habitual?"
-      type="radio"
-      options={[
-        { value: 'no', label: 'No' },
-        { value: 'yes', label: 'Sí' },
-      ]}
-      value={densityAnswers.alcohol}
-      onChange={(value) => {
-        setDensityAnswers({ ...densityAnswers, alcohol: value as any });
-        onAnswer('alcohol', value as string, getNextStepFunction('density-q5'));
-      }}
-      onNext={() => {}}
-      hideNextButton={true}
-    />
-  </div>
-);
+export const DensityQ4Step = ({ densityAnswers, setDensityAnswers, userName, onAnswer, getNextStepFunction }: DensityQuestionProps) => {
+  const getAudioForCorticosteroids = (value: string) => {
+    if (value === 'yes') return '/audio/rio-corticoides-si.mp3';
+    if (value === 'no') return '/audio/rio-corticoides-no.mp3';
+    return undefined;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <RioAvatar 
+        message="Ciertos medicamentos pueden afectar la salud de los huesos." 
+        userName={userName}
+        customAudioUrl={densityAnswers.corticosteroids ? getAudioForCorticosteroids(densityAnswers.corticosteroids) : undefined}
+      />
+      <QuestionCard
+        question="¿Has tomado o tomas actualmente medicamentos corticoides (como prednisona o cortisona) de forma regular por más de 3 meses?"
+        type="radio"
+        options={[
+          { value: 'no', label: 'No' },
+          { value: 'yes', label: 'Sí' },
+          { value: 'unsure', label: 'No estoy seguro/a' },
+        ]}
+        value={densityAnswers.corticosteroids}
+        onChange={(value) => {
+          setDensityAnswers({ ...densityAnswers, corticosteroids: value as any });
+          onAnswer('corticosteroids', value as string, getNextStepFunction('density-q4'));
+        }}
+        onNext={() => {}}
+        hideNextButton={true}
+      />
+    </div>
+  );
+};
+
+export const DensityQ5Step = ({ densityAnswers, setDensityAnswers, userName, onAnswer, getNextStepFunction }: DensityQuestionProps) => {
+  const getAudioForAlcohol = (value: string) => {
+    if (value === 'yes') return '/audio/rio-alcohol-si.mp3';
+    if (value === 'no') return '/audio/rio-alcohol-no.mp3';
+    return undefined;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <RioAvatar 
+        message="Finalmente, algunos hábitos de vida." 
+        userName={userName}
+        customAudioUrl={densityAnswers.alcohol ? getAudioForAlcohol(densityAnswers.alcohol) : undefined}
+      />
+      <QuestionCard
+        question="¿Consumes más de dos bebidas alcohólicas al día de forma habitual?"
+        type="radio"
+        options={[
+          { value: 'no', label: 'No' },
+          { value: 'yes', label: 'Sí' },
+        ]}
+        value={densityAnswers.alcohol}
+        onChange={(value) => {
+          setDensityAnswers({ ...densityAnswers, alcohol: value as any });
+          onAnswer('alcohol', value as string, getNextStepFunction('density-q5'));
+        }}
+        onNext={() => {}}
+        hideNextButton={true}
+      />
+    </div>
+  );
+};
 
 interface DensityCompleteStepProps {
   userName?: string;
