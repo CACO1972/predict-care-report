@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -29,42 +29,109 @@ const IRPResultScreen = ({
   onPurchasePlan 
 }: IRPResultScreenProps) => {
   const [isHoveringPremium, setIsHoveringPremium] = useState(false);
-  const [showPaymentCheck, setShowPaymentCheck] = useState(false);
+  const [showEmailPrompt, setShowEmailPrompt] = useState(false);
+  const [showPolling, setShowPolling] = useState(false);
   const [paymentEmail, setPaymentEmail] = useState('');
   const [pendingLevel, setPendingLevel] = useState<'plan-accion' | 'premium' | null>(null);
+  const [pollingSeconds, setPollingSeconds] = useState(0);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const colorClasses = getIRPColorClass(irpResult.level);
   const { verifyPayment, isVerifying } = usePaymentVerification();
   const { toast } = useToast();
 
-  const handlePurchasePlan = (level: 'plan-accion' | 'premium') => {
-    const url = level === 'premium' ? MERCADOPAGO_PREMIUM : MERCADOPAGO_PLAN_ACCION;
-    window.open(url, '_blank');
-    setPendingLevel(level);
-    setShowPaymentCheck(true);
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Start polling for payment
+  const startPolling = (email: string) => {
+    setPollingSeconds(0);
+    
+    // Poll every 3 seconds
+    pollingIntervalRef.current = setInterval(async () => {
+      setPollingSeconds(prev => prev + 3);
+      
+      const result = await verifyPayment({ payerEmail: email.trim().toLowerCase() });
+      
+      if (result.verified && result.purchase_level) {
+        // Payment found! Stop polling and continue
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+        
+        toast({
+          title: "¡Pago verificado!",
+          description: `Tu ${result.purchase_level === 'premium' ? 'Informe Premium' : 'Plan de Acción'} está listo`,
+        });
+        
+        setShowPolling(false);
+        onPurchasePlan(result.purchase_level);
+      }
+    }, 3000);
   };
 
-  const handleVerifyPayment = async () => {
-    if (!paymentEmail.trim()) {
+  const handleInitiatePurchase = (level: 'plan-accion' | 'premium') => {
+    setPendingLevel(level);
+    setShowEmailPrompt(true);
+  };
+
+  const handleConfirmEmailAndPay = () => {
+    if (!paymentEmail.trim() || !paymentEmail.includes('@')) {
       toast({
-        title: "Email requerido",
-        description: "Ingresa el email usado en MercadoPago",
+        title: "Email inválido",
+        description: "Ingresa un email válido para continuar",
         variant: "destructive",
       });
       return;
     }
 
-    const result = await verifyPayment({ payerEmail: paymentEmail.trim() });
+    // Open MercadoPago
+    const url = pendingLevel === 'premium' ? MERCADOPAGO_PREMIUM : MERCADOPAGO_PLAN_ACCION;
+    window.open(url, '_blank');
+    
+    // Switch to polling view
+    setShowEmailPrompt(false);
+    setShowPolling(true);
+    
+    // Start automatic polling
+    startPolling(paymentEmail);
+  };
+
+  const handleCancelPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    setShowPolling(false);
+    setShowEmailPrompt(false);
+    setPendingLevel(null);
+    setPaymentEmail('');
+    setPollingSeconds(0);
+  };
+
+  const handleManualVerify = async () => {
+    const result = await verifyPayment({ payerEmail: paymentEmail.trim().toLowerCase() });
     
     if (result.verified && result.purchase_level) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      
       toast({
         title: "¡Pago verificado!",
         description: `Tu ${result.purchase_level === 'premium' ? 'Informe Premium' : 'Plan de Acción'} está listo`,
       });
+      
+      setShowPolling(false);
       onPurchasePlan(result.purchase_level);
     } else {
       toast({
         title: "Pago no encontrado",
-        description: "Si acabas de pagar, espera unos segundos e intenta de nuevo",
+        description: "Si acabas de pagar, espera unos segundos más",
         variant: "destructive",
       });
     }
@@ -206,83 +273,121 @@ const IRPResultScreen = ({
         </div>
       </Card>
 
-      {/* Modal de verificación de pago */}
-      {showPaymentCheck && (
+      {/* Modal para pedir email ANTES de pagar */}
+      {showEmailPrompt && (
         <Card className="border-2 border-primary/50 p-6 space-y-4 bg-gradient-to-br from-primary/5 to-transparent animate-fade-in">
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500/20 to-primary/20 flex items-center justify-center mx-auto animate-pulse">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mx-auto">
+              <Mail className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="font-bold text-lg text-foreground">¡Casi listo!</h3>
+            <h3 className="font-bold text-lg text-foreground">Antes de continuar</h3>
             <p className="text-sm text-muted-foreground">
-              Una vez completes el pago en MercadoPago, vuelve aquí e ingresa el email que usaste para verificar tu compra
-            </p>
-          </div>
-          
-          <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-2">
-            <p className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">1</span>
-              Completa el pago en la ventana de MercadoPago
-            </p>
-            <p className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">2</span>
-              Vuelve a esta página
-            </p>
-            <p className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">3</span>
-              Ingresa el email que usaste y verifica tu compra
+              Ingresa el email que usarás en MercadoPago para que podamos verificar tu compra automáticamente
             </p>
           </div>
           
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Email usado en MercadoPago</label>
+              <label className="text-xs font-medium text-muted-foreground">Tu email</label>
               <input
                 type="email"
                 placeholder="tu@email.com"
                 value={paymentEmail}
                 onChange={(e) => setPaymentEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                autoFocus
               />
             </div>
             <Button 
-              className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold"
+              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:brightness-110 text-primary-foreground font-semibold"
               size="lg"
-              onClick={handleVerifyPayment}
+              onClick={handleConfirmEmailAndPay}
+            >
+              Continuar a MercadoPago
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full text-muted-foreground text-sm"
+              onClick={() => {
+                setShowEmailPrompt(false);
+                setPendingLevel(null);
+                setPaymentEmail('');
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Modal de polling automático */}
+      {showPolling && (
+        <Card className="border-2 border-emerald-500/50 p-6 space-y-4 bg-gradient-to-br from-emerald-500/5 to-transparent animate-fade-in">
+          <div className="text-center space-y-3">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              </div>
+            </div>
+            <h3 className="font-bold text-lg text-foreground">Esperando confirmación de pago</h3>
+            <p className="text-sm text-muted-foreground">
+              Completa el pago en MercadoPago. Detectaremos tu compra automáticamente.
+            </p>
+            <div className="text-xs text-muted-foreground">
+              Verificando... {pollingSeconds}s
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-2">
+            <p className="text-xs font-medium text-foreground flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 text-[10px] font-bold">1</span>
+              Completa el pago en la ventana de MercadoPago
+            </p>
+            <p className="text-xs font-medium text-foreground flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 text-[10px] font-bold">2</span>
+              Vuelve aquí - detectaremos tu pago automáticamente
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Button 
+              className="w-full gap-2"
+              variant="outline"
+              onClick={handleManualVerify}
               disabled={isVerifying}
             >
               {isVerifying ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Verificando tu pago...
+                  Verificando...
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  Verificar mi compra
+                  Verificar manualmente
                 </>
               )}
             </Button>
             <Button 
               variant="ghost" 
               className="w-full text-muted-foreground text-sm"
-              onClick={() => {
-                setShowPaymentCheck(false);
-                setPendingLevel(null);
-              }}
+              onClick={handleCancelPolling}
             >
-              Cancelar y volver
+              Cancelar
             </Button>
             
             <p className="text-[10px] text-center text-muted-foreground">
-              ¿Problemas? El pago puede tardar unos segundos en procesarse. Si no funciona, espera un momento e intenta de nuevo.
+              El pago puede tardar unos segundos en procesarse después de completar la transacción.
             </p>
           </div>
         </Card>
       )}
 
       {/* Comparación de planes */}
-      {!showPaymentCheck && (
+      {!showEmailPrompt && !showPolling && (
         <div className="space-y-4">
           <h3 className="text-center text-lg font-semibold text-foreground">
             Elige tu nivel de análisis
@@ -343,7 +448,7 @@ const IRPResultScreen = ({
               <Button 
                 className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
                 size="lg"
-                onClick={() => handlePurchasePlan('premium')}
+                onClick={() => handleInitiatePurchase('premium')}
               >
                 Obtener Informe Premium
                 <ArrowRight className="w-4 h-4" />
@@ -400,7 +505,7 @@ const IRPResultScreen = ({
               <Button 
                 className="w-full gap-2"
                 size="lg"
-                onClick={() => handlePurchasePlan('plan-accion')}
+                onClick={() => handleInitiatePurchase('plan-accion')}
               >
                 Obtener Plan de Acción
                 <ArrowRight className="w-4 h-4" />
