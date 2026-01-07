@@ -5,6 +5,7 @@ import IRPResultScreen from "@/components/IRPResultScreen";
 import UpsellPremiumScreen from "@/components/UpsellPremiumScreen";
 import QuestionnaireLayout from "@/components/questionnaire/QuestionnaireLayout";
 import { useQuestionnaireFlow } from "@/hooks/useQuestionnaireFlow";
+import { useAudioPreload, usePreloadNextAudios } from "@/hooks/useAudioPreload";
 import { triggerConfetti } from "@/utils/confetti";
 import { calculateRiskAssessment } from "@/utils/riskCalculation";
 import { DensityProAnswers, ImplantXAnswers } from "@/types/questionnaire";
@@ -36,6 +37,12 @@ import {
 
 const PatientQuestionnaire = () => {
   const flow = useQuestionnaireFlow();
+  
+  // Preload all questionnaire audio files on mount
+  useAudioPreload();
+  
+  // Preload next step's audio based on current step
+  usePreloadNextAudios(flow.step);
 
   const renderContent = () => {
     if (flow.showRioResponse) {
