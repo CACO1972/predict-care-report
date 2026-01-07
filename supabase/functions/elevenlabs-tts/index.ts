@@ -9,8 +9,8 @@ const corsHeaders = {
 const MAX_TEXT_LENGTH = 2000;
 const MIN_TEXT_LENGTH = 1;
 
-// Rio's cloned voice ID from ElevenLabs
-const RIO_VOICE_ID = "nNS8uylvF9GBWVSiIt5h";
+// Rio's voice ID from ElevenLabs Voice Library
+const RIO_VOICE_ID = "0cheeVA5B3Cv6DGq65cT";
 
 /**
  * Validates and sanitizes the input text
