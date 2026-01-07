@@ -99,22 +99,8 @@ const audioScripts: AudioScript[] = [
 ];
 
 // List of audio files that already exist in public/audio
-const EXISTING_AUDIO_FILES = [
-  "hola-soy-rio.mp3", "rio-1a2-dientes.mp3", "rio-alcohol-no-2.mp3", "rio-alcohol-no.mp3",
-  "rio-alcohol-si-2.mp3", "rio-alcohol-si.mp3", "rio-brux-pregunta.mp3", "rio-causa-caries.mp3",
-  "rio-causa-periodontitis.mp3", "rio-causa-pregunta.mp3", "rio-causa-trauma.mp3",
-  "rio-corticoides-no-2.mp3", "rio-corticoides-no.mp3", "rio-corticoides-si-2.mp3",
-  "rio-corticoides-si.mp3", "rio-cuantos-dientes.mp3", "rio-density-q3.mp3",
-  "rio-diabetes-controlada.mp3", "rio-diabetes-nocontrolada.mp3", "rio-diabetes-pregunta.mp3",
-  "rio-edad.mp3", "rio-familia-si-2.mp3", "rio-familia-si.mp3", "rio-feedback-1a2.mp3",
-  "rio-feedback-encias.mp3", "rio-feedback-puente.mp3", "rio-feedback-todos.mp3",
-  "rio-felicitaciones.mp3", "rio-fuma.mp3", "rio-implante-bien.mp3", "rio-implante-fallaron.mp3",
-  "rio-implante-pregunta.mp3", "rio-masde10.mp3", "rio-menosde10.mp3", "rio-nobruxa.mp3",
-  "rio-nodiabetes.mp3", "rio-nofuma.mp3", "rio-nombre.mp3", "rio-plan-accion.mp3",
-  "rio-plan-gratis.mp3", "rio-plan-premium.mp3", "rio-pregunta-encias.mp3", "rio-primer-implante.mp3",
-  "rio-puente-allonfor.mp3", "rio-resultados-intro.mp3", "rio-sibruxa.mp3", "rio-tiempo-1a3.mp3",
-  "rio-tiempo-masde3.mp3", "rio-tiempo-menos1.mp3", "rio-tiempo-pregunta.mp3", "rio-todos-dientes.mp3"
-];
+// Empty - regenerating all with new voice
+const EXISTING_AUDIO_FILES: string[] = [];
 
 const AudioGenerator = () => {
   const [generating, setGenerating] = useState<string | null>(null);
