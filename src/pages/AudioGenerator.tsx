@@ -99,8 +99,10 @@ const audioScripts: AudioScript[] = [
 ];
 
 // List of audio files that already exist in public/audio
-// Empty - regenerating all with new voice
-const EXISTING_AUDIO_FILES: string[] = [];
+const EXISTING_AUDIO_FILES = [
+  "hola-soy-rio.mp3", "rio-nombre.mp3", "rio-edad.mp3", "rio-fuma.mp3",
+  "rio-familia-no.mp3", "rio-altura-si.mp3", "rio-altura-no.mp3", "rio-fractura-si.mp3"
+];
 
 const AudioGenerator = () => {
   const [generating, setGenerating] = useState<string | null>(null);
