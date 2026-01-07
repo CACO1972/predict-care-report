@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Loader2, Play, CheckCircle, XCircle, Volume2 } from "lucide-react";
+import { Download, Loader2, Play, CheckCircle, XCircle, Volume2, AlertTriangle, FileAudio } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface AudioScript {
   id: string;
@@ -68,7 +69,7 @@ const audioScripts: AudioScript[] = [
   { id: "rio-todos-dientes", filename: "rio-todos-dientes.mp3", text: "Para reemplazar todos los dientes, tratamientos como All-on-4 o All-on-6 son los más recomendados. Con solo cuatro a seis implantes puedes tener una dentadura completa y fija.", description: "Feedback todos dientes alt", category: "Tratamiento" },
   { id: "rio-puente-allonfor", filename: "rio-puente-allonfor.mp3", text: "Para rehabilitaciones extensas, existen diferentes técnicas como puentes sobre implantes o el sistema All-on-4 que permiten resultados excelentes con menos implantes.", description: "Feedback puente all-on-4", category: "Tratamiento" },
 
-  // ========== SALUD ÓSEA (DensityPro) - NUEVOS ==========
+  // ========== SALUD ÓSEA (DensityPro) ==========
   { id: "rio-density-intro", filename: "rio-density-intro.mp3", text: "He notado por tu edad y género que es importante evaluar tu salud ósea. Estas preguntas nos ayudarán a entender la calidad de tus huesos, lo cual es fundamental para el éxito de tu implante.", description: "Introducción evaluación ósea", category: "Salud Ósea" },
   { id: "rio-density-q1", filename: "rio-density-q1.mp3", text: "Comencemos con tu historial médico. Las fracturas previas nos dan información importante sobre la resistencia de tus huesos.", description: "Pregunta fracturas", category: "Salud Ósea" },
   { id: "rio-density-q2", filename: "rio-density-q2.mp3", text: "Ahora, sobre algunos cambios que quizás hayas notado. La estatura puede darnos pistas sobre la salud ósea.", description: "Pregunta pérdida altura", category: "Salud Ósea" },
@@ -89,7 +90,7 @@ const audioScripts: AudioScript[] = [
   { id: "rio-alcohol-no", filename: "rio-alcohol-no.mp3", text: "Perfecto. El consumo moderado o nulo de alcohol favorece la absorción de calcio y la salud ósea.", description: "Feedback consumo bajo alcohol", category: "Salud Ósea" },
   { id: "rio-alcohol-si", filename: "rio-alcohol-si.mp3", text: "El consumo elevado puede afectar el metabolismo del calcio. Reducirlo, incluso gradualmente, puede mejorar significativamente tu salud ósea y el éxito del implante.", description: "Feedback consumo alto alcohol", category: "Salud Ósea" },
 
-  // ========== RESULTADOS Y PLANES - NUEVOS ==========
+  // ========== RESULTADOS Y PLANES ==========
   { id: "rio-resultados-intro", filename: "rio-resultados-intro.mp3", text: "¡Listo! He analizado todas tus respuestas y aquí tienes tu Índice de Riesgo Personalizado. Este número representa tu probabilidad de éxito con implantes dentales basándose en tus factores específicos.", description: "Introducción resultados", category: "Resultados" },
   { id: "rio-plan-gratis", filename: "rio-plan-gratis.mp3", text: "Con el informe gratuito puedes ver tu puntuación general y los factores principales que influyen en tu caso. Es un buen punto de partida para entender tu situación.", description: "Explicación plan gratis", category: "Resultados" },
   { id: "rio-plan-accion", filename: "rio-plan-accion.mp3", text: "El Plan de Acción incluye un análisis más detallado con recomendaciones personalizadas, factores de riesgo específicos y un PDF descargable que puedes compartir con tu dentista.", description: "Explicación plan acción", category: "Resultados" },
@@ -97,12 +98,34 @@ const audioScripts: AudioScript[] = [
   { id: "rio-felicitaciones", filename: "rio-felicitaciones.mp3", text: "¡Felicitaciones! Has dado el primer paso hacia recuperar tu sonrisa. Recuerda que estos resultados son orientativos y tu dentista tendrá la última palabra. ¡Mucho éxito!", description: "Mensaje de despedida", category: "Resultados" },
 ];
 
+// List of audio files that already exist in public/audio
+const EXISTING_AUDIO_FILES = [
+  "hola-soy-rio.mp3", "rio-1a2-dientes.mp3", "rio-alcohol-no-2.mp3", "rio-alcohol-no.mp3",
+  "rio-alcohol-si-2.mp3", "rio-alcohol-si.mp3", "rio-brux-pregunta.mp3", "rio-causa-caries.mp3",
+  "rio-causa-periodontitis.mp3", "rio-causa-pregunta.mp3", "rio-causa-trauma.mp3",
+  "rio-corticoides-no-2.mp3", "rio-corticoides-no.mp3", "rio-corticoides-si-2.mp3",
+  "rio-corticoides-si.mp3", "rio-cuantos-dientes.mp3", "rio-density-q3.mp3",
+  "rio-diabetes-controlada.mp3", "rio-diabetes-nocontrolada.mp3", "rio-diabetes-pregunta.mp3",
+  "rio-edad.mp3", "rio-familia-si-2.mp3", "rio-familia-si.mp3", "rio-feedback-1a2.mp3",
+  "rio-feedback-encias.mp3", "rio-feedback-puente.mp3", "rio-feedback-todos.mp3",
+  "rio-felicitaciones.mp3", "rio-fuma.mp3", "rio-implante-bien.mp3", "rio-implante-fallaron.mp3",
+  "rio-implante-pregunta.mp3", "rio-masde10.mp3", "rio-menosde10.mp3", "rio-nobruxa.mp3",
+  "rio-nodiabetes.mp3", "rio-nofuma.mp3", "rio-nombre.mp3", "rio-plan-accion.mp3",
+  "rio-plan-gratis.mp3", "rio-plan-premium.mp3", "rio-pregunta-encias.mp3", "rio-primer-implante.mp3",
+  "rio-puente-allonfor.mp3", "rio-resultados-intro.mp3", "rio-sibruxa.mp3", "rio-tiempo-1a3.mp3",
+  "rio-tiempo-masde3.mp3", "rio-tiempo-menos1.mp3", "rio-tiempo-pregunta.mp3", "rio-todos-dientes.mp3"
+];
+
 const AudioGenerator = () => {
   const [generating, setGenerating] = useState<string | null>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
   const [generated, setGenerated] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState<Set<string>>(new Set());
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
   const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // Calculate missing audios
+  const missingAudios = audioScripts.filter(s => !EXISTING_AUDIO_FILES.includes(s.filename));
 
   const generateAudio = async (script: AudioScript) => {
     setGenerating(script.id);
@@ -148,13 +171,42 @@ const AudioGenerator = () => {
   };
 
   const generateAll = async () => {
+    setGeneratingAll(true);
     for (const script of audioScripts) {
       if (!generated.has(script.id)) {
         await generateAudio(script);
         // Small delay between requests to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
+    setGeneratingAll(false);
+    toast.success("¡Generación completada!");
+  };
+
+  const generateMissing = async () => {
+    setGeneratingAll(true);
+    toast.info(`Generando ${missingAudios.length} audios faltantes...`);
+    
+    for (const script of missingAudios) {
+      if (!generated.has(script.id)) {
+        await generateAudio(script);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+    
+    setGeneratingAll(false);
+    toast.success(`¡${missingAudios.length} audios generados! Descárgalos para subirlos al proyecto.`);
+  };
+
+  const downloadMissing = () => {
+    missingAudios.forEach((script, index) => {
+      if (generated.has(script.id)) {
+        // Stagger downloads to avoid browser blocking
+        setTimeout(() => {
+          downloadAudio(script.id, script.filename);
+        }, index * 500);
+      }
+    });
   };
 
   const playAudio = (id: string) => {
@@ -187,6 +239,8 @@ const AudioGenerator = () => {
   };
 
   const categories = [...new Set(audioScripts.map(s => s.category))];
+  const missingCount = missingAudios.length;
+  const missingGenerated = missingAudios.filter(s => generated.has(s.id)).length;
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
@@ -195,17 +249,21 @@ const AudioGenerator = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Generador de Audios - Río</h1>
             <p className="text-muted-foreground mt-1">
-              Genera todos los audios para el asistente Río usando ElevenLabs
+              Genera todos los audios para el asistente Río usando la voz clonada de ElevenLabs
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Voice ID: nNS8uylvF9GBWVSiIt5h | Model: eleven_multilingual_v2
             </p>
           </div>
           
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button 
               onClick={generateAll} 
-              disabled={generating !== null}
+              disabled={generatingAll || generating !== null}
               className="gap-2"
+              variant="outline"
             >
-              {generating ? (
+              {generatingAll ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Generando...
@@ -226,6 +284,63 @@ const AudioGenerator = () => {
             )}
           </div>
         </div>
+
+        {/* Missing Audios Section */}
+        {missingCount > 0 && (
+          <Card className="border-amber-500/50 bg-amber-500/5">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <CardTitle className="text-lg text-amber-500">Audios Faltantes en el Proyecto</CardTitle>
+              </div>
+              <CardDescription>
+                Estos {missingCount} audios no existen en <code className="text-xs bg-muted px-1 rounded">/public/audio/</code>. 
+                Genera y descarga para agregarlos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {missingAudios.map(script => (
+                  <Badge 
+                    key={script.id} 
+                    variant={generated.has(script.id) ? "default" : "secondary"}
+                    className="gap-1"
+                  >
+                    {generated.has(script.id) && <CheckCircle className="w-3 h-3" />}
+                    {script.filename}
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="flex gap-3">
+                <Button 
+                  onClick={generateMissing} 
+                  disabled={generatingAll || generating !== null}
+                  className="gap-2"
+                >
+                  {generatingAll ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generando {missingGenerated}/{missingCount}...
+                    </>
+                  ) : (
+                    <>
+                      <FileAudio className="w-4 h-4" />
+                      Generar Solo Faltantes ({missingCount})
+                    </>
+                  )}
+                </Button>
+                
+                {missingGenerated > 0 && (
+                  <Button variant="secondary" onClick={downloadMissing} className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Descargar Faltantes ({missingGenerated})
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-4">
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
