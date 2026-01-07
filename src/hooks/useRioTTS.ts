@@ -47,8 +47,9 @@ export const useRioTTS = (): UseRioTTSReturn => {
     setError(null);
 
     try {
+      // Use elevenlabs-tts for consistent Rio voice
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rio-tts`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
           method: "POST",
           headers: {
