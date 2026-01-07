@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import rioAvatar from "@/assets/avatar-implantx.png";
+import rioAvatarStatic from "@/assets/rio-avatar-new-static.png";
 import { RioExpression } from "@/hooks/useRioExpression";
 
 interface RioAvatarExpressiveProps {
@@ -92,13 +92,13 @@ const RioAvatarExpressive = ({
           isSpeaking && "scale-105"
         )}
       >
-        {/* Rio avatar image - positioned to show full face */}
+        {/* Rio avatar image */}
         <img 
-          src={rioAvatar} 
+          src={rioAvatarStatic} 
           alt="Río - Asistente ImplantX" 
           className={cn(
-            "w-full h-[120%] object-cover object-[center_25%] transition-transform duration-300",
-            isSpeaking && "scale-105"
+            "w-full h-full object-cover transition-transform duration-300",
+            isSpeaking && "scale-102"
           )}
         />
         
