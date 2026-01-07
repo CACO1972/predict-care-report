@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import RioAvatarExpressive from "./RioAvatarExpressive";
 import { RioExpression } from "@/hooks/useRioExpression";
 import { useRioTTS } from "@/hooks/useRioTTS";
+import { getCachedAudio } from "@/hooks/useAudioPreload";
 import { Volume2, VolumeX, Loader2 } from "lucide-react";
 
 interface RioAvatarProps {
@@ -32,17 +33,33 @@ const RioAvatar = ({
 
   const isPlaying = customAudioUrl ? isCustomPlaying : isTTSPlaying;
 
-  // Play custom audio
+  // Play custom audio - use cached version if available for instant playback
   const playCustomAudio = () => {
     if (!customAudioUrl) return;
     if (audioRef.current) {
       audioRef.current.pause();
     }
-    audioRef.current = new Audio(customAudioUrl);
+    
+    // Try to get cached audio first for faster playback
+    const cachedAudio = getCachedAudio(customAudioUrl);
+    if (cachedAudio) {
+      audioRef.current = cachedAudio.cloneNode(true) as HTMLAudioElement;
+    } else {
+      audioRef.current = new Audio(customAudioUrl);
+    }
+    
     audioRef.current.onplay = () => setIsCustomPlaying(true);
     audioRef.current.onended = () => setIsCustomPlaying(false);
     audioRef.current.onpause = () => setIsCustomPlaying(false);
-    audioRef.current.play().catch(console.error);
+    audioRef.current.onerror = () => {
+      // If custom audio fails, fall back to TTS
+      console.warn(`Audio not found: ${customAudioUrl}, falling back to TTS`);
+      speak(processedMessage);
+    };
+    audioRef.current.play().catch(() => {
+      // Fallback to TTS on play error
+      speak(processedMessage);
+    });
   };
 
   const stopCustomAudio = () => {

@@ -14,7 +14,6 @@ export const DensityIntroStep = ({ userName, onNext }: DensityIntroStepProps) =>
     <RioAvatar 
       message={`Hola {name}, he notado por tu edad y género que es importante evaluar tu salud ósea. Estas preguntas nos ayudarán a entender la calidad de tus huesos.`}
       userName={userName}
-      customAudioUrl="/audio/rio-density-intro.mp3"
     />
     <Button 
       onClick={onNext} 
@@ -39,7 +38,6 @@ export const DensityQ1Step = ({ densityAnswers, setDensityAnswers, userName, onA
     <RioAvatar 
       message="Comencemos con tu historial médico." 
       userName={userName}
-      customAudioUrl="/audio/rio-density-q1.mp3"
     />
     <QuestionCard
       question="¿Alguna vez has tenido una fractura de hueso (ej. muñeca, cadera, columna) después de una caída o golpe menor como adulto?"
@@ -65,7 +63,6 @@ export const DensityQ2Step = ({ densityAnswers, setDensityAnswers, userName, onA
     <RioAvatar 
       message="Ahora, sobre algunos cambios que quizás hayas notado." 
       userName={userName}
-      customAudioUrl="/audio/rio-density-q2.mp3"
     />
     <QuestionCard
       question="¿Has notado una disminución en tu estatura en los últimos años?"
@@ -117,7 +114,6 @@ export const DensityQ4Step = ({ densityAnswers, setDensityAnswers, userName, onA
     <RioAvatar 
       message="Ciertos medicamentos pueden afectar la salud de los huesos." 
       userName={userName}
-      customAudioUrl="/audio/rio-density-q4.mp3"
     />
     <QuestionCard
       question="¿Has tomado o tomas actualmente medicamentos corticoides (como prednisona o cortisona) de forma regular por más de 3 meses?"
@@ -143,7 +139,6 @@ export const DensityQ5Step = ({ densityAnswers, setDensityAnswers, userName, onA
     <RioAvatar 
       message="Finalmente, algunos hábitos de vida." 
       userName={userName}
-      customAudioUrl="/audio/rio-density-q5.mp3"
     />
     <QuestionCard
       question="¿Consumes más de dos bebidas alcohólicas al día de forma habitual?"
@@ -180,7 +175,6 @@ export const DensityCompleteStep = ({ userName, onNext }: DensityCompleteStepPro
     <RioAvatar 
       message="¡Gracias, {name}! He analizado tus respuestas. Continuemos con el cuestionario principal."
       userName={userName}
-      customAudioUrl="/audio/rio-density-complete.mp3"
     />
     <Button 
       onClick={onNext} 
