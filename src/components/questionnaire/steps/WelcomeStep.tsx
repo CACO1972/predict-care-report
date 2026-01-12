@@ -21,7 +21,7 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
           <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-xl shadow-primary/10 bg-background aspect-[9/16]">
             <video
               ref={welcomeVideoRef}
-              src="/rio-avatar-new.mp4"
+              src="/rio-welcome-speaking.mp4"
               poster={rioThumbnail}
               autoPlay
               playsInline
