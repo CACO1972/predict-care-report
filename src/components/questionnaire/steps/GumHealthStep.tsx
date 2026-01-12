@@ -12,17 +12,17 @@ interface GumHealthStepProps {
 const GumHealthStep = ({ implantAnswers, setImplantAnswers, userName, setStep }: GumHealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="Veamos ahora la salud de tus encías."
+      message="Ahora veamos cómo están tus encías."
       userName={userName}
       customAudioUrl="/audio/rio-pregunta-encias.mp3"
     />
     <QuestionCard
-      question="1. ¿Sangran cuando te cepillas los dientes?"
+      question="1. ¿Te sangran las encías cuando te lavas los dientes?"
       type="radio"
       options={[
         { value: 'never', label: 'Nunca o casi nunca' },
         { value: 'sometimes', label: 'A veces' },
-        { value: 'frequently', label: 'Frecuentemente' },
+        { value: 'frequently', label: 'Seguido' },
       ]}
       value={implantAnswers.gumBleeding}
       onChange={(value) => {
@@ -33,12 +33,12 @@ const GumHealthStep = ({ implantAnswers, setImplantAnswers, userName, setStep }:
     />
     {implantAnswers.gumBleeding && (
       <QuestionCard
-        question="2. ¿Has perdido algún diente porque se movía o se 'soltó' solo, sin causa aparente como un golpe o caries grande?"
+        question="2. ¿Tienes dientes sueltos o se te ha caído alguno solo?"
         type="radio"
         options={[
           { value: 'no', label: 'No' },
-          { value: '1-2', label: 'Sí, 1 o 2 dientes' },
-          { value: 'several', label: 'Sí, varios dientes' },
+          { value: '1-2', label: 'Sí, 1 o 2' },
+          { value: 'several', label: 'Sí, varios' },
         ]}
         value={implantAnswers.looseTeethLoss}
         onChange={(value) => {
@@ -50,7 +50,7 @@ const GumHealthStep = ({ implantAnswers, setImplantAnswers, userName, setStep }:
     )}
     {implantAnswers.looseTeethLoss && (
       <QuestionCard
-        question="3. ¿Cuántas veces al día te cepillas los dientes?"
+        question="3. ¿Cuántas veces al día te lavas los dientes?"
         type="radio"
         options={[
           { value: 'less-once', label: 'Menos de una vez' },

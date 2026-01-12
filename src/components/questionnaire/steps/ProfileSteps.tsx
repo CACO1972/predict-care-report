@@ -10,14 +10,14 @@ interface NameStepProps {
 
 export const NameStep = ({ userProfile, setUserProfile, onNext }: NameStepProps) => (
   <div className="space-y-6 animate-fade-in">
-    <RioAvatar message="Para empezar, por favor dime tu nombre." customAudioUrl="/audio/rio-nombre.mp3" />
+    <RioAvatar message="Hola, soy Río. ¿Cómo te llamas?" customAudioUrl="/audio/rio-nombre.mp3" />
     <QuestionCard
-      question="¿Cuál es tu nombre?"
+      question="¿Cómo te llamas?"
       type="text"
       value={userProfile.name}
       onChange={(value) => setUserProfile({ ...userProfile, name: value as string })}
       onNext={onNext}
-      nextButtonText="Continuar"
+      nextButtonText="Siguiente"
       hideNextButton={false}
     />
   </div>
@@ -32,12 +32,12 @@ interface DemographicsStepProps {
 export const DemographicsStep = ({ userProfile, setUserProfile, onNext }: DemographicsStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message={`¡Un gusto, ${userProfile.name}! Ahora necesito algunos datos básicos para personalizar tu evaluación.`}
+      message={`¡Hola ${userProfile.name}! Necesito saber un poco más de ti.`}
       userName={userProfile.name}
       customAudioUrl="/audio/rio-edad.mp3"
     />
     <QuestionCard
-      question="¿Cuál es tu edad?"
+      question="¿Cuántos años tienes?"
       type="number"
       value={userProfile.age}
       onChange={(value) => setUserProfile({ ...userProfile, age: value as number })}
@@ -47,7 +47,7 @@ export const DemographicsStep = ({ userProfile, setUserProfile, onNext }: Demogr
     />
     {userProfile.age && (
       <QuestionCard
-        question="¿Cuál es tu género?"
+        question="¿Eres hombre o mujer?"
         type="gender"
         value={userProfile.gender}
         onChange={(value) => {

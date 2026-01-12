@@ -1,44 +1,75 @@
-import { MessageCircle, Camera, ClipboardCheck, FileText } from "lucide-react";
+import { MessageCircle, Upload, FileText, CheckCircle2 } from "lucide-react";
+
+const benefits = [
+  {
+    icon: CheckCircle2,
+    text: "Te dice si hay cosas que pueden complicar",
+  },
+  {
+    icon: CheckCircle2,
+    text: "Te ayuda a no perder el viaje",
+  },
+  {
+    icon: CheckCircle2,
+    text: "Te dice qué hacer primero (encías, fumar, diabetes, etc.)",
+  },
+];
 
 const steps = [
   {
     icon: MessageCircle,
     step: "1",
-    title: "Responde preguntas",
-    description: "Río, nuestra IA, te guía con preguntas simples sobre tu salud bucal",
+    title: "Cuéntanos de ti",
+    description: "Responde unas preguntas cortas sobre tu salud",
   },
   {
-    icon: Camera,
+    icon: Upload,
     step: "2",
-    title: "Sube una imagen",
-    description: "Foto de la zona afectada o radiografía (opcional en versión gratuita)",
+    title: "Sube una foto (opcional)",
+    description: "Si tienes radiografía, súbela. Si no, no pasa nada.",
     badge: "Opcional",
   },
   {
-    icon: ClipboardCheck,
-    step: "3",
-    title: "Análisis inteligente",
-    description: "Evaluamos factores de riesgo basados en evidencia clínica",
-  },
-  {
     icon: FileText,
-    step: "4",
-    title: "Recibe tu reporte",
-    description: "Obtén un informe personalizado con recomendaciones claras",
+    step: "3",
+    title: "Recibe tu guía",
+    description: "Te decimos qué hacer antes de pensar en implantes",
   },
 ];
 
 const HowItWorksSection = () => {
   return (
     <div className="max-w-4xl mx-auto mb-12 sm:mb-16">
+      {/* ¿Para qué sirve? */}
+      <div className="mb-10 sm:mb-12">
+        <h2 className="text-center text-lg sm:text-xl font-display text-foreground mb-6">
+          ¿Para qué sirve?
+        </h2>
+
+        <div className="max-w-lg mx-auto space-y-3">
+          {benefits.map((benefit, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 p-4 rounded-xl bg-card/50 border border-border/50"
+            >
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <benefit.icon className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-sm sm:text-base text-foreground">{benefit.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pasos */}
       <h2 className="text-center text-lg sm:text-xl font-display text-foreground mb-2">
         ¿Cómo funciona?
       </h2>
       <p className="text-center text-muted-foreground text-sm mb-8 sm:mb-10">
-        3 simples pasos para conocer tu candidatura
+        3 pasos simples
       </p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
         {steps.map((step, index) => (
           <div
             key={step.step}
