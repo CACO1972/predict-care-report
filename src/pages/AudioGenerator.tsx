@@ -98,10 +98,39 @@ const audioScripts: AudioScript[] = [
   { id: "rio-felicitaciones", filename: "rio-felicitaciones.mp3", text: "¡Felicitaciones! Has dado el primer paso hacia recuperar tu sonrisa. Recuerda que estos resultados son orientativos y tu dentista tendrá la última palabra. ¡Mucho éxito!", description: "Mensaje de despedida", category: "Resultados" },
 ];
 
-// List of audio files that already exist in public/audio
+// List of audio files that already exist in public/audio (31 files)
 const EXISTING_AUDIO_FILES = [
-  "hola-soy-rio.mp3", "rio-nombre.mp3", "rio-edad.mp3", "rio-fuma.mp3",
-  "rio-familia-no.mp3", "rio-altura-si.mp3", "rio-altura-no.mp3", "rio-fractura-si.mp3"
+  "hola-soy-rio.mp3",
+  "rio-1a2-dientes.mp3",
+  "rio-alcohol-no-3.mp3",
+  "rio-alcohol-si-3.mp3",
+  "rio-altura-no.mp3",
+  "rio-altura-si.mp3",
+  "rio-corticoides-no-3.mp3",
+  "rio-corticoides-si-3.mp3",
+  "rio-cuantos-dientes.mp3",
+  "rio-density-complete-2.mp3",
+  "rio-density-complete.mp3",
+  "rio-density-intro-2.mp3",
+  "rio-density-q3-2.mp3",
+  "rio-density-q4.mp3",
+  "rio-density-q5.mp3",
+  "rio-edad.mp3",
+  "rio-familia-no.mp3",
+  "rio-familia-si-3.mp3",
+  "rio-feedback-1a2.mp3",
+  "rio-feedback-puente.mp3",
+  "rio-feedback-todos.mp3",
+  "rio-felicitaciones-2.mp3",
+  "rio-fractura-no-2.mp3",
+  "rio-fractura-no.mp3",
+  "rio-fractura-si.mp3",
+  "rio-fuma.mp3",
+  "rio-nombre.mp3",
+  "rio-puente-allonfor.mp3",
+  "rio-tiempo-1a3.mp3",
+  "rio-tiempo-masde3.mp3",
+  "rio-todos-dientes.mp3",
 ];
 
 const AudioGenerator = () => {
