@@ -124,7 +124,7 @@ export const useQuestionnaireFlow = () => {
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
   const [showLeadCapture, setShowLeadCapture] = useState(false);
   const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | undefined>(undefined);
   
   const welcomeVideoRef = useRef<HTMLVideoElement>(null);
