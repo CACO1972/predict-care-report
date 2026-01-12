@@ -98,7 +98,7 @@ const audioScripts: AudioScript[] = [
   { id: "rio-felicitaciones", filename: "rio-felicitaciones.mp3", text: "¡Felicitaciones! Has dado el primer paso hacia recuperar tu sonrisa. Recuerda que estos resultados son orientativos y tu dentista tendrá la última palabra. ¡Mucho éxito!", description: "Mensaje de despedida", category: "Resultados" },
 ];
 
-// List of audio files that already exist in public/audio (66 files)
+// List of audio files that already exist in public/audio (68 files) - COMPLETE!
 const EXISTING_AUDIO_FILES = [
   "hola-soy-rio.mp3",
   "rio-1a2-dientes.mp3",
@@ -125,6 +125,8 @@ const EXISTING_AUDIO_FILES = [
   "rio-density-complete.mp3",
   "rio-density-intro-2.mp3",
   "rio-density-intro.mp3",
+  "rio-density-q1.mp3",
+  "rio-density-q2.mp3",
   "rio-density-q3-2.mp3",
   "rio-density-q3.mp3",
   "rio-density-q4.mp3",
