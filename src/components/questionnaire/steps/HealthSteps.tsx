@@ -39,7 +39,7 @@ export const SmokingStep = ({ implantAnswers, setImplantAnswers, userName, onAns
 export const BruxismStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: HealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas."
+      message={`Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas, ${userName}.`}
       userName={userName}
       customAudioUrl="/audio/rio-brux-pregunta.mp3"
     />
@@ -89,7 +89,7 @@ export const BruxismGuardStep = ({ implantAnswers, setImplantAnswers, userName, 
 export const DiabetesStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: HealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="Tu salud general influye mucho en el éxito del tratamiento."
+      message={`Tu salud general influye mucho en el éxito del tratamiento, ${userName}.`}
       userName={userName}
       customAudioUrl="/audio/rio-diabetes-pregunta.mp3"
     />
