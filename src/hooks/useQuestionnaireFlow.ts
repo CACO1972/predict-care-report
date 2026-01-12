@@ -140,7 +140,7 @@ export const useQuestionnaireFlow = () => {
     const densitySteps: QuestionnaireStep[] = ['density-intro', 'density-q1', 'density-q2', 'density-q3', 'density-q4', 'density-q5', 'density-complete'];
     const healthSteps: QuestionnaireStep[] = ['smoking', 'bruxism', 'bruxism-guard', 'diabetes'];
     const irpSteps: QuestionnaireStep[] = ['gum-health', 'irp-processing', 'irp-result'];
-    const oralSteps: QuestionnaireStep[] = ['implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'odontogram', 'summary'];
+    const oralSteps: QuestionnaireStep[] = ['xray-upload', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'odontogram', 'summary'];
     
     let allSteps = [...baseSteps];
     if (requiresDensityPro) {
@@ -161,7 +161,7 @@ export const useQuestionnaireFlow = () => {
       return 'bruxism';
     }
     
-    if (step === 'irp-result' || step === 'irp-processing') {
+    if (step === 'irp-result' || step === 'irp-processing' || step === 'xray-upload') {
       return null;
     }
     
@@ -178,7 +178,7 @@ export const useQuestionnaireFlow = () => {
   }, [getPreviousStep, clearFeedback]);
 
   const canGoBack = useCallback((): boolean => {
-    const noBackSteps: QuestionnaireStep[] = ['welcome', 'processing', 'results', 'irp-processing', 'irp-result'];
+    const noBackSteps: QuestionnaireStep[] = ['welcome', 'processing', 'results', 'irp-processing', 'irp-result', 'xray-upload'];
     return !noBackSteps.includes(step) && getPreviousStep() !== null;
   }, [step, getPreviousStep]);
 
@@ -187,12 +187,12 @@ export const useQuestionnaireFlow = () => {
     if (requiresDensityPro) {
       steps.push('density-intro', 'density-q1', 'density-q2', 'density-q3', 'density-q4', 'density-q5', 'density-complete');
     }
-    steps.push('smoking', 'bruxism', 'bruxism-guard', 'diabetes', 'gum-health', 'irp-processing', 'irp-result', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'odontogram', 'summary', 'processing', 'results');
+    steps.push('smoking', 'bruxism', 'bruxism-guard', 'diabetes', 'gum-health', 'irp-processing', 'irp-result', 'xray-upload', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count', 'odontogram', 'summary', 'processing', 'results');
     return steps.indexOf(step) + 1;
   }, [step, requiresDensityPro]);
 
   const getTotalSteps = useCallback((): number => {
-    return requiresDensityPro ? 24 : 18;
+    return requiresDensityPro ? 25 : 19;
   }, [requiresDensityPro]);
 
   const getCurrentPhase = useCallback((): 'base' | 'density' | 'health' | 'irp' | 'oral' | 'mapping' | 'complete' => {
@@ -200,7 +200,7 @@ export const useQuestionnaireFlow = () => {
     if (step.startsWith('density')) return 'density';
     if (['smoking', 'bruxism', 'bruxism-guard', 'diabetes'].includes(step)) return 'health';
     if (['gum-health', 'irp-processing', 'irp-result'].includes(step)) return 'irp';
-    if (['implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count'].includes(step)) return 'oral';
+    if (['xray-upload', 'implant-history', 'tooth-loss', 'tooth-loss-time', 'teeth-count'].includes(step)) return 'oral';
     if (step === 'odontogram' || step === 'summary') return 'mapping';
     return 'complete';
   }, [step]);
@@ -379,17 +379,20 @@ export const useQuestionnaireFlow = () => {
       setStep('upsell-premium');
     } else {
       triggerConfetti();
-      setStep('implant-history');
+      // Premium goes to xray upload first
+      setStep('xray-upload');
     }
   }, []);
 
   const handleUpgradeToPremium = useCallback(() => {
     setPurchaseLevel('premium');
     triggerConfetti();
-    setStep('implant-history');
+    // Premium goes to xray upload first
+    setStep('xray-upload');
   }, []);
 
   const handleSkipUpsell = useCallback(() => {
+    // Plan-accion skips xray, goes directly to implant-history
     setStep('implant-history');
   }, []);
 
