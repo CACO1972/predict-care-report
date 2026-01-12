@@ -23,5 +23,6 @@ export {
 } from './OralHistorySteps';
 export { default as GumHealthStep } from './GumHealthStep';
 export { default as OdontogramStep } from './OdontogramStep';
+export { default as XrayUploadStep } from './XrayUploadStep';
 export { default as ProcessingStep } from './ProcessingStep';
 export { default as ResultsStep } from './ResultsStep';
