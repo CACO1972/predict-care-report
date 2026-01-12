@@ -67,6 +67,7 @@ export const BruxismGuardStep = ({ implantAnswers, setImplantAnswers, userName, 
     <RioAvatar 
       message="El bruxismo puede manejarse muy bien. Una férula de descarga protege tanto tus dientes naturales como los implantes."
       userName={userName}
+      customAudioUrl="/audio/rio-brux-ferula.mp3"
     />
     <QuestionCard
       question={`${userName}, ¿usas una férula de descarga nocturna?`}
