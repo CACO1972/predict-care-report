@@ -1,10 +1,10 @@
 import { Clock, Shield, Sparkles, Zap } from "lucide-react";
 
 const features = [
-  { icon: Clock, title: "5 minutos", description: "Evaluación rápida" },
-  { icon: Shield, title: "100% Privado", description: "Datos protegidos" },
-  { icon: Sparkles, title: "IA Avanzada", description: "Tecnología de punta" },
-  { icon: Zap, title: "Gratis", description: "Sin pagos" },
+  { icon: Clock, title: "5 minutos", description: "Rápido" },
+  { icon: Shield, title: "Privado", description: "Solo tú lo ves" },
+  { icon: Sparkles, title: "Fácil", description: "Sin palabras difíciles" },
+  { icon: Zap, title: "Gratis", description: "No pagas nada" },
 ];
 
 const FeaturesStrip = () => {

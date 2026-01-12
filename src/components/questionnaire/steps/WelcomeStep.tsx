@@ -1,6 +1,6 @@
 import { RefObject } from "react";
 import { Button } from "@/components/ui/button";
-import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
+import { Shield, Clock, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 
 interface WelcomeStepProps {
@@ -51,14 +51,14 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
 
         <div className="mt-6 p-4 bg-background/50 border border-border/50 rounded-2xl">
           <p className="text-sm text-muted-foreground mb-4">
-            Al continuar, acepto que mis datos serán procesados de forma anónima y segura para generar mi evaluación personalizada.
+            Al continuar, acepto que mis datos se usan solo para crear mi guía. Nadie más los ve.
           </p>
           <Button
             onClick={onContinue}
             className="w-full h-14 text-base font-semibold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25"
           >
             <Shield className="w-5 h-5 mr-2" />
-            Acepto y Continúo
+            Acepto y empiezo
           </Button>
         </div>
 
@@ -67,19 +67,13 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Shield className="w-4 h-4 text-primary" />
             </div>
-            <span className="font-medium">100% Privado</span>
+            <span className="font-medium">Solo tú lo ves</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-foreground/70">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Clock className="w-4 h-4 text-primary" />
             </div>
             <span className="font-medium">5 minutos</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-foreground/70">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Award className="w-4 h-4 text-primary" />
-            </div>
-            <span className="font-medium">Reporte PDF</span>
           </div>
         </div>
       </div>
