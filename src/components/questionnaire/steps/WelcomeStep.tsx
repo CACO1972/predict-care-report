@@ -1,4 +1,4 @@
-import { RefObject } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
@@ -12,6 +12,28 @@ interface WelcomeStepProps {
 }
 
 const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: WelcomeStepProps) => {
+  const [needsTapForSound, setNeedsTapForSound] = useState(false);
+
+  useEffect(() => {
+    const v = welcomeVideoRef.current;
+    if (!v) return;
+
+    // Intentar reproducir con sonido (puede fallar por políticas del navegador)
+    const tryPlay = async () => {
+      try {
+        v.muted = isMuted;
+        await v.play();
+        setNeedsTapForSound(false);
+      } catch {
+        // Si el navegador bloquea autoplay con audio, forzamos mute y pedimos un toque
+        setIsMuted(true);
+        setNeedsTapForSound(true);
+      }
+    };
+
+    tryPlay();
+  }, [welcomeVideoRef, isMuted, setIsMuted]);
+
   return (
     <div className="space-y-8 animate-fade-in text-center">
       <div className="relative bg-gradient-to-b from-card to-card/80 border border-primary/20 rounded-3xl p-6 sm:p-10 shadow-2xl shadow-primary/5 overflow-hidden">
@@ -50,12 +72,23 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
               />
             </div>
             
+            {needsTapForSound && (
+              <div className="absolute top-3 left-3 right-14 px-3 py-2 rounded-xl bg-background/85 backdrop-blur-sm border border-border/50 text-xs text-foreground/80">
+                Toca el ícono de sonido para activarlo.
+              </div>
+            )}
+
             <button
               onClick={() => {
-                setIsMuted(!isMuted);
+                const nextMuted = !isMuted;
+                setIsMuted(nextMuted);
                 if (welcomeVideoRef.current) {
-                  welcomeVideoRef.current.muted = !isMuted;
+                  welcomeVideoRef.current.muted = nextMuted;
+                  welcomeVideoRef.current.play().catch(() => {
+                    setNeedsTapForSound(true);
+                  });
                 }
+                if (!nextMuted) setNeedsTapForSound(false);
               }}
               className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-background transition-colors"
             >
