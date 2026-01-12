@@ -32,21 +32,21 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
               className="absolute inset-0 w-full h-full object-cover"
             />
             
-            {/* Logo ImplantX en el bolsillo del delantal - lado izquierdo */}
-            <div className="absolute top-[18%] left-[22%] w-12 h-12 opacity-90">
+            {/* Logo ImplantX en el bolsillo del delantal - lado izquierdo (vista del espectador) */}
+            <div className="absolute top-[42%] left-[18%] w-8 h-8 sm:w-10 sm:h-10 opacity-85">
               <img 
                 src={logoImplantX} 
                 alt="ImplantX" 
-                className="w-full h-full object-contain drop-shadow-lg"
+                className="w-full h-full object-contain drop-shadow-md"
               />
             </div>
             
-            {/* Logo ImplantX en el bolsillo del delantal - lado derecho */}
-            <div className="absolute top-[18%] right-[22%] w-12 h-12 opacity-90">
+            {/* Logo ImplantX en el bolsillo del delantal - lado derecho (vista del espectador) */}
+            <div className="absolute top-[42%] right-[18%] w-8 h-8 sm:w-10 sm:h-10 opacity-85">
               <img 
                 src={logoImplantX} 
                 alt="ImplantX" 
-                className="w-full h-full object-contain drop-shadow-lg"
+                className="w-full h-full object-contain drop-shadow-md"
               />
             </div>
             
