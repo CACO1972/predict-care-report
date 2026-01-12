@@ -9,30 +9,36 @@ const LockedContentPreview = ({ onUpgrade }: LockedContentPreviewProps) => {
   const lockedFeatures = [
     {
       icon: TrendingUp,
-      title: "¿Qué puedo mejorar?",
-      description: "Te decimos qué cambiar para tener más chance de éxito",
+      title: "Potencial de Mejora",
+      description: "Descubre cuánto puedes mejorar tu probabilidad de éxito",
     },
     {
       icon: Target,
-      title: "Simulador ¿Qué pasa si...?",
-      description: "Mira cómo cambia tu resultado si dejas de fumar, etc.",
+      title: "Simulador ¿Qué pasaría si...?",
+      description: "Simula cambios en tus hábitos y visualiza el impacto",
     },
     {
       icon: Lightbulb,
-      title: "Consejos para tu caso",
-      description: "Pasos claros de qué hacer primero",
+      title: "Recomendaciones Personalizadas",
+      description: "Acciones específicas para optimizar tu caso",
     },
     {
       icon: FileText,
-      title: "Guía completa en PDF",
-      description: "Para llevar al dentista o revisar después",
+      title: "Plan de Acción Detallado",
+      description: "Pasos claros antes, durante y después del implante",
+    },
+    {
+      icon: Sparkles,
+      title: "Análisis de Factores de Sinergia",
+      description: "Cómo tus factores interactúan entre sí",
     },
   ];
 
   const includedFree = [
-    "Tu resultado inicial",
-    "Si hay cosas que pueden complicar",
-    "Una idea de tu situación",
+    "Índice de Riesgo Periodontal (IRP)",
+    "Probabilidad de éxito estimada",
+    "Metodología científica",
+    "Interpretación básica de resultados",
   ];
 
   return (
@@ -45,10 +51,10 @@ const LockedContentPreview = ({ onUpgrade }: LockedContentPreviewProps) => {
           </div>
           <div>
             <h3 className="font-semibold text-foreground text-base">
-              ¿Quieres más detalles?
+              Contenido Premium Bloqueado
             </h3>
             <p className="text-xs text-muted-foreground">
-              Desbloquea la guía completa
+              Desbloquea el análisis completo
             </p>
           </div>
         </div>
@@ -58,7 +64,7 @@ const LockedContentPreview = ({ onUpgrade }: LockedContentPreviewProps) => {
         {/* What's included for free */}
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            ✓ Ya tienes esto gratis
+            ✓ Incluido en tu informe gratuito
           </p>
           <div className="space-y-2">
             {includedFree.map((item, index) => (
@@ -76,7 +82,7 @@ const LockedContentPreview = ({ onUpgrade }: LockedContentPreviewProps) => {
         {/* Locked features */}
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            🔒 Desbloquea con la guía completa
+            🔒 Desbloquea con Plan de Acción
           </p>
           <div className="space-y-3">
             {lockedFeatures.map((feature, index) => (
@@ -113,11 +119,11 @@ const LockedContentPreview = ({ onUpgrade }: LockedContentPreviewProps) => {
           className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
         >
           <Lock className="w-4 h-4" />
-          Desbloquear guía completa - $14.900
+          Desbloquear Plan de Acción - $14.900
         </button>
 
         <p className="text-xs text-center text-muted-foreground">
-          La recibes al tiro después de pagar
+          Acceso inmediato tras el pago
         </p>
       </div>
     </Card>

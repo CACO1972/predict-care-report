@@ -13,17 +13,17 @@ interface OralHistoryStepProps {
 export const ImplantHistoryStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: OralHistoryStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="¿Te han puesto implantes antes? Esto nos ayuda a entender tu caso."
+      message="Saber tu experiencia previa nos ayuda a entender mejor tu caso."
       userName={userName}
       customAudioUrl="/audio/rio-implante-pregunta.mp3"
     />
     <QuestionCard
-      question="¿Has tenido implantes dentales antes?"
+      question="¿Has tenido implantes dentales anteriormente?"
       type="radio"
       options={[
-        { value: 'no', label: 'No, sería mi primero' },
-        { value: 'success', label: 'Sí, y funcionan bien' },
-        { value: 'failed', label: 'Sí, pero me fallaron' },
+        { value: 'no', label: 'No, este sería mi primer implante' },
+        { value: 'success', label: 'Sí, y siguen funcionando bien' },
+        { value: 'failed', label: 'Sí, pero fracasaron' },
       ]}
       value={implantAnswers.implantHistory}
       onChange={(value) => {
@@ -39,17 +39,17 @@ export const ImplantHistoryStep = ({ implantAnswers, setImplantAnswers, userName
 export const ToothLossStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: OralHistoryStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="¿Por qué perdiste el diente? Esto nos da pistas importantes."
+      message="Entender por qué perdiste tus dientes nos da pistas importantes."
       userName={userName}
       customAudioUrl="/audio/rio-causa-pregunta.mp3"
     />
     <QuestionCard
-      question={`¿Por qué perdiste el diente, ${userName}?`}
+      question={`¿Cuál fue el motivo principal, ${userName}?`}
       type="radio"
       options={[
-        { value: 'cavity', label: 'Por una carie' },
-        { value: 'periodontitis', label: 'Por problemas de encías' },
-        { value: 'trauma', label: 'Por un golpe' },
+        { value: 'cavity', label: 'Por una caries' },
+        { value: 'periodontitis', label: 'Por enfermedad de las encías (periodontitis)' },
+        { value: 'trauma', label: 'Por un golpe o accidente' },
         { value: 'other', label: 'Otra razón' },
       ]}
       value={implantAnswers.toothLossCause}
@@ -66,12 +66,12 @@ export const ToothLossStep = ({ implantAnswers, setImplantAnswers, userName, onA
 export const ToothLossTimeStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: OralHistoryStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="¿Hace cuánto perdiste el diente? El tiempo importa para el hueso."
+      message="Saber cuánto tiempo ha pasado nos ayuda a evaluar el hueso disponible."
       userName={userName}
       customAudioUrl="/audio/rio-tiempo-pregunta.mp3"
     />
     <QuestionCard
-      question={`¿Hace cuánto perdiste el diente, ${userName}?`}
+      question={`¿Hace cuánto tiempo perdiste el diente, ${userName}?`}
       type="radio"
       options={[
         { value: 'less-1', label: 'Menos de 1 año' },
@@ -92,15 +92,15 @@ export const ToothLossTimeStep = ({ implantAnswers, setImplantAnswers, userName,
 export const TeethCountStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: OralHistoryStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message={`${userName}, ¿cuántos dientes te faltan? Esto nos ayuda a orientarte mejor.`}
+      message={`${userName}, ¿cuántos dientes necesitas reemplazar? Esto nos ayuda a orientar el tipo de tratamiento más adecuado para ti.`}
       userName={userName}
       customAudioUrl="/audio/rio-cuantos-dientes.mp3"
     />
     <QuestionCard
-      question="¿Cuántos dientes te faltan?"
+      question="¿Cuántos dientes te faltan o necesitas reemplazar?"
       type="radio"
       options={[
-        { value: '1-2', label: '1 o 2 dientes' },
+        { value: '1-2', label: '1 a 2 dientes' },
         { value: '3-8', label: '3 a 8 dientes' },
         { value: 'all', label: 'Todos los dientes' },
       ]}

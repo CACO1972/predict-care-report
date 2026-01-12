@@ -1,4 +1,4 @@
-import { Shield, Users, Heart, FileCheck, ExternalLink } from "lucide-react";
+import { Shield, Award, Users, CheckCircle2, FileCheck, ExternalLink } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 declare global {
@@ -9,19 +9,19 @@ declare global {
 
 const trustPoints = [
   {
-    icon: Heart,
-    title: "Hecho con cariño",
-    description: "Para que no pierdas tiempo ni plata",
+    icon: Award,
+    title: "Validación Clínica",
+    description: "Algoritmo basado en literatura científica y protocolos internacionales",
   },
   {
     icon: Shield,
-    title: "Tus datos seguros",
-    description: "Nadie más ve tu información",
+    title: "Datos Protegidos",
+    description: "Cumplimiento con Ley 19.628 de protección de datos personales",
   },
   {
     icon: Users,
-    title: "Hecho por dentistas",
-    description: "Especialistas con años de experiencia",
+    title: "Desarrollado por Expertos",
+    description: "Creado por especialistas en implantología con años de experiencia",
   },
 ];
 
@@ -59,8 +59,12 @@ const TrustSection = () => {
   return (
     <div className="max-w-4xl mx-auto mb-12 sm:mb-16">
       <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+          <CheckCircle2 className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-primary">Respaldado científicamente</span>
+        </div>
         <h2 className="text-lg sm:text-xl font-display text-foreground mb-2">
-          Puedes confiar
+          Tecnología en la que puedes confiar
         </h2>
       </div>
 
@@ -79,7 +83,7 @@ const TrustSection = () => {
         ))}
       </div>
 
-      {/* Safe Creative Certificate */}
+      {/* Safe Creative Certificate - Enhanced */}
       <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-card/80 to-card/40 border border-primary/20">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-8">
           {/* Safe Creative Widget */}
@@ -90,10 +94,11 @@ const TrustSection = () => {
           {/* Info */}
           <div className="flex-1 text-center lg:text-left">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">
-              Método registrado
+              Propiedad Intelectual Registrada
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground mb-4 leading-relaxed">
-              Nuestro método está protegido legalmente.
+              Algoritmo de predicción sinérgica para implantes dentales inscrito y protegido 
+              mediante registro de propiedad intelectual con sello de tiempo certificado.
             </p>
             
             {/* Document Links */}
@@ -108,8 +113,27 @@ const TrustSection = () => {
                 Ver Certificado
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </a>
+              <a
+                href="/docs/SafeCreative_Inscription.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <FileCheck className="w-3.5 h-3.5" />
+                Inscripción de Derechos
+                <ExternalLink className="w-3 h-3 opacity-60" />
+              </a>
             </div>
           </div>
+        </div>
+
+        {/* Bottom info */}
+        <div className="mt-6 pt-4 border-t border-border/30 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[0.65rem] sm:text-xs text-muted-foreground/70">
+          <span>Patent Pending</span>
+          <span className="hidden sm:inline">·</span>
+          <span>Dr. Carlos Montoya</span>
+          <span className="hidden sm:inline">·</span>
+          <span>Registro: 7 Oct 2025</span>
         </div>
       </div>
     </div>

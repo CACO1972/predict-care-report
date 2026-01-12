@@ -169,10 +169,10 @@ const Home = () => {
               >
                 <div className="text-center mb-8 sm:mb-10">
                   <h2 className="text-xl sm:text-2xl font-display text-foreground mb-2 font-light">
-                    Les pasó a otros
+                    Historias Reales
                   </h2>
                   <p className="text-muted-foreground text-xs sm:text-sm">
-                    Gente que gastó plata de más
+                    Pacientes que hubieran ahorrado con ImplantX
                   </p>
                 </div>
 
@@ -182,9 +182,13 @@ const Home = () => {
                     <Quote className="w-5 h-5 sm:w-6 sm:h-6 text-primary/30 mb-3" />
 
                     <blockquote className="text-muted-foreground text-xs sm:text-sm leading-relaxed mb-4 sm:mb-5">
-                      "Viajé <strong className="text-foreground">6 horas</strong>. 
-                      Gasté <strong className="text-primary">$250.000</strong>... 
-                      y me dijeron que primero tenía que controlar la diabetes."
+                      "Viajé{" "}
+                      <strong className="text-foreground">
+                        6 horas, más de 600 km
+                      </strong>
+                      . Gasté <strong className="text-primary">$250.000</strong>
+                      ... solo para que me dijera que no podía hacerme el implante
+                      mientras no controle mi diabetes."
                     </blockquote>
 
                     <div className="flex items-center gap-3 pt-3 sm:pt-4 border-t border-border">
@@ -204,7 +208,7 @@ const Home = () => {
                     <div className="mt-3 sm:mt-4 p-2 sm:p-2.5 bg-success/10 rounded-lg border border-success/20">
                       <p className="text-[0.65rem] sm:text-xs text-success font-medium flex items-center gap-2">
                         <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                        Con esta guía, lo hubiera sabido en 5 minutos.
+                        Con ImplantX, lo hubiera sabido en 5 minutos.
                       </p>
                     </div>
                   </div>
@@ -214,9 +218,11 @@ const Home = () => {
                     <Quote className="w-5 h-5 sm:w-6 sm:h-6 text-primary/30 mb-3" />
 
                     <blockquote className="text-muted-foreground text-xs sm:text-sm leading-relaxed mb-4 sm:mb-5">
-                      "Tomé un vuelo, pedí <strong className="text-foreground">2 días de permiso</strong>. 
-                      Gasté casi <strong className="text-primary">$400.000</strong>. 
-                      Me dijeron que primero tenía que tratar las encías."
+                      "Tomé un vuelo de{" "}
+                      <strong className="text-foreground">3 horas</strong>, pedí{" "}
+                      <strong className="text-foreground">2 días de permiso</strong>{" "}
+                      y gasté casi <strong className="text-primary">$400.000</strong>.
+                      Me dijeron que primero debía tratar mi enfermedad periodontal."
                     </blockquote>
 
                     <div className="flex items-center gap-3 pt-3 sm:pt-4 border-t border-border">
@@ -236,7 +242,7 @@ const Home = () => {
                     <div className="mt-3 sm:mt-4 p-2 sm:p-2.5 bg-success/10 rounded-lg border border-success/20">
                       <p className="text-[0.65rem] sm:text-xs text-success font-medium flex items-center gap-2">
                         <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                        Esta guía se lo hubiera dicho antes de gastar.
+                        ImplantX me habría orientado antes de gastar.
                       </p>
                     </div>
                   </div>
@@ -251,16 +257,26 @@ const Home = () => {
             className={`border-t border-border py-8 sm:py-10 reveal reveal-delay-500 ${legalReveal.isVisible ? "reveal-active" : ""}`}
           >
             <div className="container mx-auto px-4 sm:px-6">
-              <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3 text-[10px] sm:text-[11px] text-muted-foreground/70 leading-relaxed text-center">
-                <p className="text-sm text-foreground/60 font-medium mb-4">
-                  Esto es una guía. El dentista confirma en consulta.
+              <h3 className="text-[0.65rem] sm:text-xs font-medium text-primary/60 mb-4 sm:mb-5 text-center uppercase tracking-[0.2em] sm:tracking-[0.3em]">
+                Aviso Legal
+              </h3>
+              <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3 text-[10px] sm:text-[11px] text-muted-foreground/70 leading-relaxed">
+                <p>
+                  <strong className="text-muted-foreground">
+                    Disclaimer Médico:
+                  </strong>{" "}
+                  Esta herramienta proporciona una evaluación orientativa y NO
+                  constituye un diagnóstico médico.
                 </p>
                 <p>
-                  Esta guía te orienta, pero no es un diagnóstico médico. 
-                  Solo un dentista puede decirte con certeza si puedes ponerte implantes.
+                  <strong className="text-muted-foreground">Privacidad:</strong>{" "}
+                  Sus datos personales son tratados conforme a la Ley 19.628 de
+                  Chile.
                 </p>
                 <p>
-                  Tus datos son privados y nadie más los ve.
+                  <strong className="text-muted-foreground">Limitación:</strong>{" "}
+                  ImplantX no se hace responsable por decisiones médicas basadas
+                  exclusivamente en esta evaluación.
                 </p>
               </div>
             </div>

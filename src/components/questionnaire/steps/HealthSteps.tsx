@@ -13,17 +13,17 @@ interface HealthStepProps {
 export const SmokingStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: HealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message={`Gracias, ${userName}. Ahora unas preguntas sobre tu salud. Sé honesto, es para ayudarte mejor.`}
+      message={`Perfecto, ${userName}. Hablemos ahora de algunos hábitos. Tu honestidad es clave para darte el mejor tratamiento posible.`}
       userName={userName}
       customAudioUrl="/audio/rio-fuma.mp3"
     />
     <QuestionCard
-      question="¿Fumas?"
+      question="¿Fumas actualmente?"
       type="radio"
       options={[
         { value: 'no', label: 'No' },
-        { value: 'less-10', label: 'Sí, poco (menos de 10 al día)' },
-        { value: '10-plus', label: 'Sí, harto (10 o más al día)' },
+        { value: 'less-10', label: 'Sí, menos de 10 cigarrillos al día' },
+        { value: '10-plus', label: 'Sí, 10 o más cigarrillos al día' },
       ]}
       value={implantAnswers.smoking}
       onChange={(value) => {
@@ -39,7 +39,7 @@ export const SmokingStep = ({ implantAnswers, setImplantAnswers, userName, onAns
 export const BruxismStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: HealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="Algunas personas aprietan los dientes sin darse cuenta, sobre todo al dormir."
+      message="Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas."
       userName={userName}
       customAudioUrl="/audio/rio-brux-pregunta.mp3"
     />
@@ -48,7 +48,7 @@ export const BruxismStep = ({ implantAnswers, setImplantAnswers, userName, onAns
       type="radio"
       options={[
         { value: 'no', label: 'No' },
-        { value: 'unsure', label: 'No sé' },
+        { value: 'unsure', label: 'No estoy seguro/a' },
         { value: 'yes', label: 'Sí' },
       ]}
       value={implantAnswers.bruxism}
@@ -65,15 +65,15 @@ export const BruxismStep = ({ implantAnswers, setImplantAnswers, userName, onAns
 export const BruxismGuardStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: HealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="Si aprietas los dientes, una placa de noche puede ayudar a cuidar tus implantes."
+      message="El bruxismo puede manejarse muy bien. Una férula de descarga protege tanto tus dientes naturales como los implantes."
       userName={userName}
     />
     <QuestionCard
-      question={`¿Usas una placa de noche, ${userName}?`}
+      question={`${userName}, ¿usas una férula de descarga nocturna?`}
       type="radio"
       options={[
-        { value: 'no', label: 'No uso' },
-        { value: 'yes', label: 'Sí uso' },
+        { value: 'no', label: 'No, no uso férula' },
+        { value: 'yes', label: 'Sí, uso férula de descarga' },
       ]}
       value={implantAnswers.bruxismGuard}
       onChange={(value) => {
@@ -89,16 +89,16 @@ export const BruxismGuardStep = ({ implantAnswers, setImplantAnswers, userName, 
 export const DiabetesStep = ({ implantAnswers, setImplantAnswers, userName, onAnswer, getNextStepFunction }: HealthStepProps) => (
   <div className="space-y-6 animate-fade-in">
     <RioAvatar 
-      message="Tu salud en general también importa para los implantes."
+      message="Tu salud general influye mucho en el éxito del tratamiento."
       userName={userName}
       customAudioUrl="/audio/rio-diabetes-pregunta.mp3"
     />
     <QuestionCard
-      question="¿Tienes diabetes o azúcar alta?"
+      question="¿Tienes diabetes?"
       type="radio"
       options={[
         { value: 'no', label: 'No' },
-        { value: 'controlled', label: 'Sí, pero la controlo' },
+        { value: 'controlled', label: 'Sí, y está controlada' },
         { value: 'uncontrolled', label: 'Sí, y no está bien controlada' },
       ]}
       value={implantAnswers.diabetes}

@@ -1,9 +1,7 @@
-import { useRef, useEffect } from "react";
 import ReportPreview from "@/components/ReportPreview";
 import { EnhancedAssessmentResult } from "@/utils/riskCalculation";
 import { IRPResult } from "@/utils/irpCalculation";
 import { UserProfile, ImplantXAnswers, DensityProAnswers, PurchaseLevel } from "@/types/questionnaire";
-import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 
 interface ResultsStepProps {
   assessmentResult: EnhancedAssessmentResult;
@@ -102,15 +100,6 @@ const ResultsStep = ({
   uploadedImage,
   imageAnalysis
 }: ResultsStepProps) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    // Autoplay congratulations video
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {});
-    }
-  }, []);
-
   // Calcular resultado de salud ósea si aplica
   const boneHealthResult = requiresDensityPro && Object.keys(densityAnswers).length > 0
     ? calculateBoneHealthScore(densityAnswers)
@@ -141,27 +130,6 @@ const ResultsStep = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Congratulations Video */}
-      <div className="relative w-40 h-40 sm:w-48 sm:h-48 mx-auto mb-4">
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 via-accent/20 to-primary/30 blur-2xl scale-110 motion-safe:animate-[pulse_5s_ease-in-out_infinite]" />
-        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
-          <video
-            ref={videoRef}
-            src="/rio-congratulations.mp4"
-            poster={rioThumbnail}
-            playsInline
-            muted
-            loop
-            preload="metadata"
-            className="w-full h-[120%] object-cover object-[center_25%]"
-          />
-        </div>
-        <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 flex items-center gap-1.5 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-full border border-emerald-400/30">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-medium text-emerald-400">¡Listo!</span>
-        </div>
-      </div>
-
       <ReportPreview 
         evaluation={{
           ...evaluationData,

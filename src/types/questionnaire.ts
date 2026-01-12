@@ -67,7 +67,6 @@ export type QuestionnaireStep =
   | 'irp-processing' // Procesamiento IA del IRP
   | 'irp-result' // Resultado del IRP con upsell Plan de Acción
   | 'upsell-premium' // Upsell a Informe Premium después del pago
-  | 'xray-upload' // Subida opcional de radiografía (Paso 2 de 3)
   | 'implant-history'
   | 'tooth-loss'
   | 'tooth-loss-time'

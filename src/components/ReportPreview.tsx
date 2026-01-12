@@ -696,23 +696,20 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
 
         {/* Qué significa tu resultado */}
         <div className="bg-muted/30 rounded-xl p-5 space-y-3">
-          <h4 className="font-semibold text-foreground">¿Qué significa esto?</h4>
+          <h4 className="font-semibold text-foreground">¿Qué significa tu resultado?</h4>
           <div className="text-sm text-muted-foreground space-y-2">
             {isWarning ? (
               <>
-                <p>Hay algunas cosas que conviene revisar antes de pensar en implantes.</p>
-                <p><strong className="text-foreground">No significa que no puedas</strong>, pero el dentista te dirá qué hacer primero.</p>
+                <p>Tu evaluación indica que hay algunos factores que podrían requerir atención especial antes o durante el tratamiento con implantes.</p>
+                <p><strong className="text-foreground">Esto no significa que no puedas recibir implantes</strong>, sino que tu especialista diseñará un plan personalizado considerando estos factores.</p>
               </>
             ) : (
               <>
-                <p>Tu situación se ve bien para implantes.</p>
-                <p><strong className="text-foreground">Esto es buena noticia</strong>. El dentista te confirmará en consulta.</p>
+                <p>Tu evaluación indica que tienes buenas condiciones generales para recibir implantes dentales.</p>
+                <p><strong className="text-foreground">Esto es una excelente noticia</strong> y significa que el proceso debería desarrollarse de manera favorable con los cuidados adecuados.</p>
               </>
             )}
           </div>
-          <p className="text-xs text-muted-foreground/70 pt-2 border-t border-border/50">
-            Esto es una guía. El dentista confirma en consulta.
-          </p>
         </div>
 
         {/* Synergy Factors Section - Solo Plan de Acción y Premium */}

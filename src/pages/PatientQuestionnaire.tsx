@@ -31,7 +31,6 @@ import {
   TeethCountStep,
   GumHealthStep,
   OdontogramStep,
-  XrayUploadStep,
   ProcessingStep,
   ResultsStep
 } from "@/components/questionnaire/steps";
@@ -227,20 +226,6 @@ const PatientQuestionnaire = () => {
             patientName={flow.userProfile.name || 'Paciente'}
             onUpgrade={flow.handleUpgradeToPremium}
             onSkip={flow.handleSkipUpsell}
-          />
-        );
-
-      case 'xray-upload':
-        return (
-          <XrayUploadStep
-            userName={flow.userProfile.name}
-            purchaseLevel={flow.purchaseLevel}
-            onImageSelect={(preview, analysis) => {
-              flow.setUploadedImage(preview);
-              flow.setImageAnalysis(analysis);
-            }}
-            onContinue={() => flow.setStep('implant-history')}
-            onSkip={() => flow.setStep('implant-history')}
           />
         );
 

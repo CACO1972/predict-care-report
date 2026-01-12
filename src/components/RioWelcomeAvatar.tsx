@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import rioAvatarStatic from "@/assets/rio-avatar-new-static.png";
+import rioAvatarStatic from "@/assets/rio-avatar-static.png";
 
 interface RioWelcomeAvatarProps {
   audioUrl?: string;

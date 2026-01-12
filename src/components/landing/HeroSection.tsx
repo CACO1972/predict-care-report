@@ -25,27 +25,38 @@ const HeroSection = () => {
 
   return (
     <div className="max-w-5xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16 pb-8 sm:pb-12">
-      {/* Microcopy simple */}
+      {/* Trust Badges */}
       <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <span className="text-[0.65rem] sm:text-[0.7rem] text-foreground/60 tracking-wide">
-          Basado en ciencia · No reemplaza la revisión del dentista
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+          <span className="text-[0.65rem] sm:text-[0.7rem] text-primary uppercase tracking-widest font-medium">
+            IA Activa
+          </span>
+        </div>
+        <span className="text-foreground/20">·</span>
+        <span className="text-[0.65rem] sm:text-[0.7rem] text-foreground/60 uppercase tracking-widest">
+          Validado Clínicamente
         </span>
       </div>
 
-      {/* Título simple y directo */}
+      {/* Emotional Hook */}
       <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4 leading-tight">
         <span className="bg-gradient-to-b from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
-          ¿Puedo ponerme implantes?
+          Recupera tu sonrisa
+        </span>
+        <br />
+        <span className="bg-gradient-to-b from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+          sin perder tiempo ni dinero
         </span>
       </h1>
 
-      {/* Subtítulo claro */}
-      <p className="text-base sm:text-lg lg:text-xl text-foreground/80 font-medium mb-2 sm:mb-3 max-w-lg mx-auto px-4">
-        Responde preguntas simples y recibe una guía antes de viajar o gastar plata.
+      {/* Value Proposition */}
+      <p className="text-base sm:text-lg lg:text-xl text-foreground/80 font-medium mb-2 sm:mb-3">
+        Descubre en 5 minutos si eres candidato a implantes dentales
       </p>
 
       <p className="text-sm text-foreground/50 font-normal max-w-lg mx-auto leading-relaxed px-4 mb-6 sm:mb-8">
-        5 minutos · Gratis · Desde tu casa
+        Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada.
       </p>
 
       {/* Video Avatar Section - Vertical 9:16 */}
@@ -56,9 +67,9 @@ const HeroSection = () => {
         {/* Video container with 9:16 aspect ratio */}
         <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background aspect-[9/16]">
           <video
-            key="rio-hero-speaking"
+            key="hero-intro-v5"
             ref={videoRef}
-            src="/rio-hero-speaking.mp4"
+            src="/hero-intro-v5.mp4"
             poster={rioThumbnail}
             playsInline
             preload="metadata"
@@ -103,12 +114,12 @@ const HeroSection = () => {
           onClick={() => navigate("/evaluacion")}
           className="w-full h-14 sm:h-16 flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground text-base sm:text-lg font-semibold hover:brightness-110 transition-all duration-300 shadow-lg shadow-primary/25"
         >
-          <span>Empezar ahora</span>
+          <span>Comenzar Evaluación Gratis</span>
           <ArrowRight className="w-5 h-5" />
         </button>
 
         <p className="text-center text-muted-foreground/50 text-[0.65rem] sm:text-xs mt-3 tracking-wide">
-          Sin registro · 100% privado
+          Sin registro · 100% privado · Resultados inmediatos
         </p>
       </div>
     </div>
