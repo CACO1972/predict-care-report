@@ -2,6 +2,7 @@ import { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
+import logoImplantX from "@/assets/logo-implantx-full.png";
 
 interface WelcomeStepProps {
   isMuted: boolean;
@@ -30,6 +31,24 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
               loop
               className="absolute inset-0 w-full h-full object-cover"
             />
+            
+            {/* Logo ImplantX en el bolsillo del delantal - lado izquierdo */}
+            <div className="absolute top-[18%] left-[22%] w-12 h-12 opacity-90">
+              <img 
+                src={logoImplantX} 
+                alt="ImplantX" 
+                className="w-full h-full object-contain drop-shadow-lg"
+              />
+            </div>
+            
+            {/* Logo ImplantX en el bolsillo del delantal - lado derecho */}
+            <div className="absolute top-[18%] right-[22%] w-12 h-12 opacity-90">
+              <img 
+                src={logoImplantX} 
+                alt="ImplantX" 
+                className="w-full h-full object-contain drop-shadow-lg"
+              />
+            </div>
             
             <button
               onClick={() => {
