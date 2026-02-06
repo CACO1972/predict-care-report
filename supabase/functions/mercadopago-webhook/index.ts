@@ -23,7 +23,6 @@ interface MercadoPagoPayment {
 
 /**
  * Verify MercadoPago webhook signature
- * @see https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks#verificarorigenfirmadigital
  */
 function verifyWebhookSignature(
   xSignature: string | null,
@@ -36,7 +35,6 @@ function verifyWebhookSignature(
     return false;
   }
 
-  // Parse x-signature header: "ts=...,v1=..."
   const parts = xSignature.split(',');
   let ts: string | null = null;
   let v1: string | null = null;
@@ -52,16 +50,11 @@ function verifyWebhookSignature(
     return false;
   }
 
-  // Build the manifest string as per MercadoPago documentation
-  // Format: id:[data.id];request-id:[x-request-id];ts:[ts];
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
-
-  // Generate HMAC-SHA256 signature
   const hmac = createHmac('sha256', webhookSecret);
   hmac.update(manifest);
   const generatedSignature = hmac.digest('hex');
 
-  // Constant-time comparison to prevent timing attacks
   if (generatedSignature.length !== v1.length) {
     return false;
   }
@@ -84,6 +77,59 @@ function verifyWebhookSignature(
   return isValid;
 }
 
+/**
+ * Send report email based on purchase level
+ */
+async function sendReportEmail(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+  purchaseLevel: string,
+  assessment: {
+    patient_name?: string;
+    irp_score?: number;
+    risk_level?: string;
+    answers?: Record<string, unknown>;
+  } | null
+): Promise<void> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  
+  // Prepare email data
+  const emailData = {
+    email,
+    patientName: assessment?.patient_name || 'Paciente',
+    reportId: `EV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    date: new Date().toLocaleDateString('es-CL'),
+    successRange: assessment?.irp_score 
+      ? `${Math.max(85, 98 - (assessment.irp_score * 2))}-${Math.min(98, 100 - assessment.irp_score)}%`
+      : '85-98%',
+    purchaseLevel,
+    irpScore: assessment?.irp_score,
+    irpLevel: assessment?.risk_level,
+  };
+
+  console.log('Sending report email:', { email, purchaseLevel });
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-report-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+      },
+      body: JSON.stringify(emailData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to send report email:', errorText);
+    } else {
+      console.log('Report email sent successfully');
+    }
+  } catch (error) {
+    console.error('Error sending report email:', error);
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -94,7 +140,6 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const topic = url.searchParams.get('topic') || url.searchParams.get('type');
     
-    // MercadoPago sends notifications for different topics
     console.log('Received webhook - Topic:', topic);
     
     // Only process payment notifications
@@ -109,11 +154,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log('Webhook body:', JSON.stringify(body, null, 2));
 
-    // Get payment ID from the notification
-    // MercadoPago can send the ID in different formats:
-    // - body.data.id (new format)
-    // - body.id (legacy format)  
-    // - body.resource (IPN format - just the payment ID as string)
     const paymentId = body.data?.id || body.id || body.resource;
     if (!paymentId) {
       console.error('No payment ID in webhook. Body:', JSON.stringify(body));
@@ -139,12 +179,7 @@ Deno.serve(async (req) => {
       );
 
       if (!isValid) {
-        console.error('Invalid webhook signature - possible forgery attempt', {
-          paymentId,
-          xSignature: xSignature?.substring(0, 20) + '...',
-          xRequestId,
-          ip: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip')
-        });
+        console.error('Invalid webhook signature');
         return new Response(JSON.stringify({ error: 'Invalid signature' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401,
@@ -153,7 +188,7 @@ Deno.serve(async (req) => {
       
       console.log('Webhook signature verified successfully');
     } else {
-      console.warn('MERCADOPAGO_WEBHOOK_SECRET not configured - signature verification skipped (NOT RECOMMENDED FOR PRODUCTION)');
+      console.warn('MERCADOPAGO_WEBHOOK_SECRET not configured');
     }
 
     // Fetch payment details from MercadoPago API
@@ -188,15 +223,11 @@ Deno.serve(async (req) => {
     const payment: MercadoPagoPayment = await paymentResponse.json();
     console.log('Payment details:', JSON.stringify(payment, null, 2));
 
-    // Determine purchase level from external_reference or amount
+    // Determine purchase level from amount
     let purchaseLevel: 'plan-accion' | 'premium' = 'plan-accion';
-    
-    // Check by amount (Plan de Acción: ~14990, Premium: ~29990)
     if (payment.transaction_amount >= 25000) {
       purchaseLevel = 'premium';
     }
-    
-    // Or check by external_reference if it contains level info
     if (payment.external_reference) {
       if (payment.external_reference.includes('premium')) {
         purchaseLevel = 'premium';
@@ -205,7 +236,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create Supabase client with service role for inserting
+    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -230,7 +261,7 @@ Deno.serve(async (req) => {
 
     console.log('Upserting payment record:', JSON.stringify(paymentRecord, null, 2));
 
-    const { data, error } = await supabase
+    const { data: savedPayment, error: paymentError } = await supabase
       .from('payments')
       .upsert(paymentRecord, { 
         onConflict: 'mercadopago_id',
@@ -239,15 +270,44 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    if (error) {
-      console.error('Database error:', error);
-      return new Response(JSON.stringify({ error: 'Database error', details: error.message }), {
+    if (paymentError) {
+      console.error('Database error:', paymentError);
+      return new Response(JSON.stringify({ error: 'Database error', details: paymentError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    console.log('Payment saved successfully:', data);
+    console.log('Payment saved successfully:', savedPayment);
+
+    // If payment is approved, update patient_assessment and send report
+    if (payment.status === 'approved' && payment.payer?.email) {
+      const payerEmail = payment.payer.email.toLowerCase();
+      
+      // Find and update patient assessment
+      const { data: assessment, error: assessmentError } = await supabase
+        .from('patient_assessments')
+        .update({
+          purchase_level: purchaseLevel,
+          payment_id: savedPayment.id,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('email', payerEmail)
+        .is('completed_at', null)
+        .select('id, patient_name, irp_score, risk_level, answers')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (assessmentError) {
+        console.log('No pending assessment found for email:', payerEmail);
+      } else {
+        console.log('Updated patient assessment:', assessment.id);
+      }
+
+      // Send report email
+      await sendReportEmail(supabase, payerEmail, purchaseLevel, assessment);
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

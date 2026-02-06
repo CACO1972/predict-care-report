@@ -393,11 +393,56 @@ export const useQuestionnaireFlow = () => {
     setStep('implant-history');
   }, []);
 
+  // Save assessment to database
+  const saveAssessmentToDatabase = useCallback(async (email: string, phone?: string) => {
+    try {
+      const assessmentData = {
+        patient_name: userProfile.name,
+        email: email,
+        phone: phone,
+        answers: {
+          ...densityAnswers,
+          ...implantAnswers,
+          userProfile: {
+            age: userProfile.age,
+            gender: userProfile.gender,
+          }
+        },
+        irp_score: irpResult?.score,
+        risk_level: irpResult?.level,
+        missing_teeth_count: implantAnswers.teethToReplace === 'all' ? 28 : 
+          implantAnswers.teethToReplace === '3-8' ? 5 : 2,
+        treatment_type: implantAnswers.teethToReplace === 'all' ? 'full-arch' :
+          implantAnswers.teethToReplace === '3-8' ? 'multiple' : 'single',
+      };
+
+      console.log('Saving assessment to database:', assessmentData);
+      
+      const { data, error } = await supabase.functions.invoke('save-assessment', {
+        body: assessmentData
+      });
+
+      if (error) {
+        console.error('Error saving assessment:', error);
+        return null;
+      }
+
+      console.log('Assessment saved:', data);
+      return data;
+    } catch (err) {
+      console.error('Error invoking save-assessment:', err);
+      return null;
+    }
+  }, [userProfile, densityAnswers, implantAnswers, irpResult]);
+
   const handleLeadSubmit = useCallback(async (data: { email: string; phone: string }) => {
     setLeadData(data);
     setShowLeadCapture(false);
     setStep('results');
     triggerConfetti();
+    
+    // Save assessment to database
+    await saveAssessmentToDatabase(data.email, data.phone);
     
     if (purchaseLevel === 'free' && assessmentResult) {
       try {
@@ -434,7 +479,7 @@ export const useQuestionnaireFlow = () => {
         console.error('Error invoking send-report-email:', err);
       }
     }
-  }, [purchaseLevel, assessmentResult, userProfile.name, irpResult]);
+  }, [purchaseLevel, assessmentResult, userProfile.name, irpResult, saveAssessmentToDatabase]);
 
   return {
     // State
