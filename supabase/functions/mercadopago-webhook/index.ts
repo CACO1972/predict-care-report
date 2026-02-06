@@ -182,10 +182,168 @@ interface EmailData {
 }
 
 function generateReportEmailHTML(data: EmailData): string {
-  const isPaid = data.purchaseLevel !== 'free';
-  const levelLabel = data.purchaseLevel === 'premium' ? 'PREMIUM' : 
-                     data.purchaseLevel === 'plan-accion' ? 'PLAN DE ACCIÓN' : 'BÁSICO';
-  const levelColor = data.purchaseLevel === 'premium' ? '#F59E0B' : '#00BFA5';
+  const isPlanAccion = data.purchaseLevel === 'plan-accion';
+  const isPremium = data.purchaseLevel === 'premium';
+  const isPaid = isPlanAccion || isPremium;
+  
+  const levelLabel = isPremium ? 'PREMIUM' : isPlanAccion ? 'PLAN DE ACCIÓN' : 'BÁSICO';
+  const levelColor = isPremium ? '#F59E0B' : '#00BFA5';
+  const levelEmoji = isPremium ? '🏆' : '📋';
+
+  // Timeline for Plan de Acción and Premium
+  const actionPlanHTML = isPaid ? `
+    <div style="margin-top: 30px; padding: 24px; background: rgba(0, 191, 165, 0.05); border-radius: 12px; border: 1px solid rgba(0, 191, 165, 0.2);">
+      <h3 style="margin: 0 0 20px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+        📋 Tu Plan de Acción Paso a Paso
+      </h3>
+      <table role="presentation" style="width: 100%;">
+        <tr>
+          <td style="padding: 16px; background: rgba(0, 191, 165, 0.1); border-radius: 8px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: #00BFA5; color: #000; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; flex-shrink: 0;">1</div>
+              <div>
+                <p style="margin: 0; color: #00BFA5; font-size: 12px; font-weight: bold;">SEMANA 1-2</p>
+                <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">Preparación</p>
+                <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Optimiza tu salud bucal con las recomendaciones específicas de tu perfil.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr><td style="height: 8px;"></td></tr>
+        <tr>
+          <td style="padding: 16px; background: rgba(0, 191, 165, 0.1); border-radius: 8px;">
+            <div style="display: flex; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: #00BFA5; color: #000; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; flex-shrink: 0;">2</div>
+              <div>
+                <p style="margin: 0; color: #00BFA5; font-size: 12px; font-weight: bold;">SEMANA 3</p>
+                <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">Consulta Especializada</p>
+                <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Lleva este reporte a tu consulta. Tu dentista tendrá toda la información clínica necesaria.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr><td style="height: 8px;"></td></tr>
+        <tr>
+          <td style="padding: 16px; background: rgba(0, 191, 165, 0.1); border-radius: 8px;">
+            <div style="display: flex; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: #00BFA5; color: #000; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; flex-shrink: 0;">3</div>
+              <div>
+                <p style="margin: 0; color: #00BFA5; font-size: 12px; font-weight: bold;">EVALUACIÓN</p>
+                <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">Evaluación Clínica</p>
+                <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Tu especialista realizará radiografías y exámenes complementarios según tu perfil de riesgo.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr><td style="height: 8px;"></td></tr>
+        <tr>
+          <td style="padding: 16px; background: rgba(0, 191, 165, 0.1); border-radius: 8px;">
+            <div style="display: flex; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: #00BFA5; color: #000; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; flex-shrink: 0;">4</div>
+              <div>
+                <p style="margin: 0; color: #00BFA5; font-size: 12px; font-weight: bold;">TRATAMIENTO</p>
+                <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">Tratamiento Personalizado</p>
+                <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 12px;">Recibe un plan de tratamiento adaptado a tus factores específicos.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  ` : '';
+
+  // Checklist for Plan de Acción and Premium
+  const checklistHTML = isPaid ? `
+    <div style="margin-top: 30px; padding: 24px; background: rgba(34, 197, 94, 0.05); border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+      <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+        ✅ Checklist Preoperatorio
+      </h3>
+      <table role="presentation" style="width: 100%;">
+        ${['Limpieza dental profesional realizada', 'Control de factores de riesgo (tabaco, diabetes, etc.)', 'Radiografía panorámica actualizada', 'Evaluación periodontal completada', 'Exámenes de sangre (si aplica)'].map(item => `
+        <tr>
+          <td style="padding: 10px 12px; background: rgba(34, 197, 94, 0.05); border-radius: 6px; margin-bottom: 6px;">
+            <span style="color: #22c55e; margin-right: 8px;">☐</span>
+            <span style="color: #ffffff; font-size: 13px;">${item}</span>
+          </td>
+        </tr>
+        <tr><td style="height: 6px;"></td></tr>
+        `).join('')}
+      </table>
+    </div>
+  ` : '';
+
+  // Premium exclusive content
+  const premiumExclusiveHTML = isPremium ? `
+    <div style="margin-top: 30px; padding: 24px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border-radius: 12px; border: 2px solid rgba(245, 158, 11, 0.3);">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <span style="display: inline-block; padding: 6px 16px; background: linear-gradient(135deg, #F59E0B, #D97706); color: #000; font-size: 11px; font-weight: bold; border-radius: 20px;">👑 CONTENIDO EXCLUSIVO PREMIUM</span>
+      </div>
+
+      <!-- Estimación de costos -->
+      <div style="margin-bottom: 24px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+        <h4 style="margin: 0 0 12px 0; color: #F59E0B; font-size: 14px;">💰 Estimación de Inversión</h4>
+        <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px;">Basado en tu caso, la inversión estimada en Chile es:</p>
+        <p style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold; text-align: center;">$800.000 - $1.500.000 CLP</p>
+        <p style="margin: 8px 0 0 0; color: #64748b; font-size: 10px; text-align: center;">*Por implante. Incluye corona. Puede variar según complejidad.</p>
+      </div>
+
+      <!-- Timeline de tratamiento -->
+      <div style="margin-bottom: 24px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+        <h4 style="margin: 0 0 16px 0; color: #F59E0B; font-size: 14px;">📅 Cronograma de Tratamiento</h4>
+        <table role="presentation" style="width: 100%;">
+          ${[
+            { time: 'Día 1', event: 'Cirugía de colocación del implante' },
+            { time: 'Semana 1-2', event: 'Cicatrización inicial y control' },
+            { time: 'Mes 2-4', event: 'Osteointegración (fusión con el hueso)' },
+            { time: 'Mes 4-6', event: 'Colocación de la corona definitiva' }
+          ].map(item => `
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid rgba(245, 158, 11, 0.1);">
+              <span style="color: #F59E0B; font-size: 11px; font-weight: bold; display: inline-block; width: 80px;">${item.time}</span>
+              <span style="color: #ffffff; font-size: 12px;">${item.event}</span>
+            </td>
+          </tr>
+          `).join('')}
+        </table>
+      </div>
+
+      <!-- Preguntas para el especialista -->
+      <div style="padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+        <h4 style="margin: 0 0 12px 0; color: #F59E0B; font-size: 14px;">🔬 Preguntas para tu Especialista</h4>
+        <table role="presentation" style="width: 100%;">
+          ${[
+            '¿Qué marca y tipo de implante recomienda para mi caso?',
+            '¿Necesito algún procedimiento previo (injerto óseo, elevación de seno)?',
+            '¿Cuál es el protocolo de carga en mi caso (inmediata vs. diferida)?',
+            '¿Qué tipo de mantenimiento necesitaré a largo plazo?',
+            '¿Ofrece garantía sobre el tratamiento?'
+          ].map(q => `
+          <tr>
+            <td style="padding: 6px 0;">
+              <span style="color: #F59E0B; margin-right: 8px;">•</span>
+              <span style="color: #ffffff; font-size: 12px;">${q}</span>
+            </td>
+          </tr>
+          `).join('')}
+        </table>
+      </div>
+    </div>
+  ` : '';
+
+  // Upsell to premium for plan-accion users
+  const upsellHTML = isPlanAccion ? `
+    <div style="margin-top: 30px; padding: 24px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border-radius: 12px; border: 2px solid rgba(245, 158, 11, 0.4); text-align: center;">
+      <h3 style="margin: 0 0 8px 0; color: #F59E0B; font-size: 18px; font-weight: bold;">
+        🏆 ¿Quieres el Informe Premium Completo?
+      </h3>
+      <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 14px;">
+        Incluye estimación de costos, cronograma detallado, preguntas para tu especialista y análisis de imagen con IA.
+      </p>
+      <a href="https://mpago.li/2jpxDi2" style="display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #F59E0B, #D97706); color: #000; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 8px;">
+        Upgrade a Premium - $29.990
+      </a>
+    </div>
+  ` : '';
 
   return `<!DOCTYPE html>
 <html>
@@ -225,15 +383,17 @@ function generateReportEmailHTML(data: EmailData): string {
             <td style="padding: 40px 30px; background-color: #0d1520; border: 1px solid rgba(0, 191, 165, 0.2); border-top: none;">
               
               <h1 style="margin: 0 0 10px 0; color: #ffffff; font-size: 24px;">
-                ¡Hola ${data.patientName}! ${data.purchaseLevel === 'premium' ? '🏆' : '📋'}
+                ¡Hola ${data.patientName}! ${levelEmoji}
               </h1>
               <p style="margin: 0 0 30px 0; color: #94a3b8; font-size: 16px; line-height: 1.6;">
-                ${data.purchaseLevel === 'premium' 
-                  ? 'Gracias por confiar en nosotros. Aquí tienes tu Informe Premium completo con análisis detallado y recomendaciones personalizadas.'
-                  : 'Gracias por tu compra. Aquí tienes tu Plan de Acción personalizado para optimizar tu perfil antes del tratamiento.'}
+                ${isPremium 
+                  ? 'Gracias por confiar en nosotros. Aquí tienes tu Informe Premium completo con análisis detallado, estimación de costos y recomendaciones personalizadas.'
+                  : isPlanAccion
+                  ? 'Gracias por tu compra. Aquí tienes tu Plan de Acción personalizado para optimizar tu perfil antes del tratamiento.'
+                  : 'Aquí tienes tu informe de evaluación dental personalizado.'}
               </p>
               
-              <!-- Report Card -->
+              <!-- Report Card with IRP -->
               <table role="presentation" style="width: 100%; background: linear-gradient(135deg, rgba(0, 191, 165, 0.1), rgba(0, 191, 165, 0.05)); border-radius: 12px; border: 1px solid rgba(0, 191, 165, 0.3);">
                 <tr>
                   <td style="padding: 24px;">
@@ -262,7 +422,7 @@ function generateReportEmailHTML(data: EmailData): string {
                     <!-- IRP Score -->
                     <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(0, 191, 165, 0.2); text-align: center;">
                       <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
-                        Tu Índice de Riesgo Personalizado
+                        Tu Índice de Riesgo Personalizado (IRP)
                       </p>
                       <p style="margin: 0; color: #00BFA5; font-size: 48px; font-weight: bold;">
                         ${data.irpScore}
@@ -280,7 +440,7 @@ function generateReportEmailHTML(data: EmailData): string {
               <!-- Factors Evaluated -->
               <div style="margin-top: 30px;">
                 <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
-                  📊 Factores Evaluados en Tu Perfil
+                  📊 Factores de Riesgo Evaluados
                 </h3>
                 <table role="presentation" style="width: 100%;">
                   ${data.factors.map(factor => `
@@ -289,7 +449,7 @@ function generateReportEmailHTML(data: EmailData): string {
                       <table role="presentation" style="width: 100%;">
                         <tr>
                           <td style="color: #ffffff; font-size: 14px;">${factor.name}</td>
-                          <td style="color: ${factor.impact <= 8 ? '#22c555' : factor.impact <= 14 ? '#eab308' : '#ef4444'}; font-size: 14px; text-align: right;">${factor.value}</td>
+                          <td style="color: ${factor.impact <= 8 ? '#22c555' : factor.impact <= 14 ? '#eab308' : '#ef4444'}; font-size: 14px; text-align: right; font-weight: 600;">${factor.value}</td>
                         </tr>
                       </table>
                     </td>
@@ -304,32 +464,21 @@ function generateReportEmailHTML(data: EmailData): string {
               <!-- Personalized Recommendations -->
               <div style="margin-top: 30px;">
                 <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
-                  ✅ Tu Plan de Acción Personalizado
+                  💡 Recomendaciones Personalizadas
                 </h3>
-                ${data.recommendations.map((rec, idx) => `
+                ${data.recommendations.map(rec => `
                 <div style="padding: 16px; background: rgba(0, 191, 165, 0.05); border-left: 3px solid #00BFA5; margin-bottom: 12px; border-radius: 0 8px 8px 0;">
-                  <p style="margin: 0; color: #00BFA5; font-size: 12px; font-weight: bold;">PASO ${idx + 1}</p>
-                  <p style="margin: 8px 0 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">${rec.text}</p>
+                  <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">${rec.text}</p>
                   <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 12px; font-style: italic;">📚 ${rec.evidence}</p>
                 </div>
                 `).join('')}
               </div>
               ` : ''}
               
-              ${data.purchaseLevel === 'plan-accion' ? `
-              <!-- Upsell to Premium -->
-              <div style="margin-top: 30px; padding: 24px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border-radius: 12px; border: 2px solid rgba(245, 158, 11, 0.4); text-align: center;">
-                <h3 style="margin: 0 0 8px 0; color: #F59E0B; font-size: 18px; font-weight: bold;">
-                  🏆 ¿Quieres el Informe Premium?
-                </h3>
-                <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 14px;">
-                  Incluye análisis de imagen, simulador What-If y más recomendaciones avanzadas.
-                </p>
-                <a href="https://mpago.li/2jpxDi2" style="display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #F59E0B, #D97706); color: #000; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 8px;">
-                  Upgrade a Premium - $29.990
-                </a>
-              </div>
-              ` : ''}
+              ${actionPlanHTML}
+              ${checklistHTML}
+              ${premiumExclusiveHTML}
+              ${upsellHTML}
               
               <!-- Help Section -->
               <div style="margin-top: 30px; padding: 20px; background: rgba(0, 191, 165, 0.05); border-radius: 12px; border: 1px solid rgba(0, 191, 165, 0.2);">
@@ -337,7 +486,7 @@ function generateReportEmailHTML(data: EmailData): string {
                   💡 Comparte este informe con tu dentista
                 </p>
                 <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
-                  Este informe contiene información valiosa que tu dentista puede usar para planificar mejor tu tratamiento y maximizar las probabilidades de éxito.
+                  Este informe contiene información clínica valiosa que tu dentista puede usar para planificar mejor tu tratamiento y maximizar las probabilidades de éxito.
                 </p>
               </div>
               
