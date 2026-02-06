@@ -2,6 +2,7 @@ import { ReactNode, RefObject } from "react";
 import { ArrowLeft } from "lucide-react";
 import ProgressBar from "@/components/ProgressBar";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
+import HelpButton from "@/components/HelpButton";
 import { QuestionnaireStep } from "@/types/questionnaire";
 
 interface QuestionnaireLayoutProps {
@@ -128,6 +129,8 @@ const QuestionnaireLayout = ({
         onSubmit={onLeadSubmit}
         patientName={patientName}
       />
+      
+      <HelpButton />
     </>
   );
 };
