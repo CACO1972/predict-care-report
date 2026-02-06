@@ -78,10 +78,9 @@ function verifyWebhookSignature(
 }
 
 /**
- * Send report email based on purchase level
+ * Send report email based on purchase level with full personalization
  */
 async function sendReportEmail(
-  supabase: ReturnType<typeof createClient>,
   email: string,
   purchaseLevel: string,
   assessment: {
@@ -91,43 +90,409 @@ async function sendReportEmail(
     answers?: Record<string, unknown>;
   } | null
 ): Promise<void> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
   
-  // Prepare email data
+  if (!RESEND_API_KEY) {
+    console.error('RESEND_API_KEY not configured');
+    return;
+  }
+
+  const patientName = assessment?.patient_name || 'Paciente';
+  const irpScore = assessment?.irp_score;
+  const riskLevel = assessment?.risk_level;
+  
+  // Calculate success range based on IRP score
+  const successRange = irpScore 
+    ? `${Math.max(85, 98 - (irpScore * 2))}-${Math.min(98, 100 - irpScore)}%`
+    : '85-98%';
+
+  // Build factors from answers if available
+  const factors = buildFactorsFromAnswers(assessment?.answers);
+  
+  // Build recommendations based on purchase level and answers
+  const recommendations = buildRecommendations(purchaseLevel, assessment?.answers, irpScore);
+
   const emailData = {
     email,
-    patientName: assessment?.patient_name || 'Paciente',
+    patientName,
     reportId: `EV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
     date: new Date().toLocaleDateString('es-CL'),
-    successRange: assessment?.irp_score 
-      ? `${Math.max(85, 98 - (assessment.irp_score * 2))}-${Math.min(98, 100 - assessment.irp_score)}%`
-      : '85-98%',
+    successRange,
     purchaseLevel,
-    irpScore: assessment?.irp_score,
-    irpLevel: assessment?.risk_level,
+    irpScore,
+    irpLevel: riskLevel,
+    factors,
+    recommendations,
   };
 
-  console.log('Sending report email:', { email, purchaseLevel });
+  console.log('Sending personalized report email:', { email, purchaseLevel, irpScore, factorsCount: factors.length });
 
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-report-email`, {
+    const html = generateReportEmailHTML(emailData);
+    const subject = getEmailSubject(purchaseLevel, patientName);
+    
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify(emailData),
+      body: JSON.stringify({
+        from: 'ImplantX <onboarding@resend.dev>',
+        to: [email],
+        subject,
+        html,
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Failed to send report email:', errorText);
     } else {
-      console.log('Report email sent successfully');
+      const result = await response.json();
+      console.log('Report email sent successfully:', result);
     }
   } catch (error) {
     console.error('Error sending report email:', error);
   }
+}
+
+function getEmailSubject(purchaseLevel: string, patientName: string): string {
+  switch (purchaseLevel) {
+    case 'premium':
+      return `🏆 ${patientName}, tu Informe Premium ImplantX está listo`;
+    case 'plan-accion':
+      return `📋 ${patientName}, tu Plan de Acción ImplantX está listo`;
+    default:
+      return `Tu informe ImplantX + Recursos extra 📄`;
+  }
+}
+
+interface EmailData {
+  email: string;
+  patientName: string;
+  reportId: string;
+  date: string;
+  successRange: string;
+  purchaseLevel: string;
+  irpScore?: number;
+  irpLevel?: string;
+  factors: Array<{ name: string; value: string; impact: number }>;
+  recommendations: Array<{ text: string; evidence: string }>;
+}
+
+function generateReportEmailHTML(data: EmailData): string {
+  const isPaid = data.purchaseLevel !== 'free';
+  const levelLabel = data.purchaseLevel === 'premium' ? 'PREMIUM' : 
+                     data.purchaseLevel === 'plan-accion' ? 'PLAN DE ACCIÓN' : 'BÁSICO';
+  const levelColor = data.purchaseLevel === 'premium' ? '#F59E0B' : '#00BFA5';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tu Informe ImplantX ${levelLabel}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0f1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px; background: linear-gradient(135deg, #0d1520, #1a2332); border-radius: 16px 16px 0 0; border: 1px solid rgba(0, 191, 165, 0.2);">
+              <table role="presentation" style="width: 100%;">
+                <tr>
+                  <td>
+                    <div style="display: inline-block; width: 48px; height: 48px; background: linear-gradient(135deg, #00BFA5, #00897B); border-radius: 12px; text-align: center; line-height: 48px;">
+                      <span style="color: white; font-weight: bold; font-size: 18px;">IX</span>
+                    </div>
+                  </td>
+                  <td style="text-align: right;">
+                    <span style="display: inline-block; padding: 6px 14px; background: ${levelColor}22; color: ${levelColor}; font-size: 11px; font-weight: bold; border-radius: 20px; border: 1px solid ${levelColor}44;">
+                      ${levelLabel}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px 30px; background-color: #0d1520; border: 1px solid rgba(0, 191, 165, 0.2); border-top: none;">
+              
+              <h1 style="margin: 0 0 10px 0; color: #ffffff; font-size: 24px;">
+                ¡Hola ${data.patientName}! ${data.purchaseLevel === 'premium' ? '🏆' : '📋'}
+              </h1>
+              <p style="margin: 0 0 30px 0; color: #94a3b8; font-size: 16px; line-height: 1.6;">
+                ${data.purchaseLevel === 'premium' 
+                  ? 'Gracias por confiar en nosotros. Aquí tienes tu Informe Premium completo con análisis detallado y recomendaciones personalizadas.'
+                  : 'Gracias por tu compra. Aquí tienes tu Plan de Acción personalizado para optimizar tu perfil antes del tratamiento.'}
+              </p>
+              
+              <!-- Report Card -->
+              <table role="presentation" style="width: 100%; background: linear-gradient(135deg, rgba(0, 191, 165, 0.1), rgba(0, 191, 165, 0.05)); border-radius: 12px; border: 1px solid rgba(0, 191, 165, 0.3);">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 12px;">ID del Reporte</td>
+                        <td style="color: #94a3b8; font-size: 12px; text-align: right;">Fecha</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #ffffff; font-size: 14px; font-weight: 600;">${data.reportId}</td>
+                        <td style="color: #ffffff; font-size: 14px; text-align: right;">${data.date}</td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Success Rate -->
+                    <div style="margin-top: 24px; text-align: center;">
+                      <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                        Rango de Éxito Estimado
+                      </p>
+                      <p style="margin: 0; color: #00BFA5; font-size: 36px; font-weight: bold;">
+                        ${data.successRange}
+                      </p>
+                    </div>
+                    
+                    ${isPaid && data.irpScore !== undefined ? `
+                    <!-- IRP Score -->
+                    <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(0, 191, 165, 0.2); text-align: center;">
+                      <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                        Tu Índice de Riesgo Personalizado
+                      </p>
+                      <p style="margin: 0; color: #00BFA5; font-size: 48px; font-weight: bold;">
+                        ${data.irpScore}
+                      </p>
+                      <span style="display: inline-block; margin-top: 8px; padding: 4px 12px; background: ${data.irpLevel === 'Bajo' ? '#22c55522' : data.irpLevel === 'Moderado' ? '#eab30822' : '#ef444422'}; color: ${data.irpLevel === 'Bajo' ? '#22c555' : data.irpLevel === 'Moderado' ? '#eab308' : '#ef4444'}; font-size: 12px; font-weight: 600; border-radius: 20px;">
+                        Riesgo ${data.irpLevel || 'Moderado'}
+                      </span>
+                    </div>
+                    ` : ''}
+                  </td>
+                </tr>
+              </table>
+              
+              ${data.factors.length > 0 ? `
+              <!-- Factors Evaluated -->
+              <div style="margin-top: 30px;">
+                <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+                  📊 Factores Evaluados en Tu Perfil
+                </h3>
+                <table role="presentation" style="width: 100%;">
+                  ${data.factors.map(factor => `
+                  <tr>
+                    <td style="padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px;">
+                      <table role="presentation" style="width: 100%;">
+                        <tr>
+                          <td style="color: #ffffff; font-size: 14px;">${factor.name}</td>
+                          <td style="color: ${factor.impact <= 8 ? '#22c555' : factor.impact <= 14 ? '#eab308' : '#ef4444'}; font-size: 14px; text-align: right;">${factor.value}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr><td style="height: 8px;"></td></tr>
+                  `).join('')}
+                </table>
+              </div>
+              ` : ''}
+              
+              ${data.recommendations.length > 0 ? `
+              <!-- Personalized Recommendations -->
+              <div style="margin-top: 30px;">
+                <h3 style="margin: 0 0 16px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+                  ✅ Tu Plan de Acción Personalizado
+                </h3>
+                ${data.recommendations.map((rec, idx) => `
+                <div style="padding: 16px; background: rgba(0, 191, 165, 0.05); border-left: 3px solid #00BFA5; margin-bottom: 12px; border-radius: 0 8px 8px 0;">
+                  <p style="margin: 0; color: #00BFA5; font-size: 12px; font-weight: bold;">PASO ${idx + 1}</p>
+                  <p style="margin: 8px 0 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">${rec.text}</p>
+                  <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 12px; font-style: italic;">📚 ${rec.evidence}</p>
+                </div>
+                `).join('')}
+              </div>
+              ` : ''}
+              
+              ${data.purchaseLevel === 'plan-accion' ? `
+              <!-- Upsell to Premium -->
+              <div style="margin-top: 30px; padding: 24px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border-radius: 12px; border: 2px solid rgba(245, 158, 11, 0.4); text-align: center;">
+                <h3 style="margin: 0 0 8px 0; color: #F59E0B; font-size: 18px; font-weight: bold;">
+                  🏆 ¿Quieres el Informe Premium?
+                </h3>
+                <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 14px;">
+                  Incluye análisis de imagen, simulador What-If y más recomendaciones avanzadas.
+                </p>
+                <a href="https://mpago.li/2jpxDi2" style="display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #F59E0B, #D97706); color: #000; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 8px;">
+                  Upgrade a Premium - $29.990
+                </a>
+              </div>
+              ` : ''}
+              
+              <!-- Help Section -->
+              <div style="margin-top: 30px; padding: 20px; background: rgba(0, 191, 165, 0.05); border-radius: 12px; border: 1px solid rgba(0, 191, 165, 0.2);">
+                <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 500;">
+                  💡 Comparte este informe con tu dentista
+                </p>
+                <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
+                  Este informe contiene información valiosa que tu dentista puede usar para planificar mejor tu tratamiento y maximizar las probabilidades de éxito.
+                </p>
+              </div>
+              
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px; background: linear-gradient(135deg, #0d1520, #1a2332); border-radius: 0 0 16px 16px; border: 1px solid rgba(0, 191, 165, 0.2); border-top: none; text-align: center;">
+              <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px;">
+                Este informe fue generado por ImplantX®
+              </p>
+              <p style="margin: 0; color: #64748b; font-size: 11px;">
+                © 2026 ImplantX - Tecnología de Inteligencia Artificial para Evaluación Dental
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+
+function buildFactorsFromAnswers(answers?: Record<string, unknown>): Array<{ name: string; value: string; impact: number }> {
+  if (!answers) return [];
+  
+  const factors: Array<{ name: string; value: string; impact: number }> = [];
+  
+  if (answers.smoking) {
+    const smokingMap: Record<string, { value: string; impact: number }> = {
+      'no': { value: 'No fumador', impact: 5 },
+      'less-10': { value: 'Fumador leve', impact: 12 },
+      '10-plus': { value: 'Fumador moderado/alto', impact: 20 },
+    };
+    const smoking = smokingMap[answers.smoking as string];
+    if (smoking) factors.push({ name: 'Tabaquismo', ...smoking });
+  }
+  
+  if (answers.diabetes) {
+    const diabetesMap: Record<string, { value: string; impact: number }> = {
+      'no': { value: 'Sin diabetes', impact: 5 },
+      'controlled': { value: 'Diabetes controlada', impact: 10 },
+      'uncontrolled': { value: 'Diabetes no controlada', impact: 18 },
+    };
+    const diabetes = diabetesMap[answers.diabetes as string];
+    if (diabetes) factors.push({ name: 'Diabetes', ...diabetes });
+  }
+  
+  if (answers.bruxism) {
+    const bruxismMap: Record<string, { value: string; impact: number }> = {
+      'no': { value: 'No bruxismo', impact: 5 },
+      'unsure': { value: 'Posible bruxismo', impact: 10 },
+      'yes': { value: 'Bruxismo confirmado', impact: 15 },
+    };
+    const bruxism = bruxismMap[answers.bruxism as string];
+    if (bruxism) factors.push({ name: 'Bruxismo', ...bruxism });
+  }
+  
+  if (answers.gumBleeding) {
+    const gumMap: Record<string, { value: string; impact: number }> = {
+      'never': { value: 'Encías saludables', impact: 5 },
+      'sometimes': { value: 'Sangrado ocasional', impact: 12 },
+      'frequently': { value: 'Sangrado frecuente', impact: 18 },
+    };
+    const gum = gumMap[answers.gumBleeding as string];
+    if (gum) factors.push({ name: 'Salud de encías', ...gum });
+  }
+  
+  if (answers.oralHygiene) {
+    const hygieneMap: Record<string, { value: string; impact: number }> = {
+      'twice-plus': { value: 'Excelente', impact: 5 },
+      'once': { value: 'Regular', impact: 10 },
+      'less-once': { value: 'Insuficiente', impact: 15 },
+    };
+    const hygiene = hygieneMap[answers.oralHygiene as string];
+    if (hygiene) factors.push({ name: 'Higiene oral', ...hygiene });
+  }
+  
+  return factors;
+}
+
+function buildRecommendations(
+  purchaseLevel: string, 
+  answers?: Record<string, unknown>,
+  irpScore?: number
+): Array<{ text: string; evidence: string }> {
+  const recommendations: Array<{ text: string; evidence: string }> = [];
+  
+  if (!answers) return recommendations;
+  
+  // Smoking recommendations
+  if (answers.smoking === '10-plus') {
+    recommendations.push({
+      text: 'Reducir o eliminar el consumo de tabaco antes del tratamiento',
+      evidence: 'El tabaquismo reduce la tasa de éxito de implantes en un 10-20%'
+    });
+  } else if (answers.smoking === 'less-10') {
+    recommendations.push({
+      text: 'Considerar dejar de fumar al menos 2 semanas antes y después de la cirugía',
+      evidence: 'Incluso el tabaquismo leve afecta la cicatrización y oseointegración'
+    });
+  }
+  
+  // Diabetes recommendations
+  if (answers.diabetes === 'uncontrolled') {
+    recommendations.push({
+      text: 'Optimizar el control glucémico antes del procedimiento',
+      evidence: 'HbA1c < 7% mejora significativamente los resultados de implantes'
+    });
+  } else if (answers.diabetes === 'controlled') {
+    recommendations.push({
+      text: 'Mantener el control glucémico durante todo el tratamiento',
+      evidence: 'Diabetes controlada tiene tasas de éxito similares a no diabéticos'
+    });
+  }
+  
+  // Bruxism recommendations
+  if (answers.bruxism === 'yes') {
+    if (answers.bruxismGuard !== 'yes') {
+      recommendations.push({
+        text: 'Usar férula de descarga nocturna para proteger el implante',
+        evidence: 'El bruxismo aumenta el riesgo de fractura de la prótesis y aflojamiento'
+      });
+    }
+  }
+  
+  // Gum health recommendations
+  if (answers.gumBleeding === 'frequently') {
+    recommendations.push({
+      text: 'Tratamiento periodontal previo al implante',
+      evidence: 'La periodontitis activa aumenta 4x el riesgo de periimplantitis'
+    });
+  }
+  
+  // Oral hygiene recommendations  
+  if (answers.oralHygiene === 'less-once') {
+    recommendations.push({
+      text: 'Mejorar rutina de higiene: cepillado 2x/día + hilo dental',
+      evidence: 'La higiene deficiente es el factor de riesgo más modificable'
+    });
+  }
+  
+  // Premium-specific recommendations
+  if (purchaseLevel === 'premium' && irpScore && irpScore > 30) {
+    recommendations.push({
+      text: 'Considerar protocolo de carga diferida para mayor seguridad',
+      evidence: 'IRP elevado sugiere beneficio de tiempo adicional de oseointegración'
+    });
+  }
+  
+  return recommendations.slice(0, purchaseLevel === 'premium' ? 5 : 3);
 }
 
 Deno.serve(async (req) => {
@@ -306,7 +671,7 @@ Deno.serve(async (req) => {
       }
 
       // Send report email
-      await sendReportEmail(supabase, payerEmail, purchaseLevel, assessment);
+      await sendReportEmail(payerEmail, purchaseLevel, assessment);
     }
 
     return new Response(JSON.stringify({ 
