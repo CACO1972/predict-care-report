@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { 
   Activity, ArrowRight, CheckCircle2, FileText, Lock, 
   Sparkles, TrendingUp, Shield, Zap, Crown, Download, Loader2, Mail,
-  X, Car, Plane, Clock, DollarSign
+  X, Car, Plane, Clock, DollarSign, Bug
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IRPResult, getIRPColorClass } from "@/utils/irpCalculation";
@@ -12,6 +12,7 @@ import { usePaymentVerification } from "@/hooks/usePaymentVerification";
 import { PurchaseLevel } from "@/types/questionnaire";
 import { useToast } from "@/hooks/use-toast";
 import RioAvatar from "./RioAvatar";
+
 interface IRPResultScreenProps {
   irpResult: IRPResult;
   patientName: string;
@@ -21,6 +22,17 @@ interface IRPResultScreenProps {
 
 const MERCADOPAGO_PLAN_ACCION = "https://mpago.la/2eWC5q6"; // $14.900
 const MERCADOPAGO_PREMIUM = "https://mpago.li/2jpxDi2"; // $29.990
+
+// Test mode bypass - use ?testMode=premium or ?testMode=plan-accion in URL
+const getTestMode = (): PurchaseLevel | null => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const testMode = params.get('testMode');
+    if (testMode === 'premium') return 'premium';
+    if (testMode === 'plan-accion') return 'plan-accion';
+  }
+  return null;
+};
 
 const IRPResultScreen = ({ 
   irpResult, 
@@ -38,6 +50,9 @@ const IRPResultScreen = ({
   const colorClasses = getIRPColorClass(irpResult.level);
   const { verifyPayment, isVerifying } = usePaymentVerification();
   const { toast } = useToast();
+  
+  // Check for test mode
+  const testMode = getTestMode();
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -47,6 +62,15 @@ const IRPResultScreen = ({
       }
     };
   }, []);
+  
+  // Handle test mode bypass
+  const handleTestBypass = (level: PurchaseLevel) => {
+    toast({
+      title: "🧪 Modo Test Activado",
+      description: `Bypasseando pago: ${level}`,
+    });
+    onPurchasePlan(level);
+  };
 
   // Start polling for payment
   const startPolling = (email: string) => {
@@ -411,6 +435,40 @@ const IRPResultScreen = ({
             <p className="text-[10px] text-center text-muted-foreground">
               El pago puede tardar unos segundos en procesarse después de completar la transacción.
             </p>
+          </div>
+        </Card>
+      )}
+
+      {/* TEST MODE BANNER - Only visible when ?testMode=premium or ?testMode=plan-accion */}
+      {testMode && (
+        <Card className="border-2 border-orange-500 bg-orange-500/10 p-4 space-y-3 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <Bug className="w-5 h-5 text-orange-500" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-foreground">🧪 Modo Test Activo</p>
+              <p className="text-xs text-muted-foreground">
+                Bypass de pagos habilitado. Haz clic para continuar sin pagar.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={() => handleTestBypass('plan-accion')}
+              variant="outline"
+              className="gap-2 border-orange-500/50 hover:bg-orange-500/10"
+            >
+              <Zap className="w-4 h-4" />
+              Test Plan Acción
+            </Button>
+            <Button
+              onClick={() => handleTestBypass('premium')}
+              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-white"
+            >
+              <Crown className="w-4 h-4" />
+              Test Premium
+            </Button>
           </div>
         </Card>
       )}
