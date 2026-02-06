@@ -19,22 +19,41 @@ interface QuestionnaireLayoutProps {
   patientName?: string;
 }
 
-export const QuestionnaireHeader = () => (
-  <header className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-black/80 backdrop-blur-xl">
-    <div className="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="font-display text-lg sm:text-xl text-foreground font-bold tracking-tight">
-          Implant<span className="text-primary">X</span>
-        </span>
-        <span className="text-foreground/30 text-xs font-light">™</span>
+// Check for test mode
+const getTestMode = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('testMode');
+  }
+  return null;
+};
+
+export const QuestionnaireHeader = () => {
+  const testMode = getTestMode();
+  
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-black/80 backdrop-blur-xl">
+      {/* Test Mode Banner */}
+      {testMode && (
+        <div className="bg-orange-500 text-white text-center py-1 text-xs font-bold">
+          🧪 MODO TEST ACTIVO: {testMode.toUpperCase()} - Los pagos serán bypasseados
+        </div>
+      )}
+      <div className="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-display text-lg sm:text-xl text-foreground font-bold tracking-tight">
+            Implant<span className="text-primary">X</span>
+          </span>
+          <span className="text-foreground/30 text-xs font-light">™</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+          <span className="text-[10px] sm:text-xs font-medium text-primary tracking-wide">IA Predictiva</span>
+        </div>
       </div>
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
-        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-        <span className="text-[10px] sm:text-xs font-medium text-primary tracking-wide">IA Predictiva</span>
-      </div>
-    </div>
-  </header>
-);
+    </header>
+  );
+};
 
 export const QuestionnaireFooter = () => (
   <footer className="border-t border-primary/10 py-6 bg-black/60 backdrop-blur-sm">
