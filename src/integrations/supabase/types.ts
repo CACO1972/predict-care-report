@@ -41,6 +41,68 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_assessments: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          created_at: string
+          email: string
+          id: string
+          irp_score: number | null
+          missing_teeth_count: number | null
+          patient_name: string | null
+          payment_id: string | null
+          phone: string | null
+          purchase_level: string | null
+          risk_level: string | null
+          session_id: string | null
+          treatment_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          irp_score?: number | null
+          missing_teeth_count?: number | null
+          patient_name?: string | null
+          payment_id?: string | null
+          phone?: string | null
+          purchase_level?: string | null
+          risk_level?: string | null
+          session_id?: string | null
+          treatment_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          irp_score?: number | null
+          missing_teeth_count?: number | null
+          patient_name?: string | null
+          payment_id?: string | null
+          phone?: string | null
+          purchase_level?: string | null
+          risk_level?: string | null
+          session_id?: string | null
+          treatment_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_assessments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number | null
