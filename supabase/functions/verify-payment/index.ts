@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // CORS configuration - allow production and preview domains
 const getAllowedOrigin = (requestOrigin: string | null): string => {
   const allowedPatterns = [
+    'https://implantx.cl',
+    'https://www.implantx.cl',
     'https://implantx.lovable.app',
     'https://predict-care-report.lovable.app',
     /^https:\/\/.*\.lovableproject\.com$/,
