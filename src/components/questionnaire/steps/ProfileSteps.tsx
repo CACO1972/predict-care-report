@@ -19,37 +19,62 @@ interface NameStepProps {
 export const NameStep = ({ userProfile, setUserProfile, onNext }: NameStepProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasAdvancedRef = useRef(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [videosFinished, setVideosFinished] = useState(false);
 
-  // Play audio on mount
+  // Play audio on mount and handle auto-advance after audio ends
   useEffect(() => {
     const audio = new Audio("/audio/rio-nombre.mp3");
     audioRef.current = audio;
     audio.play().catch(err => console.log("Audio autoplay blocked:", err));
 
+    // When audio ends, start 2 second timer for auto-advance
+    audio.addEventListener('ended', () => {
+      autoAdvanceTimerRef.current = setTimeout(() => {
+        if (!hasAdvancedRef.current && userProfile.name && userProfile.name.trim().length > 0) {
+          hasAdvancedRef.current = true;
+          onNext();
+        }
+      }, 2000);
+    });
+
     return () => {
       audio.pause();
       audio.src = "";
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+      }
     };
   }, []);
 
-  // Handle video sequence
+  // Handle video sequence - no loop
   const handleVideoEnded = () => {
     if (currentVideoIndex < NAME_VIDEOS.length - 1) {
       setCurrentVideoIndex(prev => prev + 1);
     } else {
-      // Loop back to first video
-      setCurrentVideoIndex(0);
+      // Videos finished, don't loop
+      setVideosFinished(true);
     }
   };
 
   // Auto-play when video source changes
   useEffect(() => {
-    if (videoRef.current) {
+    if (videoRef.current && !videosFinished) {
       videoRef.current.load();
       videoRef.current.play().catch(err => console.log("Video autoplay blocked:", err));
     }
-  }, [currentVideoIndex]);
+  }, [currentVideoIndex, videosFinished]);
+
+  // Handle manual click - cancel auto-advance timer
+  const handleManualNext = () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+    }
+    hasAdvancedRef.current = true;
+    onNext();
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -91,7 +116,7 @@ export const NameStep = ({ userProfile, setUserProfile, onNext }: NameStepProps)
         type="text"
         value={userProfile.name}
         onChange={(value) => setUserProfile({ ...userProfile, name: value as string })}
-        onNext={onNext}
+        onNext={handleManualNext}
         nextButtonText="Continuar"
         hideNextButton={false}
       />
