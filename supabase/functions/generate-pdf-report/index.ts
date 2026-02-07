@@ -803,23 +803,9 @@ async function generateBaseReport(data: ReportData): Promise<Uint8Array> {
     }
   }
 
-  b.space(6);
+  b.space(10);
 
-  // What's available in Completo
-  b.drawSectionTitle('Disponible en Informe Completo');
-  const completoFeatures = [
-    'Sinergias de riesgo con multiplicadores de interaccion',
-    'Plan de tratamiento detallado por zona anatomica',
-    'Protocolo de preparacion priorizado (Critico / Importante / Recomendado)',
-    'Resumen clinico narrativo integrador',
-  ];
-  for (const f of completoFeatures) {
-    b.drawText(`  >> ${f}`, { size: 8, color: C.BLUE_ACCENT, font: b.fontRegular });
-  }
-
-  b.space(8);
-
-  // Upsell to Completo
+  // Upsell to Completo (single consolidated section)
   b.drawUpsellBox('completo', '$29.900 CLP');
 
   b.space(8);
