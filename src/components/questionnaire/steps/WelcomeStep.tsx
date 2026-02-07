@@ -12,30 +12,81 @@ interface WelcomeStepProps {
 
 const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: WelcomeStepProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const comenzamosAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isMutedRef = useRef(isMuted);
 
-  // Play welcome audio when component mounts and user is not muted
+  // Keep muted ref in sync
   useEffect(() => {
-    const audio = new Audio("/audio/hola-soy-rio.mp3");
-    audioRef.current = audio;
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+
+  // Play welcome audio sequence when component mounts
+  useEffect(() => {
+    const welcomeAudio = new Audio("/audio/hola-soy-rio.mp3");
+    audioRef.current = welcomeAudio;
     
+    // Generate comenzamos audio via TTS
+    const fetchComenzamosAudio = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+            },
+            body: JSON.stringify({
+              text: "¿Comenzamos?",
+              voice_id: "0cheeVA5B3Cv6DGq65cT"
+            })
+          }
+        );
+        if (response.ok) {
+          const audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          comenzamosAudioRef.current = new Audio(audioUrl);
+        }
+      } catch (err) {
+        console.log("Failed to fetch comenzamos audio:", err);
+      }
+    };
+    
+    fetchComenzamosAudio();
+    
+    // Chain audios: play "comenzamos?" after welcome audio ends
+    welcomeAudio.addEventListener('ended', () => {
+      if (!isMutedRef.current && comenzamosAudioRef.current) {
+        comenzamosAudioRef.current.play().catch(err => {
+          console.log("Comenzamos audio play blocked:", err);
+        });
+      }
+    });
+
     if (!isMuted) {
-      audio.play().catch(err => {
+      welcomeAudio.play().catch(err => {
         console.log("Audio autoplay blocked:", err);
       });
     }
 
     return () => {
-      audio.pause();
-      audio.src = "";
+      welcomeAudio.pause();
+      welcomeAudio.src = "";
+      if (comenzamosAudioRef.current) {
+        comenzamosAudioRef.current.pause();
+        comenzamosAudioRef.current.src = "";
+      }
     };
   }, []);
 
   // Handle mute toggle for audio
   useEffect(() => {
-    if (audioRef.current) {
-      if (isMuted) {
-        audioRef.current.pause();
-      } else {
+    if (isMuted) {
+      audioRef.current?.pause();
+      comenzamosAudioRef.current?.pause();
+    } else {
+      // Resume welcome audio if it hasn't ended
+      if (audioRef.current && audioRef.current.currentTime < audioRef.current.duration) {
         audioRef.current.play().catch(err => {
           console.log("Audio play blocked:", err);
         });
