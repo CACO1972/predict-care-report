@@ -29,6 +29,20 @@ const getCorsHeaders = (requestOrigin: string | null) => ({
 
 type PurchaseLevel = 'free' | 'plan-accion' | 'premium';
 
+interface RiskFactor {
+  name: string;
+  value: string;
+  impact: number | string;
+  rr?: number;           // ✅ Riesgo Relativo
+  action?: string;
+}
+
+interface Recommendation {
+  text: string;
+  evidence?: string;
+  priority?: string;     // ✅ Alta, Media, Baja
+}
+
 interface ReportEmailRequest {
   email: string;
   patientName: string;
@@ -40,10 +54,10 @@ interface ReportEmailRequest {
   irpLevel?: string;
   pronosticoLabel?: string;
   pronosticoMessage?: string;
-  factors?: Array<{ name: string; value: string; impact: number }>;
-  recommendations?: Array<{ text: string; evidence: string }>;
+  factors?: RiskFactor[];
+  recommendations?: Recommendation[];
   synergies?: Array<{ text: string }>;
-  irpResult?: { score: number; level: string; factors?: any[] };
+  irpResult?: { score: number; level: string; factors?: RiskFactor[] };
 }
 
 // ============================================================
