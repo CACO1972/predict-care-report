@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 // CORS configuration
 const getAllowedOrigin = (requestOrigin: string | null): string => {
@@ -18,66 +18,401 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
   return 'https://implantx.cl';
 };
 
+const getCorsHeaders = (requestOrigin: string | null) => ({
+  "Access-Control-Allow-Origin": getAllowedOrigin(requestOrigin),
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+});
+
 type PurchaseLevel = 'free' | 'plan-accion' | 'premium';
 
 interface ReportData {
   id: string;
   date: string;
-  patientName?: string;
-  pronosticoLabel: string;
-  pronosticoMessage: string;
+  patientName: string;
+  pronosticoLabel?: string;
+  pronosticoMessage?: string;
   successRange: string;
-  factors: Array<{ name: string; value: string; impact: number }>;
-  recommendations: Array<{ text: string; evidence: string }>;
-  synergies?: string[];
-  methodology?: string;
+  factors?: Array<{ name: string; value: string; impact: number }>;
+  recommendations?: Array<{ text: string; evidence: string }>;
+  synergies?: Array<{ text: string }>;
   purchaseLevel?: PurchaseLevel;
-  irpResult?: {
-    score: number;
-    level: string;
-    message: string;
-  };
+  irpResult?: { score: number; level: string; factors?: any[] };
 }
 
-const getLevelConfig = (level: PurchaseLevel) => {
+// ============================================================
+//  TIER CONFIG
+// ============================================================
+interface TierConfig {
+  label: string;
+  badge: string;
+  color: string;
+  colorLight: string;
+  colorDark: string;
+}
+
+const getTierConfig = (level: PurchaseLevel): TierConfig => {
   switch (level) {
     case 'premium':
       return {
         label: 'EVALUACIÓN CLÍNICA AVANZADA',
-        shortLabel: 'Avanzada',
-        badge: '🔬',
+        badge: '🏥',
         color: '#C9A86C',
-        bgGradient: 'linear-gradient(135deg, rgba(201,168,108,0.15) 0%, rgba(201,168,108,0.05) 100%)',
-        borderColor: 'rgba(201,168,108,0.4)',
+        colorLight: 'rgba(201, 168, 108, 0.15)',
+        colorDark: 'rgba(201, 168, 108, 0.08)',
       };
     case 'plan-accion':
       return {
         label: 'GUÍA CLÍNICA PERSONALIZADA',
-        shortLabel: 'Guía Clínica',
         badge: '📋',
-        color: '#C9A86C',
-        bgGradient: 'linear-gradient(135deg, rgba(201,168,108,0.10) 0%, rgba(201,168,108,0.03) 100%)',
-        borderColor: 'rgba(201,168,108,0.3)',
+        color: '#00BFA5',
+        colorLight: 'rgba(0, 191, 165, 0.15)',
+        colorDark: 'rgba(0, 191, 165, 0.08)',
       };
     default:
       return {
         label: 'EVALUACIÓN INICIAL',
-        shortLabel: 'Inicial',
         badge: '📄',
-        color: '#94a3b8',
-        bgGradient: 'linear-gradient(135deg, rgba(148,163,184,0.10) 0%, rgba(148,163,184,0.03) 100%)',
-        borderColor: 'rgba(148,163,184,0.2)',
+        color: '#60A5FA',
+        colorLight: 'rgba(96, 165, 250, 0.15)',
+        colorDark: 'rgba(96, 165, 250, 0.08)',
       };
   }
 };
 
-serve(async (req) => {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': getAllowedOrigin(req.headers.get('origin')),
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  };
+// ============================================================
+//  IRP GAUGE SVG
+// ============================================================
+const generateIRPGauge = (score: number, level: string): string => {
+  const gaugeColor = level === 'Bajo' ? '#22c55e' : level === 'Moderado' ? '#eab308' : '#ef4444';
+  const angle = Math.min(Math.max((score / 100) * 180, 0), 180);
+  const rad = (angle - 90) * (Math.PI / 180);
+  const x = 100 + 70 * Math.cos(rad);
+  const y = 100 + 70 * Math.sin(rad);
+  const largeArc = angle > 90 ? 1 : 0;
 
-  if (req.method === 'OPTIONS') {
+  return `
+  <div style="text-align:center;margin:20px 0;">
+    <svg width="200" height="120" viewBox="0 0 200 120">
+      <path d="M 30 100 A 70 70 0 0 1 170 100" fill="none" stroke="#1e293b" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 30 100 A 70 70 0 ${largeArc} 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${gaugeColor}" stroke-width="12" stroke-linecap="round"/>
+      <text x="100" y="88" text-anchor="middle" fill="${gaugeColor}" font-size="32" font-weight="bold" font-family="Georgia,serif">${score}</text>
+      <text x="100" y="112" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="Arial,sans-serif">IRP</text>
+    </svg>
+    <div style="margin-top:4px;">
+      <span style="display:inline-block;padding:4px 16px;background:${gaugeColor}22;color:${gaugeColor};font-size:12px;font-weight:700;border-radius:20px;border:1px solid ${gaugeColor}44;">
+        Riesgo ${level}
+      </span>
+    </div>
+  </div>`;
+};
+
+// ============================================================
+//  GENERATE BRANDED REPORT HTML
+// ============================================================
+const generateReportHTML = (data: ReportData): string => {
+  const level = data.purchaseLevel || 'free';
+  const tier = getTierConfig(level);
+  const isPaid = level !== 'free';
+  const isPremium = level === 'premium';
+  const irp = data.irpResult;
+
+  // ---- Factors section (paid only) ----
+  const factorsHTML = isPaid && data.factors && data.factors.length > 0 ? `
+    <div style="margin-top:32px;">
+      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
+        Factores Clínicos Evaluados
+      </h2>
+      <table style="width:100%;border-collapse:collapse;">
+        ${data.factors.map(f => {
+          const barColor = f.impact > 0 ? '#22c55e' : f.impact < -5 ? '#ef4444' : '#eab308';
+          const barWidth = Math.min(Math.abs(f.impact) * 5, 100);
+          return `
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #1e293b;color:#e2e8f0;font-size:14px;width:35%;">${f.name}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #1e293b;color:#94a3b8;font-size:13px;width:25%;">${f.value}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #1e293b;width:40%;">
+              <div style="background:#1e293b;border-radius:4px;height:8px;width:100%;">
+                <div style="background:${barColor};border-radius:4px;height:8px;width:${barWidth}%;"></div>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>` : '';
+
+  // ---- Recommendations (paid only) ----
+  const recsHTML = isPaid && data.recommendations && data.recommendations.length > 0 ? `
+    <div style="margin-top:32px;">
+      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
+        Recomendaciones Personalizadas
+      </h2>
+      ${data.recommendations.map((r, i) => `
+        <div style="padding:14px 16px;background:${tier.colorDark};border-left:3px solid ${tier.color};margin-bottom:10px;border-radius:0 8px 8px 0;">
+          <p style="margin:0;color:#e2e8f0;font-size:14px;font-weight:600;">${i + 1}. ${r.text}</p>
+          ${r.evidence ? `<p style="margin:6px 0 0;color:#94a3b8;font-size:12px;font-style:italic;">Evidencia: ${r.evidence}</p>` : ''}
+        </div>
+      `).join('')}
+    </div>` : '';
+
+  // ---- Synergies (paid only) ----
+  const synergiesHTML = isPaid && data.synergies && data.synergies.length > 0 ? `
+    <div style="margin-top:32px;">
+      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
+        Sinergias Detectadas
+      </h2>
+      ${data.synergies.map(s => `
+        <div style="padding:12px 16px;background:rgba(99,102,241,0.08);border-left:3px solid #818cf8;margin-bottom:8px;border-radius:0 8px 8px 0;">
+          <p style="margin:0;color:#e2e8f0;font-size:13px;">${s.text}</p>
+        </div>
+      `).join('')}
+    </div>` : '';
+
+  // ---- IRP Section (paid only) ----
+  const irpHTML = isPaid && irp ? `
+    <div style="margin-top:32px;padding:24px;background:linear-gradient(135deg,rgba(0,191,165,0.08),rgba(0,191,165,0.03));border:1px solid rgba(0,191,165,0.2);border-radius:12px;">
+      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 4px;font-family:Georgia,serif;text-align:center;">
+        Índice de Riesgo Personalizado (IRP)
+      </h2>
+      <p style="color:#94a3b8;font-size:13px;text-align:center;margin:0 0 8px;">
+        Puntaje calculado según tus factores clínicos individuales
+      </p>
+      ${generateIRPGauge(irp.score, irp.level)}
+    </div>` : '';
+
+  // ---- Premium exclusive sections ----
+  const premiumHTML = isPremium ? `
+    <div style="margin-top:32px;padding:24px;background:linear-gradient(135deg,${tier.colorLight},${tier.colorDark});border:1px solid ${tier.color}44;border-radius:12px;">
+      <h2 style="color:${tier.color};font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
+        🏥 Análisis Clínico Avanzado
+      </h2>
+      
+      <!-- Treatment timeline -->
+      <h3 style="color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 12px;">Línea de Tiempo Estimada</h3>
+      <div style="position:relative;padding-left:24px;border-left:2px solid ${tier.color}44;">
+        <div style="margin-bottom:16px;">
+          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;"></div>
+          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Semana 1-2: Preparación</p>
+          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Exámenes previos, ajustes de medicación, evaluación periodontal</p>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;margin-top:2px;"></div>
+          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Semana 3-4: Procedimiento</p>
+          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Cirugía de colocación, protocolo post-operatorio inmediato</p>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;margin-top:2px;"></div>
+          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Mes 2-4: Oseointegración</p>
+          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Período de cicatrización y fusión hueso-implante, controles mensuales</p>
+        </div>
+        <div>
+          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;margin-top:2px;"></div>
+          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Mes 5-6: Rehabilitación</p>
+          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Colocación de corona definitiva, ajustes oclusales finales</p>
+        </div>
+      </div>
+
+      <!-- Cost estimate -->
+      <div style="margin-top:24px;padding:16px;background:rgba(0,0,0,0.2);border-radius:8px;">
+        <h3 style="color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 8px;">Rango de Inversión Referencial</h3>
+        <p style="color:${tier.color};font-size:28px;font-weight:700;margin:0;">$800.000 – $1.500.000 CLP</p>
+        <p style="color:#94a3b8;font-size:12px;margin:6px 0 0;">Por implante unitario. Valor referencial según complejidad clínica y tipo de rehabilitación protésica.</p>
+      </div>
+
+      <!-- Questions for specialist -->
+      <div style="margin-top:24px;">
+        <h3 style="color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 12px;">Preguntas Clave para tu Especialista</h3>
+        ${[
+          '¿Mi densidad ósea es suficiente o necesitaré injerto?',
+          '¿Cuánto tiempo tomará mi oseointegración según mi perfil?',
+          '¿Qué tipo de prótesis recomienda para mi caso?',
+          '¿Cuáles son los riesgos específicos según mi historial?',
+          '¿Necesito tratamiento periodontal previo?'
+        ].map((q, i) => `
+          <div style="padding:8px 12px;background:rgba(0,0,0,0.15);border-radius:6px;margin-bottom:6px;">
+            <p style="margin:0;color:#e2e8f0;font-size:13px;">${i + 1}. ${q}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+
+  // ---- Checklist (paid only) ----
+  const checklistHTML = isPaid ? `
+    <div style="margin-top:32px;">
+      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
+        ✅ Checklist Pre-Operatorio
+      </h2>
+      <table style="width:100%;border-collapse:collapse;">
+        ${[
+          'Radiografía panorámica o CBCT actualizada',
+          'Exámenes de sangre (hemograma, glicemia, coagulación)',
+          'Evaluación periodontal completa',
+          'Control de enfermedades sistémicas (diabetes, hipertensión)',
+          'Suspender tabaco al menos 2 semanas antes',
+          'Informar todos los medicamentos actuales',
+          'Planificar reposo post-operatorio (2-3 días)',
+          isPremium ? 'Evaluación de densidad ósea (según perfil IRP)' : null,
+          isPremium ? 'Consulta con especialista en rehabilitación oral' : null,
+        ].filter(Boolean).map(item => `
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #1e293b;">
+              <span style="color:#94a3b8;font-size:16px;margin-right:8px;">☐</span>
+              <span style="color:#e2e8f0;font-size:13px;">${item}</span>
+            </td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>` : '';
+
+  // ---- Upsell (free only) ----
+  const upsellHTML = level === 'free' ? `
+    <div style="margin-top:40px;padding:28px 24px;background:linear-gradient(135deg,rgba(0,191,165,0.12),rgba(0,191,165,0.04));border:2px solid rgba(0,191,165,0.3);border-radius:16px;text-align:center;">
+      <p style="font-size:28px;margin:0 0 12px;">📋</p>
+      <h2 style="color:#00BFA5;font-size:20px;font-weight:700;margin:0 0 8px;font-family:Georgia,serif;">
+        ¿Quieres tu Guía Clínica Personalizada?
+      </h2>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 16px;">
+        Obtén un plan paso a paso con recomendaciones específicas según tu perfil,
+        checklist pre-operatorio y mucho más.
+      </p>
+      <div style="margin-bottom:20px;text-align:left;max-width:320px;display:inline-block;">
+        ${['Índice de Riesgo Personalizado (IRP)', 'Plan de acción semana a semana', 'Recomendaciones basadas en evidencia', 'Checklist pre-operatorio completo'].map(b => `
+          <p style="color:#e2e8f0;font-size:13px;margin:6px 0;">
+            <span style="color:#22c55e;margin-right:6px;">✓</span>${b}
+          </p>
+        `).join('')}
+      </div>
+      <div>
+        <a href="https://mpago.la/2eWC5q6" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#00BFA5,#00897B);color:#fff;font-size:16px;font-weight:700;text-decoration:none;border-radius:10px;box-shadow:0 4px 16px rgba(0,191,165,0.3);">
+          Obtener Guía Clínica — $14.900
+        </a>
+        <p style="color:#64748b;font-size:11px;margin:10px 0 0;">🔒 Pago seguro con MercadoPago • Acceso inmediato</p>
+      </div>
+    </div>` : '';
+
+  // ============================================================
+  //  FULL REPORT HTML
+  // ============================================================
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ImplantX — ${tier.label}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0f1a; color: #e2e8f0; font-family: 'DM Sans', -apple-system, sans-serif; }
+    @media print {
+      body { background: #fff; color: #1e293b; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div style="max-width:680px;margin:0 auto;padding:32px 24px;">
+
+  <!-- ========== HEADER ========== -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid #1e293b;margin-bottom:28px;">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#00BFA5,#00897B);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+          <span style="color:#fff;font-weight:700;font-size:16px;line-height:44px;text-align:center;display:block;width:44px;">IX</span>
+        </div>
+        <div>
+          <p style="font-size:18px;font-weight:700;color:#fff;font-family:'Playfair Display',Georgia,serif;margin:0;">ImplantX</p>
+          <p style="font-size:11px;color:#64748b;margin:0;">by Clínica Miró</p>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <span style="display:inline-block;padding:6px 14px;background:${tier.colorLight};color:${tier.color};font-size:11px;font-weight:700;border-radius:20px;border:1px solid ${tier.color}44;letter-spacing:0.5px;">
+        ${tier.badge} ${tier.label}
+      </span>
+    </div>
+  </div>
+
+  <!-- ========== PATIENT INFO ========== -->
+  <div style="display:flex;justify-content:space-between;margin-bottom:28px;">
+    <div>
+      <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">Paciente</p>
+      <p style="color:#fff;font-size:16px;font-weight:600;margin:0;">${data.patientName}</p>
+    </div>
+    <div style="text-align:right;">
+      <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">Fecha</p>
+      <p style="color:#fff;font-size:14px;margin:0;">${data.date}</p>
+    </div>
+  </div>
+  <div style="margin-bottom:28px;">
+    <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">ID Reporte</p>
+    <p style="color:#94a3b8;font-size:13px;font-family:monospace;margin:0;">${data.id}</p>
+  </div>
+
+  <!-- ========== MAIN RESULT ========== -->
+  <div style="padding:28px;background:linear-gradient(135deg,rgba(0,191,165,0.1),rgba(0,191,165,0.03));border:1px solid rgba(0,191,165,0.25);border-radius:16px;text-align:center;margin-bottom:8px;">
+    <p style="color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 8px;">Rango de Éxito Estimado</p>
+    <p style="color:#00BFA5;font-size:42px;font-weight:700;font-family:'Playfair Display',Georgia,serif;margin:0;line-height:1.1;">${data.successRange}</p>
+    ${data.pronosticoLabel ? `
+      <p style="color:#e2e8f0;font-size:15px;margin:10px 0 0;font-weight:500;">${data.pronosticoLabel}</p>
+    ` : ''}
+    ${data.pronosticoMessage ? `
+      <p style="color:#94a3b8;font-size:13px;margin:8px 0 0;line-height:1.5;max-width:500px;display:inline-block;">${data.pronosticoMessage}</p>
+    ` : ''}
+  </div>
+
+  <!-- ========== IRP ========== -->
+  ${irpHTML}
+
+  <!-- ========== FACTORS ========== -->
+  ${factorsHTML}
+
+  <!-- ========== RECOMMENDATIONS ========== -->
+  ${recsHTML}
+
+  <!-- ========== SYNERGIES ========== -->
+  ${synergiesHTML}
+
+  <!-- ========== PREMIUM EXCLUSIVE ========== -->
+  ${premiumHTML}
+
+  <!-- ========== CHECKLIST ========== -->
+  ${checklistHTML}
+
+  <!-- ========== UPSELL (free only) ========== -->
+  ${upsellHTML}
+
+  <!-- ========== DISCLAIMER ========== -->
+  <div style="margin-top:40px;padding:16px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid #1e293b;">
+    <p style="color:#64748b;font-size:11px;line-height:1.6;margin:0;">
+      <strong style="color:#94a3b8;">Aviso importante:</strong> Este informe es una herramienta de orientación basada en inteligencia artificial y no reemplaza la evaluación clínica presencial de un profesional de la salud. Los resultados son estimaciones basadas en la información proporcionada y literatura científica disponible. Consulte siempre con su implantólogo antes de tomar decisiones de tratamiento.
+    </p>
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <div style="margin-top:24px;padding-top:20px;border-top:1px solid #1e293b;text-align:center;">
+    <p style="color:#64748b;font-size:12px;margin:0 0 4px;">
+      ImplantX® — Tecnología de IA para Evaluación Dental
+    </p>
+    <p style="color:#475569;font-size:11px;margin:0 0 4px;">
+      Desarrollado por Clínica Miró · clinicamiro.cl
+    </p>
+    <p style="color:#334155;font-size:10px;margin:0;">
+      © 2026 Todos los derechos reservados
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`;
+};
+
+// ============================================================
+//  HANDLER
+// ============================================================
+const handler = async (req: Request): Promise<Response> => {
+  console.log("generate-pdf-report function invoked");
+  const corsHeaders = getCorsHeaders(req.headers.get('origin'));
+
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -86,390 +421,31 @@ serve(async (req) => {
     const purchaseLevel = reportData.purchaseLevel || 'free';
     console.log('Generating report:', reportData.id, 'Level:', purchaseLevel);
 
-    const htmlContent = generateReportHTML(reportData);
-    
-    const levelSuffix = purchaseLevel === 'premium' ? '_Evaluacion_Avanzada' 
-      : purchaseLevel === 'plan-accion' ? '_Guia_Clinica' 
+    const html = generateReportHTML(reportData);
+
+    const levelSuffix = purchaseLevel === 'premium' ? '_Evaluacion_Avanzada'
+      : purchaseLevel === 'plan-accion' ? '_Guia_Clinica'
       : '_Evaluacion_Inicial';
-    
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        html: htmlContent,
-        downloadName: `ImplantX${levelSuffix}_${reportData.patientName?.replace(/\s/g, '_') || 'Paciente'}_${reportData.id}.html`
+      JSON.stringify({
+        success: true,
+        html,
+        downloadName: `ImplantX${levelSuffix}_${reportData.id}.html`,
+        contentType: 'text/html',
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
     );
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Error generating report:', errorMessage);
+  } catch (error: any) {
+    console.error("Error generating report:", error);
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
-});
+};
 
-function generateReportHTML(data: ReportData): string {
-  const purchaseLevel = data.purchaseLevel || 'free';
-  const config = getLevelConfig(purchaseLevel);
-  const isPaid = purchaseLevel !== 'free';
-  const isPremium = purchaseLevel === 'premium';
-  const today = data.date || new Date().toLocaleDateString('es-CL');
-
-  // Risk color helper
-  const riskColor = (val: string) => {
-    const v = val.toLowerCase();
-    if (v === 'alto' || v === 'high') return { bg: 'rgba(220,38,38,0.15)', text: '#ef4444', border: 'rgba(220,38,38,0.3)' };
-    if (v === 'medio' || v === 'moderado' || v === 'medium') return { bg: 'rgba(234,179,8,0.15)', text: '#eab308', border: 'rgba(234,179,8,0.3)' };
-    return { bg: 'rgba(34,197,94,0.15)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' };
-  };
-
-  // IRP gauge color
-  const irpColor = (level: string) => {
-    const l = level.toLowerCase();
-    if (l === 'alto' || l === 'high') return '#ef4444';
-    if (l === 'moderado' || l === 'medio') return '#eab308';
-    return '#22c55e';
-  };
-
-  // ── SECTIONS ──
-
-  const factorsHTML = (data.factors || []).map(f => {
-    const rc = riskColor(f.value);
-    const barWidth = Math.min(Math.max(f.impact * 6, 10), 100);
-    return `
-    <div style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:14px;color:#e2e8f0;font-weight:500;">${f.name}</span>
-        <span style="font-size:11px;padding:3px 10px;border-radius:12px;background:${rc.bg};color:${rc.text};border:1px solid ${rc.border};font-weight:600;">${f.value}</span>
-      </div>
-      <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:${barWidth}%;background:linear-gradient(90deg,#C9A86C,#e0c9a8);border-radius:3px;"></div>
-      </div>
-    </div>`;
-  }).join('');
-
-  const recsHTML = (data.recommendations || []).map(r => `
-    <div style="display:flex;gap:14px;padding:16px;background:rgba(201,168,108,0.06);border:1px solid rgba(201,168,108,0.15);border-radius:12px;margin-bottom:10px;">
-      <div style="width:28px;height:28px;min-width:28px;background:rgba(201,168,108,0.2);color:#C9A86C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">✓</div>
-      <div>
-        <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:3px;">${r.text}</div>
-        <div style="font-size:12px;color:#64748b;line-height:1.5;">${r.evidence}</div>
-      </div>
-    </div>
-  `).join('');
-
-  const synergiesHTML = (data.synergies && data.synergies.length > 0) ? `
-    <div style="margin-top:32px;">
-      <h3 style="font-size:16px;color:#C9A86C;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.2);">
-        ⚡ Factores Combinados Identificados
-      </h3>
-      ${data.synergies.map(s => `
-        <div style="padding:12px 16px;background:rgba(234,179,8,0.08);border-left:3px solid #eab308;margin-bottom:8px;border-radius:0 8px 8px 0;color:#fde68a;font-size:13px;">
-          ${s}
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
-
-  // IRP Section (paid only)
-  const irpHTML = isPaid && data.irpResult ? `
-    <div style="margin-top:32px;background:${config.bgGradient};border:1px solid ${config.borderColor};border-radius:16px;padding:28px;text-align:center;">
-      <h3 style="font-size:16px;color:#C9A86C;margin:0 0 20px 0;">
-        🎯 Índice de Riesgo Personalizado (IRP)
-      </h3>
-      <div style="font-size:72px;font-weight:800;color:${irpColor(data.irpResult.level)};line-height:1;margin-bottom:8px;">
-        ${data.irpResult.score}
-      </div>
-      <div style="display:inline-block;padding:6px 20px;border-radius:20px;font-weight:600;font-size:13px;background:${riskColor(data.irpResult.level).bg};color:${riskColor(data.irpResult.level).text};border:1px solid ${riskColor(data.irpResult.level).border};">
-        Riesgo ${data.irpResult.level}
-      </div>
-      <p style="margin:16px auto 0;color:#94a3b8;font-size:13px;max-width:400px;line-height:1.5;">
-        ${data.irpResult.message}
-      </p>
-    </div>
-  ` : '';
-
-  // Action Plan (paid only)
-  const actionPlanHTML = isPaid ? `
-    <div style="margin-top:32px;background:rgba(201,168,108,0.04);border:1px solid rgba(201,168,108,0.2);border-radius:16px;padding:28px;">
-      <h3 style="font-size:16px;color:#C9A86C;margin:0 0 20px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.15);">
-        📋 Plan de Acción Personalizado
-      </h3>
-      ${[
-        { n: '1', title: 'Semanas 1-2: Preparación Oral', desc: 'Optimiza tu salud bucal siguiendo las recomendaciones específicas de tu perfil de riesgo.' },
-        { n: '2', title: 'Semana 3: Consulta Especializada', desc: 'Presenta este informe a tu implantólogo. Contiene toda la información clínica necesaria para planificar tu caso.' },
-        { n: '3', title: 'Evaluación Complementaria', desc: 'Tu especialista indicará radiografías y exámenes complementarios según tu perfil de riesgo específico.' },
-        { n: '4', title: 'Tratamiento Personalizado', desc: 'Recibe un plan de tratamiento adaptado a tus factores individuales, maximizando la probabilidad de éxito.' },
-      ].map(step => `
-        <div style="display:flex;gap:16px;margin-bottom:20px;">
-          <div style="width:32px;height:32px;min-width:32px;background:#C9A86C;color:#0A0A0A;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${step.n}</div>
-          <div>
-            <div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:4px;">${step.title}</div>
-            <div style="font-size:13px;color:#94a3b8;line-height:1.5;">${step.desc}</div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
-
-  // Checklist (paid only)
-  const checklistHTML = isPaid ? `
-    <div style="margin-top:32px;background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.2);border-radius:16px;padding:28px;">
-      <h3 style="font-size:16px;color:#22c55e;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(34,197,94,0.15);">
-        ✅ Checklist Pre-Operatorio
-      </h3>
-      ${[
-        'Limpieza dental profesional realizada',
-        'Control de factores de riesgo identificados (tabaco, diabetes, medicamentos)',
-        'Radiografía panorámica actualizada (máx. 6 meses)',
-        'Evaluación periodontal completada',
-        'Exámenes de laboratorio (hemograma, glicemia, coagulación)',
-        'Confirmación de medicación actual con su médico tratante',
-      ].map(item => `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(34,197,94,0.06);border-radius:8px;margin-bottom:6px;">
-          <div style="width:20px;height:20px;min-width:20px;border:2px solid rgba(34,197,94,0.5);border-radius:4px;"></div>
-          <span style="font-size:13px;color:#e2e8f0;">${item}</span>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
-
-  // Premium exclusive content
-  const premiumHTML = isPremium ? `
-    <div style="margin-top:32px;background:linear-gradient(135deg,rgba(201,168,108,0.12) 0%,rgba(201,168,108,0.04) 100%);border:2px solid rgba(201,168,108,0.35);border-radius:16px;padding:28px;">
-      <div style="text-align:center;font-size:13px;font-weight:700;color:#C9A86C;letter-spacing:2px;margin-bottom:24px;">
-        🔬 CONTENIDO EXCLUSIVO — EVALUACIÓN CLÍNICA AVANZADA
-      </div>
-      
-      <!-- Advanced Analysis -->
-      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
-        <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:15px;">📊 Análisis Avanzado de tu Caso</h4>
-        <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 12px 0;">
-          Basado en tus respuestas y el análisis de <strong style="color:#e2e8f0;">17,025 casos documentados</strong>, 
-          hemos identificado patrones específicos para tu perfil clínico:
-        </p>
-        <div style="padding-left:16px;border-left:2px solid rgba(201,168,108,0.3);">
-          <p style="color:#cbd5e1;font-size:13px;margin:8px 0;">→ Tu combinación de factores tiene comportamiento documentado en estudios longitudinales de hasta 22 años.</p>
-          <p style="color:#cbd5e1;font-size:13px;margin:8px 0;">→ Casos con perfil similar muestran tasas de éxito dentro del rango <strong style="color:#C9A86C;">${data.successRange}</strong>.</p>
-          <p style="color:#cbd5e1;font-size:13px;margin:8px 0;">→ La evidencia sugiere que siguiendo las recomendaciones personalizadas, puedes optimizar significativamente tu pronóstico.</p>
-        </div>
-      </div>
-
-      <!-- Cost Estimate -->
-      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
-        <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:15px;">💰 Estimación de Inversión por Implante</h4>
-        <div style="text-align:center;padding:16px;background:rgba(201,168,108,0.08);border-radius:10px;">
-          <div style="font-size:28px;font-weight:800;color:#C9A86C;margin-bottom:4px;">$800.000 – $1.500.000 CLP</div>
-          <div style="font-size:11px;color:#64748b;font-style:italic;">*Por implante. Incluye corona. Varía según complejidad y profesional.</div>
-        </div>
-      </div>
-
-      <!-- Treatment Timeline -->
-      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
-        <h4 style="color:#C9A86C;margin:0 0 16px 0;font-size:15px;">📅 Cronograma Típico de Tratamiento</h4>
-        ${[
-          { time: 'Día 1', event: 'Cirugía de colocación del implante' },
-          { time: 'Semana 1-2', event: 'Cicatrización inicial y primer control' },
-          { time: 'Mes 2-4', event: 'Osteointegración (fusión con el hueso)' },
-          { time: 'Mes 4-6', event: 'Colocación de la corona definitiva' },
-        ].map(t => `
-          <div style="display:flex;gap:16px;padding:10px 14px;background:rgba(201,168,108,0.06);border-radius:8px;margin-bottom:6px;">
-            <span style="font-weight:700;color:#C9A86C;min-width:90px;font-size:13px;">${t.time}</span>
-            <span style="color:#e2e8f0;font-size:13px;">${t.event}</span>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Questions for Specialist -->
-      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;">
-        <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:15px;">🔬 Preguntas Clave para tu Especialista</h4>
-        ${[
-          '¿Qué sistema y tipo de implante recomienda para mi caso específico?',
-          '¿Necesito algún procedimiento previo (injerto óseo, elevación de seno maxilar)?',
-          '¿Cuál es el protocolo de carga indicado: inmediata o diferida?',
-          '¿Qué tipo de mantenimiento necesitaré a largo plazo?',
-          '¿Ofrece garantía sobre los implantes y la rehabilitación protésica?',
-        ].map(q => `
-          <div style="padding:8px 0 8px 20px;position:relative;color:#cbd5e1;font-size:13px;line-height:1.5;">
-            <span style="position:absolute;left:0;color:#C9A86C;">→</span>${q}
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  ` : '';
-
-  // Upsell for free
-  const upsellHTML = purchaseLevel === 'free' ? `
-    <div style="margin-top:32px;background:linear-gradient(135deg,rgba(201,168,108,0.12) 0%,rgba(201,168,108,0.04) 100%);border:2px dashed rgba(201,168,108,0.35);border-radius:16px;padding:28px;text-align:center;">
-      <div style="font-size:28px;margin-bottom:12px;">🎯</div>
-      <h3 style="margin:0 0 8px 0;color:#C9A86C;font-size:18px;">¿Listo para prepararte mejor?</h3>
-      <p style="margin:0 0 6px 0;color:#e2e8f0;font-size:15px;font-weight:600;">
-        Tu IRP de ${data.irpResult?.score || 'tu perfil'} tiene potencial de optimización
-      </p>
-      <p style="margin:0 0 20px 0;color:#94a3b8;font-size:13px;line-height:1.5;max-width:400px;display:inline-block;">
-        Obtén tu Guía Clínica Personalizada con plan de acción paso a paso, checklist pre-operatorio y recomendaciones específicas.
-      </p>
-      <div>
-        <a href="https://mpago.la/2eWC5q6" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#C9A86C,#a8884d);color:#0A0A0A;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
-          Obtener Guía Clínica — $14.900
-        </a>
-      </div>
-      <p style="margin:12px 0 0 0;color:#64748b;font-size:11px;">🔒 Pago seguro con MercadoPago · Acceso inmediato</p>
-    </div>
-  ` : '';
-
-  // ── FULL REPORT ──
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImplantX — ${config.label} — ${data.patientName || 'Paciente'}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: #0A0A0A;
-      color: #f1f5f9;
-      line-height: 1.6;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    @media print {
-      body { background: #0A0A0A !important; }
-      .no-print { display: none !important; }
-      .container { box-shadow: none; }
-    }
-    @page { margin: 12mm; size: A4; }
-  </style>
-</head>
-<body>
-  <div class="container" style="max-width:780px;margin:0 auto;padding:24px;">
-    
-    <!-- ═══ HEADER ═══ -->
-    <div style="background:linear-gradient(165deg,#0d0d0d 0%,#1a1510 50%,#0d0d0d 100%);border:1px solid rgba(201,168,108,0.25);border-radius:20px;overflow:hidden;">
-      
-      <!-- Top bar -->
-      <div style="padding:28px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(201,168,108,0.15);">
-        <div>
-          <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">
-            <span style="color:#f1f5f9;">Implant</span><span style="color:#C9A86C;">X</span><span style="color:#64748b;font-size:16px;vertical-align:super;">™</span>
-          </div>
-          <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">
-            Evaluación Clínica de Implantes
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="display:inline-block;padding:6px 16px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;background:${config.bgGradient};color:${config.color};border:1px solid ${config.borderColor};">
-            ${config.badge} ${config.label}
-          </div>
-        </div>
-      </div>
-
-      <!-- Patient info -->
-      <div style="padding:16px 32px;display:flex;gap:32px;background:rgba(0,0,0,0.2);">
-        <div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Paciente</div>
-          <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-top:2px;">${data.patientName || 'No especificado'}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">ID Reporte</div>
-          <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-top:2px;">${data.id}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Fecha</div>
-          <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-top:2px;">${today}</div>
-        </div>
-      </div>
-
-      <!-- ═══ MAIN RESULT ═══ -->
-      <div style="padding:48px 32px;text-align:center;background:radial-gradient(ellipse at center,rgba(201,168,108,0.08) 0%,transparent 70%);">
-        <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">
-          Rango de Éxito Estimado
-        </div>
-        <div style="font-size:56px;font-weight:800;color:#C9A86C;letter-spacing:-1px;line-height:1;">
-          ${data.successRange}
-        </div>
-        <div style="display:inline-block;margin-top:16px;padding:8px 28px;border-radius:50px;font-size:14px;font-weight:600;background:rgba(201,168,108,0.15);color:#C9A86C;border:1px solid rgba(201,168,108,0.25);">
-          ${data.pronosticoLabel || 'Pronóstico Favorable'}
-        </div>
-        <p style="margin:16px auto 0;max-width:480px;font-size:14px;color:#94a3b8;line-height:1.6;">
-          ${data.pronosticoMessage || 'Tu perfil muestra condiciones favorables para el tratamiento con implantes dentales.'}
-        </p>
-      </div>
-
-      <!-- ═══ CONTENT ═══ -->
-      <div style="padding:32px;">
-        
-        ${irpHTML}
-
-        <!-- Factors -->
-        <div style="margin-top:32px;">
-          <h3 style="font-size:16px;color:#C9A86C;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.2);">
-            📊 Factores de Riesgo Evaluados
-          </h3>
-          ${factorsHTML}
-        </div>
-
-        ${synergiesHTML}
-        ${actionPlanHTML}
-        ${checklistHTML}
-
-        <!-- Recommendations -->
-        <div style="margin-top:32px;">
-          <h3 style="font-size:16px;color:#C9A86C;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.2);">
-            💡 Recomendaciones Personalizadas
-          </h3>
-          ${recsHTML}
-        </div>
-
-        ${premiumHTML}
-        ${upsellHTML}
-
-        <!-- Methodology -->
-        <div style="margin-top:32px;background:rgba(201,168,108,0.04);border:1px solid rgba(201,168,108,0.12);border-radius:16px;padding:24px;">
-          <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:14px;">📊 Metodología del Algoritmo ImplantX</h4>
-          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0;line-height:1.6;">
-            Esta evaluación utiliza el <strong style="color:#e2e8f0;">algoritmo sinérgico ImplantX</strong>, 
-            desarrollado a partir del análisis de <strong style="color:#e2e8f0;">17,025 implantes documentados</strong> 
-            en estudios longitudinales con seguimiento de hasta 22 años.
-          </p>
-          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0;line-height:1.6;">
-            <strong style="color:#cbd5e1;">Fuentes:</strong> University of British Columbia Cohort (PMC8359846), 
-            Meta-análisis Howe et al. 2019 (PMID:30904559), 20-Year Survival Meta-Analysis 2024 (PMC11416373).
-          </p>
-          <p style="font-size:11px;color:#475569;margin:12px 0 0 0;">
-            *Los rangos de probabilidad reflejan la variabilidad inherente documentada en la literatura científica (IC 95% ±1.2-2.5%). 
-            Este informe es orientativo y no reemplaza la evaluación presencial por un especialista.
-          </p>
-        </div>
-      </div>
-
-      <!-- ═══ FOOTER ═══ -->
-      <div style="padding:24px 32px;border-top:1px solid rgba(201,168,108,0.15);background:rgba(0,0,0,0.25);text-align:center;">
-        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">
-          <span style="color:#f1f5f9;">Implant</span><span style="color:#C9A86C;">X</span><span style="color:#64748b;font-size:10px;vertical-align:super;">™</span>
-        </div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px;">
-          Powered by <span style="color:#C9A86C;">humana.ia</span> · Clínica Miró
-        </div>
-        <div style="font-size:10px;color:#475569;">
-          © 2026 ImplantX · Este reporte es orientativo. La evaluación definitiva debe ser realizada por un especialista en implantología.
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Print button -->
-    <div class="no-print" style="text-align:center;margin-top:24px;">
-      <button onclick="window.print()" style="padding:12px 32px;background:#C9A86C;color:#0A0A0A;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
-        📄 Imprimir / Guardar como PDF
-      </button>
-    </div>
-  </div>
-</body>
-</html>`;
-}
+serve(handler);
