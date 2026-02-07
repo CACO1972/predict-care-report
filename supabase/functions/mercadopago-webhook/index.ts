@@ -102,8 +102,10 @@ async function sendReportEmail(
   const riskLevel = assessment?.risk_level;
   
   // Calculate success range based on IRP score
-  const successRange = irpScore 
-    ? `${Math.max(85, 98 - (irpScore * 2))}-${Math.min(98, 100 - irpScore)}%`
+  // IRP: 0=worst (high risk, low success) → 100=best (low risk, high success)
+  // Maps to: IRP 0 → 75-85%, IRP 50 → 86-93%, IRP 100 → 96-99%
+  const successRange = irpScore !== undefined && irpScore !== null
+    ? `${Math.round(75 + (irpScore / 100) * 21)}-${Math.round(85 + (irpScore / 100) * 14)}%`
     : '85-98%';
 
   // Build factors from answers if available
@@ -115,7 +117,7 @@ async function sendReportEmail(
   const emailData = {
     email,
     patientName,
-    reportId: `EV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    reportId: `EV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     date: new Date().toLocaleDateString('es-CL'),
     successRange,
     purchaseLevel,
@@ -138,7 +140,7 @@ async function sendReportEmail(
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'ImplantX <onboarding@resend.dev>',
+        from: 'ImplantX <implantes@clinicamiro.cl>',
         to: [email],
         subject,
         html,
