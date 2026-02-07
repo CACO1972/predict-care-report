@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont, grayscale } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
+import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont, grayscale } from "npm:pdf-lib@1.17.1";
 
 // ============================================================
 //  CORS
