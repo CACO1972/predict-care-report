@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// CORS configuration - allow production and preview domains
+// CORS configuration
 const getAllowedOrigin = (requestOrigin: string | null): string => {
   const allowedPatterns = [
     'https://implantx.cl',
@@ -10,14 +10,11 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
     /^https:\/\/.*\.lovableproject\.com$/,
     /^https:\/\/.*\.lovable\.app$/,
   ];
-  
   if (!requestOrigin) return '*';
-  
   for (const pattern of allowedPatterns) {
     if (typeof pattern === 'string' && requestOrigin === pattern) return requestOrigin;
     if (pattern instanceof RegExp && pattern.test(requestOrigin)) return requestOrigin;
   }
-  
   return 'https://implantx.cl';
 };
 
@@ -42,883 +39,437 @@ interface ReportData {
   };
 }
 
+const getLevelConfig = (level: PurchaseLevel) => {
+  switch (level) {
+    case 'premium':
+      return {
+        label: 'EVALUACIÓN CLÍNICA AVANZADA',
+        shortLabel: 'Avanzada',
+        badge: '🔬',
+        color: '#C9A86C',
+        bgGradient: 'linear-gradient(135deg, rgba(201,168,108,0.15) 0%, rgba(201,168,108,0.05) 100%)',
+        borderColor: 'rgba(201,168,108,0.4)',
+      };
+    case 'plan-accion':
+      return {
+        label: 'GUÍA CLÍNICA PERSONALIZADA',
+        shortLabel: 'Guía Clínica',
+        badge: '📋',
+        color: '#C9A86C',
+        bgGradient: 'linear-gradient(135deg, rgba(201,168,108,0.10) 0%, rgba(201,168,108,0.03) 100%)',
+        borderColor: 'rgba(201,168,108,0.3)',
+      };
+    default:
+      return {
+        label: 'EVALUACIÓN INICIAL',
+        shortLabel: 'Inicial',
+        badge: '📄',
+        color: '#94a3b8',
+        bgGradient: 'linear-gradient(135deg, rgba(148,163,184,0.10) 0%, rgba(148,163,184,0.03) 100%)',
+        borderColor: 'rgba(148,163,184,0.2)',
+      };
+  }
+};
+
 serve(async (req) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': getAllowedOrigin(req.headers.get('origin')),
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   };
 
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const reportData: ReportData = await req.json();
-    console.log('Generating PDF for report:', reportData.id, 'Level:', reportData.purchaseLevel);
+    const purchaseLevel = reportData.purchaseLevel || 'free';
+    console.log('Generating report:', reportData.id, 'Level:', purchaseLevel);
 
-    // Generate HTML content based on purchase level
     const htmlContent = generateReportHTML(reportData);
     
-    const levelSuffix = reportData.purchaseLevel === 'premium' ? '_Premium' 
-      : reportData.purchaseLevel === 'plan-accion' ? '_PlanAccion' 
-      : '_Basico';
+    const levelSuffix = purchaseLevel === 'premium' ? '_Evaluacion_Avanzada' 
+      : purchaseLevel === 'plan-accion' ? '_Guia_Clinica' 
+      : '_Evaluacion_Inicial';
     
     return new Response(
       JSON.stringify({ 
         success: true, 
         html: htmlContent,
-        downloadName: `ImplantX_Reporte${levelSuffix}_${reportData.patientName?.replace(/\s/g, '_') || 'Paciente'}_${reportData.id}.html`
+        downloadName: `ImplantX${levelSuffix}_${reportData.patientName?.replace(/\s/g, '_') || 'Paciente'}_${reportData.id}.html`
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Error generating PDF:', errorMessage);
+    console.error('Error generating report:', errorMessage);
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
 function generateReportHTML(data: ReportData): string {
   const purchaseLevel = data.purchaseLevel || 'free';
-  
-  const factorsHTML = data.factors.map(f => `
-    <div class="factor">
-      <div class="factor-header">
-        <span class="factor-name">${f.name}</span>
-        <span class="factor-value ${f.value.toLowerCase()}">${f.value}</span>
+  const config = getLevelConfig(purchaseLevel);
+  const isPaid = purchaseLevel !== 'free';
+  const isPremium = purchaseLevel === 'premium';
+  const today = data.date || new Date().toLocaleDateString('es-CL');
+
+  // Risk color helper
+  const riskColor = (val: string) => {
+    const v = val.toLowerCase();
+    if (v === 'alto' || v === 'high') return { bg: 'rgba(220,38,38,0.15)', text: '#ef4444', border: 'rgba(220,38,38,0.3)' };
+    if (v === 'medio' || v === 'moderado' || v === 'medium') return { bg: 'rgba(234,179,8,0.15)', text: '#eab308', border: 'rgba(234,179,8,0.3)' };
+    return { bg: 'rgba(34,197,94,0.15)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' };
+  };
+
+  // IRP gauge color
+  const irpColor = (level: string) => {
+    const l = level.toLowerCase();
+    if (l === 'alto' || l === 'high') return '#ef4444';
+    if (l === 'moderado' || l === 'medio') return '#eab308';
+    return '#22c55e';
+  };
+
+  // ── SECTIONS ──
+
+  const factorsHTML = (data.factors || []).map(f => {
+    const rc = riskColor(f.value);
+    const barWidth = Math.min(Math.max(f.impact * 6, 10), 100);
+    return `
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:14px;color:#e2e8f0;font-weight:500;">${f.name}</span>
+        <span style="font-size:11px;padding:3px 10px;border-radius:12px;background:${rc.bg};color:${rc.text};border:1px solid ${rc.border};font-weight:600;">${f.value}</span>
       </div>
-      <div class="factor-bar">
-        <div class="factor-fill" style="width: ${f.impact * 6}%"></div>
+      <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${barWidth}%;background:linear-gradient(90deg,#C9A86C,#e0c9a8);border-radius:3px;"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const recsHTML = (data.recommendations || []).map(r => `
+    <div style="display:flex;gap:14px;padding:16px;background:rgba(201,168,108,0.06);border:1px solid rgba(201,168,108,0.15);border-radius:12px;margin-bottom:10px;">
+      <div style="width:28px;height:28px;min-width:28px;background:rgba(201,168,108,0.2);color:#C9A86C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">✓</div>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:3px;">${r.text}</div>
+        <div style="font-size:12px;color:#64748b;line-height:1.5;">${r.evidence}</div>
       </div>
     </div>
   `).join('');
 
-  const recommendationsHTML = data.recommendations.map(r => `
-    <div class="recommendation">
-      <div class="rec-icon">✓</div>
-      <div class="rec-content">
-        <strong>${r.text}</strong>
-        <p>${r.evidence}</p>
-      </div>
-    </div>
-  `).join('');
-
-  const synergiesHTML = data.synergies?.length ? `
-    <div class="section">
-      <h3>Factores Combinados Identificados</h3>
-      <ul class="synergies">
-        ${data.synergies.map(s => `<li>${s}</li>`).join('')}
-      </ul>
+  const synergiesHTML = (data.synergies && data.synergies.length > 0) ? `
+    <div style="margin-top:32px;">
+      <h3 style="font-size:16px;color:#C9A86C;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.2);">
+        ⚡ Factores Combinados Identificados
+      </h3>
+      ${data.synergies.map(s => `
+        <div style="padding:12px 16px;background:rgba(234,179,8,0.08);border-left:3px solid #eab308;margin-bottom:8px;border-radius:0 8px 8px 0;color:#fde68a;font-size:13px;">
+          ${s}
+        </div>
+      `).join('')}
     </div>
   ` : '';
 
-  // IRP Section (Plan de Acción y Premium)
-  const irpSectionHTML = (purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') && data.irpResult ? `
-    <div class="section irp-section">
-      <h3>🎯 Tu Índice de Riesgo Personalizado (IRP)</h3>
-      <div class="irp-gauge">
-        <div class="irp-score">${data.irpResult.score}</div>
-        <div class="irp-level ${data.irpResult.level.toLowerCase()}">${data.irpResult.level}</div>
+  // IRP Section (paid only)
+  const irpHTML = isPaid && data.irpResult ? `
+    <div style="margin-top:32px;background:${config.bgGradient};border:1px solid ${config.borderColor};border-radius:16px;padding:28px;text-align:center;">
+      <h3 style="font-size:16px;color:#C9A86C;margin:0 0 20px 0;">
+        🎯 Índice de Riesgo Personalizado (IRP)
+      </h3>
+      <div style="font-size:72px;font-weight:800;color:${irpColor(data.irpResult.level)};line-height:1;margin-bottom:8px;">
+        ${data.irpResult.score}
       </div>
-      <p class="irp-message">${data.irpResult.message}</p>
+      <div style="display:inline-block;padding:6px 20px;border-radius:20px;font-weight:600;font-size:13px;background:${riskColor(data.irpResult.level).bg};color:${riskColor(data.irpResult.level).text};border:1px solid ${riskColor(data.irpResult.level).border};">
+        Riesgo ${data.irpResult.level}
+      </div>
+      <p style="margin:16px auto 0;color:#94a3b8;font-size:13px;max-width:400px;line-height:1.5;">
+        ${data.irpResult.message}
+      </p>
     </div>
   ` : '';
 
-  // Plan de Acción Personalizado (Solo Plan de Acción y Premium)
-  const actionPlanHTML = (purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') ? `
-    <div class="section action-plan">
-      <h3>📋 Tu Plan de Acción Personalizado</h3>
-      <div class="action-timeline">
-        <div class="action-item">
-          <div class="action-number">1</div>
-          <div class="action-content">
-            <strong>Semana 1-2: Preparación</strong>
-            <p>Optimiza tu salud bucal con las recomendaciones específicas de tu perfil.</p>
+  // Action Plan (paid only)
+  const actionPlanHTML = isPaid ? `
+    <div style="margin-top:32px;background:rgba(201,168,108,0.04);border:1px solid rgba(201,168,108,0.2);border-radius:16px;padding:28px;">
+      <h3 style="font-size:16px;color:#C9A86C;margin:0 0 20px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.15);">
+        📋 Plan de Acción Personalizado
+      </h3>
+      ${[
+        { n: '1', title: 'Semanas 1-2: Preparación Oral', desc: 'Optimiza tu salud bucal siguiendo las recomendaciones específicas de tu perfil de riesgo.' },
+        { n: '2', title: 'Semana 3: Consulta Especializada', desc: 'Presenta este informe a tu implantólogo. Contiene toda la información clínica necesaria para planificar tu caso.' },
+        { n: '3', title: 'Evaluación Complementaria', desc: 'Tu especialista indicará radiografías y exámenes complementarios según tu perfil de riesgo específico.' },
+        { n: '4', title: 'Tratamiento Personalizado', desc: 'Recibe un plan de tratamiento adaptado a tus factores individuales, maximizando la probabilidad de éxito.' },
+      ].map(step => `
+        <div style="display:flex;gap:16px;margin-bottom:20px;">
+          <div style="width:32px;height:32px;min-width:32px;background:#C9A86C;color:#0A0A0A;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${step.n}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:4px;">${step.title}</div>
+            <div style="font-size:13px;color:#94a3b8;line-height:1.5;">${step.desc}</div>
           </div>
         </div>
-        <div class="action-item">
-          <div class="action-number">2</div>
-          <div class="action-content">
-            <strong>Semana 3: Consulta Especializada</strong>
-            <p>Lleva este reporte a tu consulta. Tu dentista tendrá toda la información clínica necesaria.</p>
-          </div>
-        </div>
-        <div class="action-item">
-          <div class="action-number">3</div>
-          <div class="action-content">
-            <strong>Evaluación Clínica</strong>
-            <p>Tu especialista realizará radiografías y exámenes complementarios según tu perfil de riesgo.</p>
-          </div>
-        </div>
-        <div class="action-item">
-          <div class="action-number">4</div>
-          <div class="action-content">
-            <strong>Tratamiento Personalizado</strong>
-            <p>Recibe un plan de tratamiento adaptado a tus factores específicos.</p>
-          </div>
-        </div>
-      </div>
+      `).join('')}
     </div>
   ` : '';
 
-  // Checklist Preoperatorio (Solo Plan de Acción y Premium)
-  const checklistHTML = (purchaseLevel === 'plan-accion' || purchaseLevel === 'premium') ? `
-    <div class="section checklist">
-      <h3>✅ Checklist Preoperatorio</h3>
-      <div class="checklist-items">
-        <label class="checklist-item">
-          <input type="checkbox" />
-          <span>Limpieza dental profesional realizada</span>
-        </label>
-        <label class="checklist-item">
-          <input type="checkbox" />
-          <span>Control de factores de riesgo (tabaco, diabetes, etc.)</span>
-        </label>
-        <label class="checklist-item">
-          <input type="checkbox" />
-          <span>Radiografía panorámica actualizada</span>
-        </label>
-        <label class="checklist-item">
-          <input type="checkbox" />
-          <span>Evaluación periodontal completada</span>
-        </label>
-        <label class="checklist-item">
-          <input type="checkbox" />
-          <span>Exámenes de sangre (si aplica)</span>
-        </label>
-      </div>
+  // Checklist (paid only)
+  const checklistHTML = isPaid ? `
+    <div style="margin-top:32px;background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.2);border-radius:16px;padding:28px;">
+      <h3 style="font-size:16px;color:#22c55e;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(34,197,94,0.15);">
+        ✅ Checklist Pre-Operatorio
+      </h3>
+      ${[
+        'Limpieza dental profesional realizada',
+        'Control de factores de riesgo identificados (tabaco, diabetes, medicamentos)',
+        'Radiografía panorámica actualizada (máx. 6 meses)',
+        'Evaluación periodontal completada',
+        'Exámenes de laboratorio (hemograma, glicemia, coagulación)',
+        'Confirmación de medicación actual con su médico tratante',
+      ].map(item => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(34,197,94,0.06);border-radius:8px;margin-bottom:6px;">
+          <div style="width:20px;height:20px;min-width:20px;border:2px solid rgba(34,197,94,0.5);border-radius:4px;"></div>
+          <span style="font-size:13px;color:#e2e8f0;">${item}</span>
+        </div>
+      `).join('')}
     </div>
   ` : '';
 
-  // Premium Exclusive Content
-  const premiumExclusiveHTML = purchaseLevel === 'premium' ? `
-    <div class="section premium-exclusive">
-      <div class="premium-badge">👑 CONTENIDO EXCLUSIVO PREMIUM</div>
+  // Premium exclusive content
+  const premiumHTML = isPremium ? `
+    <div style="margin-top:32px;background:linear-gradient(135deg,rgba(201,168,108,0.12) 0%,rgba(201,168,108,0.04) 100%);border:2px solid rgba(201,168,108,0.35);border-radius:16px;padding:28px;">
+      <div style="text-align:center;font-size:13px;font-weight:700;color:#C9A86C;letter-spacing:2px;margin-bottom:24px;">
+        🔬 CONTENIDO EXCLUSIVO — EVALUACIÓN CLÍNICA AVANZADA
+      </div>
       
-      <div class="premium-block">
-        <h4>📊 Análisis Avanzado de tu Caso</h4>
-        <p>Basado en tus respuestas y el análisis de 17,025 casos similares, hemos identificado los siguientes patrones específicos para tu perfil:</p>
-        <ul>
-          <li>Tu combinación de factores tiene un comportamiento documentado en estudios longitudinales.</li>
-          <li>Los casos similares al tuyo muestran tasas de éxito dentro del rango ${data.successRange}.</li>
-          <li>La evidencia sugiere que siguiendo las recomendaciones, puedes optimizar tu pronóstico.</li>
-        </ul>
-      </div>
-
-      <div class="premium-block">
-        <h4>💰 Estimación de Inversión</h4>
-        <div class="price-estimate">
-          <p>Basado en tu caso, la inversión estimada en Chile es:</p>
-          <div class="price-range">
-            <span class="price-min">$800.000</span>
-            <span class="price-sep">-</span>
-            <span class="price-max">$1.500.000 CLP</span>
-          </div>
-          <p class="price-note">*Por implante. Incluye corona. Puede variar según complejidad y profesional.</p>
+      <!-- Advanced Analysis -->
+      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:15px;">📊 Análisis Avanzado de tu Caso</h4>
+        <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 12px 0;">
+          Basado en tus respuestas y el análisis de <strong style="color:#e2e8f0;">17,025 casos documentados</strong>, 
+          hemos identificado patrones específicos para tu perfil clínico:
+        </p>
+        <div style="padding-left:16px;border-left:2px solid rgba(201,168,108,0.3);">
+          <p style="color:#cbd5e1;font-size:13px;margin:8px 0;">→ Tu combinación de factores tiene comportamiento documentado en estudios longitudinales de hasta 22 años.</p>
+          <p style="color:#cbd5e1;font-size:13px;margin:8px 0;">→ Casos con perfil similar muestran tasas de éxito dentro del rango <strong style="color:#C9A86C;">${data.successRange}</strong>.</p>
+          <p style="color:#cbd5e1;font-size:13px;margin:8px 0;">→ La evidencia sugiere que siguiendo las recomendaciones personalizadas, puedes optimizar significativamente tu pronóstico.</p>
         </div>
       </div>
 
-      <div class="premium-block">
-        <h4>📅 Cronograma Típico de Tratamiento</h4>
-        <div class="timeline">
-          <div class="timeline-item">
-            <span class="timeline-time">Día 1</span>
-            <span class="timeline-event">Cirugía de colocación del implante</span>
-          </div>
-          <div class="timeline-item">
-            <span class="timeline-time">Semana 1-2</span>
-            <span class="timeline-event">Cicatrización inicial y control</span>
-          </div>
-          <div class="timeline-item">
-            <span class="timeline-time">Mes 2-4</span>
-            <span class="timeline-event">Osteointegración (fusión con el hueso)</span>
-          </div>
-          <div class="timeline-item">
-            <span class="timeline-time">Mes 4-6</span>
-            <span class="timeline-event">Colocación de la corona definitiva</span>
-          </div>
+      <!-- Cost Estimate -->
+      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:15px;">💰 Estimación de Inversión por Implante</h4>
+        <div style="text-align:center;padding:16px;background:rgba(201,168,108,0.08);border-radius:10px;">
+          <div style="font-size:28px;font-weight:800;color:#C9A86C;margin-bottom:4px;">$800.000 – $1.500.000 CLP</div>
+          <div style="font-size:11px;color:#64748b;font-style:italic;">*Por implante. Incluye corona. Varía según complejidad y profesional.</div>
         </div>
       </div>
 
-      <div class="premium-block">
-        <h4>🔬 Preguntas para tu Especialista</h4>
-        <ul class="questions-list">
-          <li>¿Qué marca y tipo de implante recomienda para mi caso?</li>
-          <li>¿Necesito algún procedimiento previo (injerto óseo, elevación de seno)?</li>
-          <li>¿Cuál es el protocolo de carga en mi caso (inmediata vs. diferida)?</li>
-          <li>¿Qué tipo de mantenimiento necesitaré a largo plazo?</li>
-          <li>¿Ofrece garantía sobre el tratamiento?</li>
-        </ul>
+      <!-- Treatment Timeline -->
+      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <h4 style="color:#C9A86C;margin:0 0 16px 0;font-size:15px;">📅 Cronograma Típico de Tratamiento</h4>
+        ${[
+          { time: 'Día 1', event: 'Cirugía de colocación del implante' },
+          { time: 'Semana 1-2', event: 'Cicatrización inicial y primer control' },
+          { time: 'Mes 2-4', event: 'Osteointegración (fusión con el hueso)' },
+          { time: 'Mes 4-6', event: 'Colocación de la corona definitiva' },
+        ].map(t => `
+          <div style="display:flex;gap:16px;padding:10px 14px;background:rgba(201,168,108,0.06);border-radius:8px;margin-bottom:6px;">
+            <span style="font-weight:700;color:#C9A86C;min-width:90px;font-size:13px;">${t.time}</span>
+            <span style="color:#e2e8f0;font-size:13px;">${t.event}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Questions for Specialist -->
+      <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(201,168,108,0.2);border-radius:12px;padding:20px;">
+        <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:15px;">🔬 Preguntas Clave para tu Especialista</h4>
+        ${[
+          '¿Qué sistema y tipo de implante recomienda para mi caso específico?',
+          '¿Necesito algún procedimiento previo (injerto óseo, elevación de seno maxilar)?',
+          '¿Cuál es el protocolo de carga indicado: inmediata o diferida?',
+          '¿Qué tipo de mantenimiento necesitaré a largo plazo?',
+          '¿Ofrece garantía sobre los implantes y la rehabilitación protésica?',
+        ].map(q => `
+          <div style="padding:8px 0 8px 20px;position:relative;color:#cbd5e1;font-size:13px;line-height:1.5;">
+            <span style="position:absolute;left:0;color:#C9A86C;">→</span>${q}
+          </div>
+        `).join('')}
       </div>
     </div>
   ` : '';
 
-  // Upsell banner for free version
-  const upsellBannerHTML = purchaseLevel === 'free' ? `
-    <div class="section upsell-banner">
-      <div class="upsell-content">
-        <span class="upsell-icon">🚀</span>
-        <div>
-          <strong>¿Quieres un Plan de Acción Personalizado?</strong>
-          <p>Obtén tu checklist preoperatorio, cronograma detallado y guía paso a paso.</p>
-          <a href="https://mpago.la/2eWC5q6" class="upsell-button">Obtener Plan de Acción →</a>
-        </div>
+  // Upsell for free
+  const upsellHTML = purchaseLevel === 'free' ? `
+    <div style="margin-top:32px;background:linear-gradient(135deg,rgba(201,168,108,0.12) 0%,rgba(201,168,108,0.04) 100%);border:2px dashed rgba(201,168,108,0.35);border-radius:16px;padding:28px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:12px;">🎯</div>
+      <h3 style="margin:0 0 8px 0;color:#C9A86C;font-size:18px;">¿Listo para prepararte mejor?</h3>
+      <p style="margin:0 0 6px 0;color:#e2e8f0;font-size:15px;font-weight:600;">
+        Tu IRP de ${data.irpResult?.score || 'tu perfil'} tiene potencial de optimización
+      </p>
+      <p style="margin:0 0 20px 0;color:#94a3b8;font-size:13px;line-height:1.5;max-width:400px;display:inline-block;">
+        Obtén tu Guía Clínica Personalizada con plan de acción paso a paso, checklist pre-operatorio y recomendaciones específicas.
+      </p>
+      <div>
+        <a href="https://mpago.la/2eWC5q6" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#C9A86C,#a8884d);color:#0A0A0A;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
+          Obtener Guía Clínica — $14.900
+        </a>
       </div>
+      <p style="margin:12px 0 0 0;color:#64748b;font-size:11px;">🔒 Pago seguro con MercadoPago · Acceso inmediato</p>
     </div>
   ` : '';
 
-  // Level badge
-  const levelBadge = purchaseLevel === 'premium' 
-    ? '<span class="level-badge premium">👑 PREMIUM</span>'
-    : purchaseLevel === 'plan-accion'
-    ? '<span class="level-badge plan-accion">📋 PLAN DE ACCIÓN</span>'
-    : '<span class="level-badge free">📄 BÁSICO</span>';
-
-  return `
-<!DOCTYPE html>
+  // ── FULL REPORT ──
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte ImplantX - ${data.patientName || 'Paciente'}</title>
+  <title>ImplantX — ${config.label} — ${data.patientName || 'Paciente'}</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: #0a0a0a;
-      color: #fafafa;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #0A0A0A;
+      color: #f1f5f9;
       line-height: 1.6;
-      padding: 40px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: linear-gradient(165deg, #0d0d0d 0%, #1a1510 50%, #0d0d0d 100%);
-      border: 1px solid rgba(201, 168, 124, 0.3);
-      border-radius: 24px;
-      overflow: hidden;
-    }
-    
-    .header {
-      background: linear-gradient(135deg, rgba(201, 168, 124, 0.15) 0%, transparent 100%);
-      padding: 40px;
-      text-align: center;
-      border-bottom: 1px solid rgba(201, 168, 124, 0.2);
-    }
-    
-    .logo {
-      font-size: 36px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    
-    .logo span { color: #c9a87c; }
-    
-    .subtitle {
-      color: #888;
-      font-size: 14px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-    
-    .level-badge {
-      display: inline-block;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-top: 12px;
-    }
-    
-    .level-badge.premium {
-      background: linear-gradient(135deg, #ffd700 0%, #c9a87c 100%);
-      color: #000;
-    }
-    
-    .level-badge.plan-accion {
-      background: rgba(201, 168, 124, 0.3);
-      color: #c9a87c;
-      border: 1px solid rgba(201, 168, 124, 0.5);
-    }
-    
-    .level-badge.free {
-      background: rgba(255,255,255,0.1);
-      color: #888;
-    }
-    
-    .patient-info {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .patient-info span {
-      color: #888;
-      font-size: 13px;
-    }
-    
-    .patient-info strong {
-      color: #fafafa;
-    }
-    
-    .main-result {
-      padding: 50px 40px;
-      text-align: center;
-      background: radial-gradient(circle at center, rgba(201, 168, 124, 0.1) 0%, transparent 70%);
-    }
-    
-    .success-range {
-      font-size: 48px;
-      font-weight: 700;
-      color: #c9a87c;
-      margin-bottom: 8px;
-    }
-    
-    .success-label {
-      font-size: 14px;
-      color: #888;
-      margin-bottom: 16px;
-    }
-    
-    .pronostico-badge {
-      display: inline-block;
-      background: rgba(201, 168, 124, 0.2);
-      color: #c9a87c;
-      padding: 8px 24px;
-      border-radius: 50px;
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
-    
-    .pronostico-message {
-      color: #aaa;
-      max-width: 500px;
-      margin: 0 auto;
-      font-size: 15px;
-    }
-    
-    .content {
-      padding: 40px;
-    }
-    
-    .section {
-      margin-bottom: 40px;
-    }
-    
-    .section h3 {
-      font-size: 18px;
-      color: #c9a87c;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(201, 168, 124, 0.2);
-    }
-    
-    .factor {
-      margin-bottom: 16px;
-    }
-    
-    .factor-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-    
-    .factor-name {
-      font-weight: 500;
-    }
-    
-    .factor-value {
-      font-size: 12px;
-      padding: 2px 10px;
-      border-radius: 10px;
-    }
-    
-    .factor-value.alto { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .factor-value.medio { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-    .factor-value.bajo { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-    
-    .factor-bar {
-      height: 6px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    
-    .factor-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #c9a87c, #e0c9a8);
-      border-radius: 3px;
-    }
-    
-    .recommendation {
-      display: flex;
-      gap: 16px;
-      padding: 16px;
-      background: rgba(201, 168, 124, 0.08);
-      border: 1px solid rgba(201, 168, 124, 0.2);
-      border-radius: 12px;
-      margin-bottom: 12px;
-    }
-    
-    .rec-icon {
-      width: 28px;
-      height: 28px;
-      background: rgba(201, 168, 124, 0.2);
-      color: #c9a87c;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    
-    .rec-content strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-    
-    .rec-content p {
-      font-size: 13px;
-      color: #888;
-    }
-    
-    .synergies {
-      list-style: none;
-    }
-    
-    .synergies li {
-      padding: 12px 16px;
-      background: rgba(245, 158, 11, 0.1);
-      border-left: 3px solid #f59e0b;
-      margin-bottom: 8px;
-      border-radius: 0 8px 8px 0;
-    }
-    
-    /* IRP Section Styles */
-    .irp-section {
-      background: linear-gradient(135deg, rgba(201, 168, 124, 0.1) 0%, rgba(201, 168, 124, 0.05) 100%);
-      border: 1px solid rgba(201, 168, 124, 0.3);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    
-    .irp-gauge {
-      text-align: center;
-      margin: 20px 0;
-    }
-    
-    .irp-score {
-      font-size: 64px;
-      font-weight: 700;
-      color: #c9a87c;
-    }
-    
-    .irp-level {
-      display: inline-block;
-      padding: 6px 20px;
-      border-radius: 20px;
-      font-weight: 600;
-      margin-top: 8px;
-    }
-    
-    .irp-level.bajo { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-    .irp-level.moderado { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-    .irp-level.alto { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    
-    .irp-message {
-      text-align: center;
-      color: #aaa;
-      font-size: 14px;
-    }
-    
-    /* Action Plan Styles */
-    .action-plan {
-      background: rgba(201, 168, 124, 0.05);
-      border: 1px solid rgba(201, 168, 124, 0.2);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    
-    .action-timeline {
-      position: relative;
-      padding-left: 30px;
-    }
-    
-    .action-timeline::before {
-      content: '';
-      position: absolute;
-      left: 12px;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: rgba(201, 168, 124, 0.3);
-    }
-    
-    .action-item {
-      position: relative;
-      margin-bottom: 24px;
-      display: flex;
-      gap: 16px;
-    }
-    
-    .action-number {
-      width: 28px;
-      height: 28px;
-      background: #c9a87c;
-      color: #000;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 14px;
-      flex-shrink: 0;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .action-content strong {
-      display: block;
-      color: #fafafa;
-      margin-bottom: 4px;
-    }
-    
-    .action-content p {
-      font-size: 13px;
-      color: #888;
-    }
-    
-    /* Checklist Styles */
-    .checklist {
-      background: rgba(34, 197, 94, 0.05);
-      border: 1px solid rgba(34, 197, 94, 0.2);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    
-    .checklist h3 {
-      color: #22c55e;
-      border-bottom-color: rgba(34, 197, 94, 0.2);
-    }
-    
-    .checklist-items {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    
-    .checklist-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: rgba(34, 197, 94, 0.08);
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    
-    .checklist-item input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      accent-color: #22c55e;
-    }
-    
-    /* Premium Exclusive Styles */
-    .premium-exclusive {
-      background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(201, 168, 124, 0.1) 100%);
-      border: 2px solid rgba(255, 215, 0, 0.3);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    
-    .premium-badge {
-      text-align: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: #ffd700;
-      margin-bottom: 24px;
-      letter-spacing: 1px;
-    }
-    
-    .premium-block {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid rgba(255, 215, 0, 0.2);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-    
-    .premium-block h4 {
-      color: #ffd700;
-      margin-bottom: 12px;
-      font-size: 16px;
-    }
-    
-    .premium-block p {
-      color: #aaa;
-      font-size: 14px;
-      margin-bottom: 12px;
-    }
-    
-    .premium-block ul {
-      list-style: none;
-      padding-left: 0;
-    }
-    
-    .premium-block li {
-      padding: 8px 0;
-      padding-left: 24px;
-      position: relative;
-      color: #ddd;
-      font-size: 14px;
-    }
-    
-    .premium-block li::before {
-      content: '→';
-      position: absolute;
-      left: 0;
-      color: #c9a87c;
-    }
-    
-    .price-estimate {
-      text-align: center;
-      padding: 20px;
-      background: rgba(201, 168, 124, 0.1);
-      border-radius: 12px;
-    }
-    
-    .price-range {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      margin: 16px 0;
-    }
-    
-    .price-min, .price-max {
-      font-size: 24px;
-      font-weight: 700;
-      color: #c9a87c;
-    }
-    
-    .price-sep {
-      color: #666;
-    }
-    
-    .price-note {
-      font-size: 12px !important;
-      color: #666 !important;
-      font-style: italic;
-    }
-    
-    .timeline {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .timeline-item {
-      display: flex;
-      gap: 16px;
-      padding: 12px;
-      background: rgba(201, 168, 124, 0.08);
-      border-radius: 8px;
-    }
-    
-    .timeline-time {
-      font-weight: 600;
-      color: #c9a87c;
-      min-width: 100px;
-    }
-    
-    .timeline-event {
-      color: #ddd;
-    }
-    
-    .questions-list li::before {
-      content: '❓';
-    }
-    
-    /* Upsell Banner */
-    .upsell-banner {
-      background: linear-gradient(135deg, rgba(201, 168, 124, 0.15) 0%, rgba(201, 168, 124, 0.05) 100%);
-      border: 2px dashed rgba(201, 168, 124, 0.4);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    
-    .upsell-content {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-    
-    .upsell-icon {
-      font-size: 32px;
-    }
-    
-    .upsell-content strong {
-      display: block;
-      color: #c9a87c;
-      margin-bottom: 8px;
-      font-size: 16px;
-    }
-    
-    .upsell-content p {
-      color: #888;
-      font-size: 14px;
-      margin-bottom: 12px;
-    }
-    
-    .upsell-button {
-      display: inline-block;
-      background: #c9a87c;
-      color: #000;
-      padding: 10px 24px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    
-    .methodology {
-      background: rgba(201, 168, 124, 0.05);
-      border: 1px solid rgba(201, 168, 124, 0.15);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    
-    .methodology h4 {
-      color: #c9a87c;
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
-    
-    .methodology p {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 12px;
-    }
-    
-    .methodology .highlight {
-      color: #fafafa;
-      font-weight: 500;
-    }
-    
-    .footer {
-      padding: 30px 40px;
-      text-align: center;
-      border-top: 1px solid rgba(201, 168, 124, 0.2);
-      background: rgba(0,0,0,0.3);
-    }
-    
-    .footer-logo {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    
-    .footer-logo span { color: #c9a87c; }
-    
-    .footer p {
-      font-size: 11px;
-      color: #666;
-    }
-    
-    .footer a {
-      color: #c9a87c;
-      text-decoration: none;
-    }
-    
     @media print {
-      body { padding: 0; background: white; color: #1a1a1a; }
-      .container { border: none; box-shadow: none; }
+      body { background: #0A0A0A !important; }
+      .no-print { display: none !important; }
+      .container { box-shadow: none; }
     }
+    @page { margin: 12mm; size: A4; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">Implant<span>X</span>™</div>
-      <div class="subtitle">Reporte de Evaluación Clínica</div>
-      ${levelBadge}
-      <div class="patient-info">
-        <span><strong>${data.patientName || 'Paciente'}</strong></span>
-        <span>ID: <strong>${data.id}</strong></span>
-        <span>Fecha: <strong>${data.date}</strong></span>
-      </div>
-    </div>
+  <div class="container" style="max-width:780px;margin:0 auto;padding:24px;">
     
-    <div class="main-result">
-      <div class="success-range">${data.successRange}</div>
-      <div class="success-label">Rango de éxito estimado*</div>
-      <div class="pronostico-badge">${data.pronosticoLabel}</div>
-      <p class="pronostico-message">${data.pronosticoMessage}</p>
-    </div>
-    
-    <div class="content">
-      ${irpSectionHTML}
+    <!-- ═══ HEADER ═══ -->
+    <div style="background:linear-gradient(165deg,#0d0d0d 0%,#1a1510 50%,#0d0d0d 100%);border:1px solid rgba(201,168,108,0.25);border-radius:20px;overflow:hidden;">
       
-      <div class="section">
-        <h3>Factores de Riesgo Evaluados</h3>
-        ${factorsHTML}
+      <!-- Top bar -->
+      <div style="padding:28px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(201,168,108,0.15);">
+        <div>
+          <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">
+            <span style="color:#f1f5f9;">Implant</span><span style="color:#C9A86C;">X</span><span style="color:#64748b;font-size:16px;vertical-align:super;">™</span>
+          </div>
+          <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">
+            Evaluación Clínica de Implantes
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="display:inline-block;padding:6px 16px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;background:${config.bgGradient};color:${config.color};border:1px solid ${config.borderColor};">
+            ${config.badge} ${config.label}
+          </div>
+        </div>
       </div>
-      
-      ${synergiesHTML}
-      
-      ${actionPlanHTML}
-      
-      ${checklistHTML}
-      
-      <div class="section">
-        <h3>Recomendaciones Personalizadas</h3>
-        ${recommendationsHTML}
+
+      <!-- Patient info -->
+      <div style="padding:16px 32px;display:flex;gap:32px;background:rgba(0,0,0,0.2);">
+        <div>
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Paciente</div>
+          <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-top:2px;">${data.patientName || 'No especificado'}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">ID Reporte</div>
+          <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-top:2px;">${data.id}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Fecha</div>
+          <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-top:2px;">${today}</div>
+        </div>
       </div>
-      
-      ${premiumExclusiveHTML}
-      
-      ${upsellBannerHTML}
-      
-      <div class="section methodology">
-        <h4>📊 Metodología del Algoritmo ImplantX</h4>
-        <p>
-          Esta evaluación utiliza el <span class="highlight">algoritmo sinérgico ImplantX</span>, 
-          desarrollado a partir del análisis de <span class="highlight">17,025 implantes documentados</span> 
-          en estudios longitudinales con seguimiento de hasta 22 años.
-        </p>
-        <p>
-          <span class="highlight">Fuentes científicas:</span> University of British Columbia Cohort (PMC8359846), 
-          Meta-análisis de Howe et al. 2019 (PMID:30904559), 20-Year Survival Meta-Analysis 2024 (PMC11416373).
-        </p>
-        <p style="font-size: 11px; color: #666; margin-top: 16px;">
-          *Los rangos de probabilidad reflejan la variabilidad inherente documentada en la literatura científica (IC 95% ±1.2-2.5%).
+
+      <!-- ═══ MAIN RESULT ═══ -->
+      <div style="padding:48px 32px;text-align:center;background:radial-gradient(ellipse at center,rgba(201,168,108,0.08) 0%,transparent 70%);">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">
+          Rango de Éxito Estimado
+        </div>
+        <div style="font-size:56px;font-weight:800;color:#C9A86C;letter-spacing:-1px;line-height:1;">
+          ${data.successRange}
+        </div>
+        <div style="display:inline-block;margin-top:16px;padding:8px 28px;border-radius:50px;font-size:14px;font-weight:600;background:rgba(201,168,108,0.15);color:#C9A86C;border:1px solid rgba(201,168,108,0.25);">
+          ${data.pronosticoLabel || 'Pronóstico Favorable'}
+        </div>
+        <p style="margin:16px auto 0;max-width:480px;font-size:14px;color:#94a3b8;line-height:1.6;">
+          ${data.pronosticoMessage || 'Tu perfil muestra condiciones favorables para el tratamiento con implantes dentales.'}
         </p>
       </div>
+
+      <!-- ═══ CONTENT ═══ -->
+      <div style="padding:32px;">
+        
+        ${irpHTML}
+
+        <!-- Factors -->
+        <div style="margin-top:32px;">
+          <h3 style="font-size:16px;color:#C9A86C;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.2);">
+            📊 Factores de Riesgo Evaluados
+          </h3>
+          ${factorsHTML}
+        </div>
+
+        ${synergiesHTML}
+        ${actionPlanHTML}
+        ${checklistHTML}
+
+        <!-- Recommendations -->
+        <div style="margin-top:32px;">
+          <h3 style="font-size:16px;color:#C9A86C;margin:0 0 16px 0;padding-bottom:10px;border-bottom:1px solid rgba(201,168,108,0.2);">
+            💡 Recomendaciones Personalizadas
+          </h3>
+          ${recsHTML}
+        </div>
+
+        ${premiumHTML}
+        ${upsellHTML}
+
+        <!-- Methodology -->
+        <div style="margin-top:32px;background:rgba(201,168,108,0.04);border:1px solid rgba(201,168,108,0.12);border-radius:16px;padding:24px;">
+          <h4 style="color:#C9A86C;margin:0 0 12px 0;font-size:14px;">📊 Metodología del Algoritmo ImplantX</h4>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0;line-height:1.6;">
+            Esta evaluación utiliza el <strong style="color:#e2e8f0;">algoritmo sinérgico ImplantX</strong>, 
+            desarrollado a partir del análisis de <strong style="color:#e2e8f0;">17,025 implantes documentados</strong> 
+            en estudios longitudinales con seguimiento de hasta 22 años.
+          </p>
+          <p style="font-size:12px;color:#94a3b8;margin:0 0 8px 0;line-height:1.6;">
+            <strong style="color:#cbd5e1;">Fuentes:</strong> University of British Columbia Cohort (PMC8359846), 
+            Meta-análisis Howe et al. 2019 (PMID:30904559), 20-Year Survival Meta-Analysis 2024 (PMC11416373).
+          </p>
+          <p style="font-size:11px;color:#475569;margin:12px 0 0 0;">
+            *Los rangos de probabilidad reflejan la variabilidad inherente documentada en la literatura científica (IC 95% ±1.2-2.5%). 
+            Este informe es orientativo y no reemplaza la evaluación presencial por un especialista.
+          </p>
+        </div>
+      </div>
+
+      <!-- ═══ FOOTER ═══ -->
+      <div style="padding:24px 32px;border-top:1px solid rgba(201,168,108,0.15);background:rgba(0,0,0,0.25);text-align:center;">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">
+          <span style="color:#f1f5f9;">Implant</span><span style="color:#C9A86C;">X</span><span style="color:#64748b;font-size:10px;vertical-align:super;">™</span>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px;">
+          Powered by <span style="color:#C9A86C;">humana.ia</span> · Clínica Miró
+        </div>
+        <div style="font-size:10px;color:#475569;">
+          © 2026 ImplantX · Este reporte es orientativo. La evaluación definitiva debe ser realizada por un especialista en implantología.
+        </div>
+      </div>
+
     </div>
-    
-    <div class="footer">
-      <div class="footer-logo">Implant<span>X</span>™</div>
-      <p>Powered by <a href="https://humanaia.cl">humana.ia</a></p>
-      <p style="margin-top: 8px;">© 2026 ImplantX · Este reporte es orientativo. La evaluación final debe ser realizada por un especialista.</p>
+
+    <!-- Print button -->
+    <div class="no-print" style="text-align:center;margin-top:24px;">
+      <button onclick="window.print()" style="padding:12px 32px;background:#C9A86C;color:#0A0A0A;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+        📄 Imprimir / Guardar como PDF
+      </button>
     </div>
   </div>
 </body>
-</html>
-  `;
+</html>`;
 }
