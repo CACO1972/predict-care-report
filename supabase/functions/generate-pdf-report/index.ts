@@ -1,14 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont, grayscale } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 
-// CORS configuration
+// ============================================================
+//  CORS
+// ============================================================
 const getAllowedOrigin = (requestOrigin: string | null): string => {
   const allowedPatterns = [
     'https://implantx.cl',
     'https://www.implantx.cl',
+    'https://app.implantx.cl',
     'https://implantx.lovable.app',
     'https://predict-care-report.lovable.app',
     /^https:\/\/.*\.lovableproject\.com$/,
     /^https:\/\/.*\.lovable\.app$/,
+    /^https:\/\/.*\.vercel\.app$/,
   ];
   if (!requestOrigin) return '*';
   for (const pattern of allowedPatterns) {
@@ -23,387 +28,1078 @@ const getCorsHeaders = (requestOrigin: string | null) => ({
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 });
 
+// ============================================================
+//  TYPES
+// ============================================================
 type PurchaseLevel = 'free' | 'plan-accion' | 'premium';
 
 interface ReportData {
   id: string;
   date: string;
   patientName: string;
+  patientAge?: number;
+  patientCity?: string;
+  patientRegion?: string;
   pronosticoLabel?: string;
   pronosticoMessage?: string;
+  pronosticoLevel?: number; // 1-5
+  successProbability?: number;
   successRange: string;
-  factors?: Array<{ name: string; value: string; impact: number }>;
-  recommendations?: Array<{ text: string; evidence: string }>;
-  synergies?: Array<{ text: string }>;
+  factors?: Array<{ name: string; value: string; impact: number; rr?: number; action?: string }>;
+  recommendations?: Array<{ text: string; evidence: string; priority?: string }>;
+  synergies?: Array<{ text: string; multiplier?: number; implication?: string }>;
   purchaseLevel?: PurchaseLevel;
   irpResult?: { score: number; level: string; factors?: any[] };
+  missingTeeth?: string[];
+  nTeeth?: number;
+  treatmentZones?: Array<{
+    zone: string;
+    implants: number;
+    complexity: string;
+    notes: string;
+  }>;
 }
 
 // ============================================================
-//  TIER CONFIG
+//  COLORS (Brand: HUMANA.AI / ImplantX)
 // ============================================================
-interface TierConfig {
-  label: string;
-  badge: string;
-  color: string;
-  colorLight: string;
-  colorDark: string;
-}
+const C = {
+  DARK_BG:     rgb(10/255, 10/255, 10/255),       // #0A0A0A
+  DARK_HEADER: rgb(15/255, 15/255, 15/255),        // #0F0F0F
+  GOLD:        rgb(201/255, 168/255, 108/255),      // #C9A86C
+  GOLD_LIGHT:  rgb(232/255, 213/255, 168/255),      // #E8D5A8
+  GOLD_DARK:   rgb(139/255, 115/255, 64/255),       // #8B7340
+  WHITE:       rgb(1, 1, 1),
+  LIGHT_GRAY:  rgb(0.95, 0.95, 0.95),
+  MED_GRAY:    rgb(0.6, 0.6, 0.6),
+  DARK_GRAY:   rgb(0.3, 0.3, 0.3),
+  TEXT:         rgb(0.2, 0.2, 0.2),
+  BEIGE_BG:    rgb(248/255, 246/255, 240/255),      // #F8F6F0
+  CREAM_BG:    rgb(251/255, 248/255, 240/255),      // #FBF8F0
+  GREEN_OK:    rgb(46/255, 125/255, 50/255),        // #2E7D32
+  YELLOW_WARN: rgb(245/255, 127/255, 23/255),       // #F57F17
+  RED_ALERT:   rgb(198/255, 40/255, 40/255),        // #C62828
+  ORANGE_MED:  rgb(230/255, 81/255, 0/255),         // #E65100
+  BLUE_ACCENT: rgb(30/255, 58/255, 95/255),         // #1E3A5F
+  BLUE_LIGHT:  rgb(245/255, 248/255, 252/255),      // #F5F8FC
+  PINK_LIGHT:  rgb(255/255, 245/255, 245/255),      // #FFF5F5
+};
 
-const getTierConfig = (level: PurchaseLevel): TierConfig => {
-  switch (level) {
-    case 'premium':
-      return {
-        label: 'EVALUACIÓN CLÍNICA AVANZADA',
-        badge: '🏥',
-        color: '#C9A86C',
-        colorLight: 'rgba(201, 168, 108, 0.15)',
-        colorDark: 'rgba(201, 168, 108, 0.08)',
-      };
-    case 'plan-accion':
-      return {
-        label: 'GUÍA CLÍNICA PERSONALIZADA',
-        badge: '📋',
-        color: '#00BFA5',
-        colorLight: 'rgba(0, 191, 165, 0.15)',
-        colorDark: 'rgba(0, 191, 165, 0.08)',
-      };
-    default:
-      return {
-        label: 'EVALUACIÓN INICIAL',
-        badge: '📄',
-        color: '#60A5FA',
-        colorLight: 'rgba(96, 165, 250, 0.15)',
-        colorDark: 'rgba(96, 165, 250, 0.08)',
-      };
+// ============================================================
+//  LAYOUT CONSTANTS
+// ============================================================
+const PAGE_W = 595.28; // A4
+const PAGE_H = 841.89;
+const M_LEFT = 45;
+const M_RIGHT = 45;
+const M_TOP = 60;
+const M_BOTTOM = 60;
+const CONTENT_W = PAGE_W - M_LEFT - M_RIGHT;
+const HEADER_H = 52;
+const FOOTER_H = 40;
+
+// ============================================================
+//  PDF HELPER CLASS
+// ============================================================
+class PDFBuilder {
+  doc!: PDFDocument;
+  page!: PDFPage;
+  fontRegular!: PDFFont;
+  fontBold!: PDFFont;
+  fontItalic!: PDFFont;
+  y: number = 0;
+  pageNum: number = 0;
+  tier: PurchaseLevel = 'free';
+  totalPages: number = 1;
+
+  async init(tier: PurchaseLevel) {
+    this.doc = await PDFDocument.create();
+    this.fontRegular = await this.doc.embedFont(StandardFonts.Helvetica);
+    this.fontBold = await this.doc.embedFont(StandardFonts.HelveticaBold);
+    this.fontItalic = await this.doc.embedFont(StandardFonts.HelveticaOblique);
+    this.tier = tier;
+    this.newPage();
   }
-};
 
-// ============================================================
-//  IRP GAUGE SVG
-// ============================================================
-const generateIRPGauge = (score: number, level: string): string => {
-  const gaugeColor = level === 'Bajo' ? '#22c55e' : level === 'Moderado' ? '#eab308' : '#ef4444';
-  const angle = Math.min(Math.max((score / 100) * 180, 0), 180);
-  const rad = (angle - 90) * (Math.PI / 180);
-  const x = 100 + 70 * Math.cos(rad);
-  const y = 100 + 70 * Math.sin(rad);
-  const largeArc = angle > 90 ? 1 : 0;
+  newPage() {
+    this.page = this.doc.addPage([PAGE_W, PAGE_H]);
+    this.pageNum++;
+    this.y = PAGE_H - M_TOP;
+    // White background
+    this.page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.WHITE });
+  }
 
-  return `
-  <div style="text-align:center;margin:20px 0;">
-    <svg width="200" height="120" viewBox="0 0 200 120">
-      <path d="M 30 100 A 70 70 0 0 1 170 100" fill="none" stroke="#1e293b" stroke-width="12" stroke-linecap="round"/>
-      <path d="M 30 100 A 70 70 0 ${largeArc} 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${gaugeColor}" stroke-width="12" stroke-linecap="round"/>
-      <text x="100" y="88" text-anchor="middle" fill="${gaugeColor}" font-size="32" font-weight="bold" font-family="Georgia,serif">${score}</text>
-      <text x="100" y="112" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="Arial,sans-serif">IRP</text>
-    </svg>
-    <div style="margin-top:4px;">
-      <span style="display:inline-block;padding:4px 16px;background:${gaugeColor}22;color:${gaugeColor};font-size:12px;font-weight:700;border-radius:20px;border:1px solid ${gaugeColor}44;">
-        Riesgo ${level}
-      </span>
-    </div>
-  </div>`;
-};
+  // ---- HEADER (dark bar) ----
+  drawHeader(subtitle: string) {
+    const p = this.page;
+    // Dark header bar
+    p.drawRectangle({ x: 0, y: PAGE_H - HEADER_H, width: PAGE_W, height: HEADER_H, color: C.DARK_BG });
 
-// ============================================================
-//  GENERATE BRANDED REPORT HTML
-// ============================================================
-const generateReportHTML = (data: ReportData): string => {
-  const level = data.purchaseLevel || 'free';
-  const tier = getTierConfig(level);
-  const isPaid = level !== 'free';
-  const isPremium = level === 'premium';
-  const irp = data.irpResult;
+    // "IMPLANTX" logo text
+    p.drawText("IMPLANTX", {
+      x: M_LEFT,
+      y: PAGE_H - HEADER_H + 18,
+      size: 18,
+      font: this.fontBold,
+      color: C.GOLD,
+    });
 
-  // ---- Factors section (paid only) ----
-  const factorsHTML = isPaid && data.factors && data.factors.length > 0 ? `
-    <div style="margin-top:32px;">
-      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
-        Factores Clínicos Evaluados
-      </h2>
-      <table style="width:100%;border-collapse:collapse;">
-        ${data.factors.map(f => {
-          const barColor = f.impact > 0 ? '#22c55e' : f.impact < -5 ? '#ef4444' : '#eab308';
-          const barWidth = Math.min(Math.abs(f.impact) * 5, 100);
-          return `
-          <tr>
-            <td style="padding:10px 12px;border-bottom:1px solid #1e293b;color:#e2e8f0;font-size:14px;width:35%;">${f.name}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #1e293b;color:#94a3b8;font-size:13px;width:25%;">${f.value}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #1e293b;width:40%;">
-              <div style="background:#1e293b;border-radius:4px;height:8px;width:100%;">
-                <div style="background:${barColor};border-radius:4px;height:8px;width:${barWidth}%;"></div>
-              </div>
-            </td>
-          </tr>`;
-        }).join('')}
-      </table>
-    </div>` : '';
+    // Subtitle right-aligned
+    const subW = this.fontRegular.widthOfTextAtSize(subtitle, 8);
+    p.drawText(subtitle, {
+      x: PAGE_W - M_RIGHT - subW,
+      y: PAGE_H - HEADER_H + 22,
+      size: 8,
+      font: this.fontRegular,
+      color: C.GOLD_LIGHT,
+    });
 
-  // ---- Recommendations (paid only) ----
-  const recsHTML = isPaid && data.recommendations && data.recommendations.length > 0 ? `
-    <div style="margin-top:32px;">
-      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
-        Recomendaciones Personalizadas
-      </h2>
-      ${data.recommendations.map((r, i) => `
-        <div style="padding:14px 16px;background:${tier.colorDark};border-left:3px solid ${tier.color};margin-bottom:10px;border-radius:0 8px 8px 0;">
-          <p style="margin:0;color:#e2e8f0;font-size:14px;font-weight:600;">${i + 1}. ${r.text}</p>
-          ${r.evidence ? `<p style="margin:6px 0 0;color:#94a3b8;font-size:12px;font-style:italic;">Evidencia: ${r.evidence}</p>` : ''}
-        </div>
-      `).join('')}
-    </div>` : '';
+    // "by Clinica Miro" under logo
+    p.drawText("by Clinica Miro", {
+      x: M_LEFT,
+      y: PAGE_H - HEADER_H + 7,
+      size: 7,
+      font: this.fontItalic,
+      color: C.MED_GRAY,
+    });
 
-  // ---- Synergies (paid only) ----
-  const synergiesHTML = isPaid && data.synergies && data.synergies.length > 0 ? `
-    <div style="margin-top:32px;">
-      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
-        Sinergias Detectadas
-      </h2>
-      ${data.synergies.map(s => `
-        <div style="padding:12px 16px;background:rgba(99,102,241,0.08);border-left:3px solid #818cf8;margin-bottom:8px;border-radius:0 8px 8px 0;">
-          <p style="margin:0;color:#e2e8f0;font-size:13px;">${s.text}</p>
-        </div>
-      `).join('')}
-    </div>` : '';
+    this.y = PAGE_H - HEADER_H - 20;
+  }
 
-  // ---- IRP Section (paid only) ----
-  const irpHTML = isPaid && irp ? `
-    <div style="margin-top:32px;padding:24px;background:linear-gradient(135deg,rgba(0,191,165,0.08),rgba(0,191,165,0.03));border:1px solid rgba(0,191,165,0.2);border-radius:12px;">
-      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 4px;font-family:Georgia,serif;text-align:center;">
-        Índice de Riesgo Personalizado (IRP)
-      </h2>
-      <p style="color:#94a3b8;font-size:13px;text-align:center;margin:0 0 8px;">
-        Puntaje calculado según tus factores clínicos individuales
-      </p>
-      ${generateIRPGauge(irp.score, irp.level)}
-    </div>` : '';
+  // ---- FOOTER ----
+  drawFooter(tierLabel: string, currentPage: number, totalPages: number) {
+    const p = this.page;
+    const footY = FOOTER_H;
 
-  // ---- Premium exclusive sections ----
-  const premiumHTML = isPremium ? `
-    <div style="margin-top:32px;padding:24px;background:linear-gradient(135deg,${tier.colorLight},${tier.colorDark});border:1px solid ${tier.color}44;border-radius:12px;">
-      <h2 style="color:${tier.color};font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
-        🏥 Análisis Clínico Avanzado
-      </h2>
-      
-      <!-- Treatment timeline -->
-      <h3 style="color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 12px;">Línea de Tiempo Estimada</h3>
-      <div style="position:relative;padding-left:24px;border-left:2px solid ${tier.color}44;">
-        <div style="margin-bottom:16px;">
-          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;"></div>
-          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Semana 1-2: Preparación</p>
-          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Exámenes previos, ajustes de medicación, evaluación periodontal</p>
-        </div>
-        <div style="margin-bottom:16px;">
-          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;margin-top:2px;"></div>
-          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Semana 3-4: Procedimiento</p>
-          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Cirugía de colocación, protocolo post-operatorio inmediato</p>
-        </div>
-        <div style="margin-bottom:16px;">
-          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;margin-top:2px;"></div>
-          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Mes 2-4: Oseointegración</p>
-          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Período de cicatrización y fusión hueso-implante, controles mensuales</p>
-        </div>
-        <div>
-          <div style="position:absolute;left:-6px;width:10px;height:10px;background:${tier.color};border-radius:50%;margin-top:2px;"></div>
-          <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0;">Mes 5-6: Rehabilitación</p>
-          <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">Colocación de corona definitiva, ajustes oclusales finales</p>
-        </div>
-      </div>
+    // Gold line
+    p.drawRectangle({ x: M_LEFT, y: footY + 12, width: CONTENT_W, height: 0.8, color: C.GOLD });
 
-      <!-- Cost estimate -->
-      <div style="margin-top:24px;padding:16px;background:rgba(0,0,0,0.2);border-radius:8px;">
-        <h3 style="color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 8px;">Rango de Inversión Referencial</h3>
-        <p style="color:${tier.color};font-size:28px;font-weight:700;margin:0;">$800.000 – $1.500.000 CLP</p>
-        <p style="color:#94a3b8;font-size:12px;margin:6px 0 0;">Por implante unitario. Valor referencial según complejidad clínica y tipo de rehabilitación protésica.</p>
-      </div>
+    // Left: clinic info
+    p.drawText("Clinica Miro | Av. Nueva Providencia 2214 Of 189, Providencia", {
+      x: M_LEFT,
+      y: footY,
+      size: 6.5,
+      font: this.fontRegular,
+      color: C.MED_GRAY,
+    });
 
-      <!-- Questions for specialist -->
-      <div style="margin-top:24px;">
-        <h3 style="color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 12px;">Preguntas Clave para tu Especialista</h3>
-        ${[
-          '¿Mi densidad ósea es suficiente o necesitaré injerto?',
-          '¿Cuánto tiempo tomará mi oseointegración según mi perfil?',
-          '¿Qué tipo de prótesis recomienda para mi caso?',
-          '¿Cuáles son los riesgos específicos según mi historial?',
-          '¿Necesito tratamiento periodontal previo?'
-        ].map((q, i) => `
-          <div style="padding:8px 12px;background:rgba(0,0,0,0.15);border-radius:6px;margin-bottom:6px;">
-            <p style="margin:0;color:#e2e8f0;font-size:13px;">${i + 1}. ${q}</p>
-          </div>
-        `).join('')}
-      </div>
-    </div>` : '';
+    // Center: tier label
+    const tierW = this.fontBold.widthOfTextAtSize(tierLabel, 6.5);
+    p.drawText(tierLabel, {
+      x: (PAGE_W - tierW) / 2,
+      y: footY,
+      size: 6.5,
+      font: this.fontBold,
+      color: C.GOLD,
+    });
 
-  // ---- Checklist (paid only) ----
-  const checklistHTML = isPaid ? `
-    <div style="margin-top:32px;">
-      <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;font-family:Georgia,serif;">
-        ✅ Checklist Pre-Operatorio
-      </h2>
-      <table style="width:100%;border-collapse:collapse;">
-        ${[
-          'Radiografía panorámica o CBCT actualizada',
-          'Exámenes de sangre (hemograma, glicemia, coagulación)',
-          'Evaluación periodontal completa',
-          'Control de enfermedades sistémicas (diabetes, hipertensión)',
-          'Suspender tabaco al menos 2 semanas antes',
-          'Informar todos los medicamentos actuales',
-          'Planificar reposo post-operatorio (2-3 días)',
-          isPremium ? 'Evaluación de densidad ósea (según perfil IRP)' : null,
-          isPremium ? 'Consulta con especialista en rehabilitación oral' : null,
-        ].filter(Boolean).map(item => `
-          <tr>
-            <td style="padding:8px 12px;border-bottom:1px solid #1e293b;">
-              <span style="color:#94a3b8;font-size:16px;margin-right:8px;">☐</span>
-              <span style="color:#e2e8f0;font-size:13px;">${item}</span>
-            </td>
-          </tr>
-        `).join('')}
-      </table>
-    </div>` : '';
+    // Right: page number
+    const pageText = `${currentPage} / ${totalPages}`;
+    const pageW = this.fontRegular.widthOfTextAtSize(pageText, 6.5);
+    p.drawText(pageText, {
+      x: PAGE_W - M_RIGHT - pageW,
+      y: footY,
+      size: 6.5,
+      font: this.fontRegular,
+      color: C.MED_GRAY,
+    });
+  }
 
-  // ---- Upsell (free only) ----
-  const upsellHTML = level === 'free' ? `
-    <div style="margin-top:40px;padding:28px 24px;background:linear-gradient(135deg,rgba(0,191,165,0.12),rgba(0,191,165,0.04));border:2px solid rgba(0,191,165,0.3);border-radius:16px;text-align:center;">
-      <p style="font-size:28px;margin:0 0 12px;">📋</p>
-      <h2 style="color:#00BFA5;font-size:20px;font-weight:700;margin:0 0 8px;font-family:Georgia,serif;">
-        ¿Quieres tu Guía Clínica Personalizada?
-      </h2>
-      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 16px;">
-        Obtén un plan paso a paso con recomendaciones específicas según tu perfil,
-        checklist pre-operatorio y mucho más.
-      </p>
-      <div style="margin-bottom:20px;text-align:left;max-width:320px;display:inline-block;">
-        ${['Índice de Riesgo Personalizado (IRP)', 'Plan de acción semana a semana', 'Recomendaciones basadas en evidencia', 'Checklist pre-operatorio completo'].map(b => `
-          <p style="color:#e2e8f0;font-size:13px;margin:6px 0;">
-            <span style="color:#22c55e;margin-right:6px;">✓</span>${b}
-          </p>
-        `).join('')}
-      </div>
-      <div>
-        <a href="https://mpago.la/2eWC5q6" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#00BFA5,#00897B);color:#fff;font-size:16px;font-weight:700;text-decoration:none;border-radius:10px;box-shadow:0 4px 16px rgba(0,191,165,0.3);">
-          Obtener Guía Clínica — $14.900
-        </a>
-        <p style="color:#64748b;font-size:11px;margin:10px 0 0;">🔒 Pago seguro con MercadoPago • Acceso inmediato</p>
-      </div>
-    </div>` : '';
+  // ---- TEXT HELPERS ----
+  drawText(text: string, opts: {
+    x?: number; size?: number; font?: PDFFont; color?: any;
+    maxWidth?: number; lineHeight?: number; align?: 'left' | 'center' | 'right';
+  } = {}) {
+    const {
+      x = M_LEFT, size = 10, font = this.fontRegular,
+      color = C.TEXT, maxWidth = CONTENT_W, lineHeight = size * 1.4,
+      align = 'left'
+    } = opts;
 
-  // ============================================================
-  //  FULL REPORT HTML
-  // ============================================================
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImplantX — ${tier.label}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0a0f1a; color: #e2e8f0; font-family: 'DM Sans', -apple-system, sans-serif; }
-    @media print {
-      body { background: #fff; color: #1e293b; }
-      .no-print { display: none !important; }
+    const words = text.split(' ');
+    let line = '';
+    const lines: string[] = [];
+
+    for (const word of words) {
+      const testLine = line ? `${line} ${word}` : word;
+      const testWidth = font.widthOfTextAtSize(testLine, size);
+      if (testWidth > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = testLine;
+      }
     }
-  </style>
-</head>
-<body>
-<div style="max-width:680px;margin:0 auto;padding:32px 24px;">
+    if (line) lines.push(line);
 
-  <!-- ========== HEADER ========== -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid #1e293b;margin-bottom:28px;">
-    <div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:linear-gradient(135deg,#00BFA5,#00897B);border-radius:10px;display:flex;align-items:center;justify-content:center;">
-          <span style="color:#fff;font-weight:700;font-size:16px;line-height:44px;text-align:center;display:block;width:44px;">IX</span>
-        </div>
-        <div>
-          <p style="font-size:18px;font-weight:700;color:#fff;font-family:'Playfair Display',Georgia,serif;margin:0;">ImplantX</p>
-          <p style="font-size:11px;color:#64748b;margin:0;">by Clínica Miró</p>
-        </div>
-      </div>
-    </div>
-    <div style="text-align:right;">
-      <span style="display:inline-block;padding:6px 14px;background:${tier.colorLight};color:${tier.color};font-size:11px;font-weight:700;border-radius:20px;border:1px solid ${tier.color}44;letter-spacing:0.5px;">
-        ${tier.badge} ${tier.label}
-      </span>
-    </div>
-  </div>
+    for (const l of lines) {
+      if (this.y < M_BOTTOM + FOOTER_H + 20) {
+        this.newPage();
+        this.drawHeader(this.currentSubtitle);
+      }
 
-  <!-- ========== PATIENT INFO ========== -->
-  <div style="display:flex;justify-content:space-between;margin-bottom:28px;">
-    <div>
-      <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">Paciente</p>
-      <p style="color:#fff;font-size:16px;font-weight:600;margin:0;">${data.patientName}</p>
-    </div>
-    <div style="text-align:right;">
-      <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">Fecha</p>
-      <p style="color:#fff;font-size:14px;margin:0;">${data.date}</p>
-    </div>
-  </div>
-  <div style="margin-bottom:28px;">
-    <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">ID Reporte</p>
-    <p style="color:#94a3b8;font-size:13px;font-family:monospace;margin:0;">${data.id}</p>
-  </div>
+      let drawX = x;
+      if (align === 'center') {
+        const lw = font.widthOfTextAtSize(l, size);
+        drawX = x + (maxWidth - lw) / 2;
+      } else if (align === 'right') {
+        const lw = font.widthOfTextAtSize(l, size);
+        drawX = x + maxWidth - lw;
+      }
 
-  <!-- ========== MAIN RESULT ========== -->
-  <div style="padding:28px;background:linear-gradient(135deg,rgba(0,191,165,0.1),rgba(0,191,165,0.03));border:1px solid rgba(0,191,165,0.25);border-radius:16px;text-align:center;margin-bottom:8px;">
-    <p style="color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 8px;">Rango de Éxito Estimado</p>
-    <p style="color:#00BFA5;font-size:42px;font-weight:700;font-family:'Playfair Display',Georgia,serif;margin:0;line-height:1.1;">${data.successRange}</p>
-    ${data.pronosticoLabel ? `
-      <p style="color:#e2e8f0;font-size:15px;margin:10px 0 0;font-weight:500;">${data.pronosticoLabel}</p>
-    ` : ''}
-    ${data.pronosticoMessage ? `
-      <p style="color:#94a3b8;font-size:13px;margin:8px 0 0;line-height:1.5;max-width:500px;display:inline-block;">${data.pronosticoMessage}</p>
-    ` : ''}
-  </div>
+      this.page.drawText(l, { x: drawX, y: this.y, size, font, color });
+      this.y -= lineHeight;
+    }
+  }
 
-  <!-- ========== IRP ========== -->
-  ${irpHTML}
+  currentSubtitle = '';
 
-  <!-- ========== FACTORS ========== -->
-  ${factorsHTML}
+  // ---- SECTION TITLE ----
+  drawSectionTitle(text: string) {
+    this.y -= 8;
 
-  <!-- ========== RECOMMENDATIONS ========== -->
-  ${recsHTML}
+    if (this.y < M_BOTTOM + FOOTER_H + 40) {
+      this.newPage();
+      this.drawHeader(this.currentSubtitle);
+    }
 
-  <!-- ========== SYNERGIES ========== -->
-  ${synergiesHTML}
+    // Gold left accent bar
+    this.page.drawRectangle({
+      x: M_LEFT, y: this.y - 2, width: 3, height: 14, color: C.GOLD
+    });
 
-  <!-- ========== PREMIUM EXCLUSIVE ========== -->
-  ${premiumHTML}
+    this.page.drawText(text.toUpperCase(), {
+      x: M_LEFT + 10,
+      y: this.y,
+      size: 11,
+      font: this.fontBold,
+      color: C.DARK_BG,
+    });
 
-  <!-- ========== CHECKLIST ========== -->
-  ${checklistHTML}
+    this.y -= 20;
+  }
 
-  <!-- ========== UPSELL (free only) ========== -->
-  ${upsellHTML}
+  // ---- GOLD DIVIDER ----
+  drawGoldDivider() {
+    this.y -= 4;
+    this.page.drawRectangle({
+      x: M_LEFT, y: this.y, width: CONTENT_W, height: 0.5, color: C.GOLD
+    });
+    this.y -= 10;
+  }
 
-  <!-- ========== DISCLAIMER ========== -->
-  <div style="margin-top:40px;padding:16px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid #1e293b;">
-    <p style="color:#64748b;font-size:11px;line-height:1.6;margin:0;">
-      <strong style="color:#94a3b8;">Aviso importante:</strong> Este informe es una herramienta de orientación basada en inteligencia artificial y no reemplaza la evaluación clínica presencial de un profesional de la salud. Los resultados son estimaciones basadas en la información proporcionada y literatura científica disponible. Consulte siempre con su implantólogo antes de tomar decisiones de tratamiento.
-    </p>
-  </div>
+  // ---- SPACER ----
+  space(h: number) {
+    this.y -= h;
+    if (this.y < M_BOTTOM + FOOTER_H + 20) {
+      this.newPage();
+      this.drawHeader(this.currentSubtitle);
+    }
+  }
 
-  <!-- ========== FOOTER ========== -->
-  <div style="margin-top:24px;padding-top:20px;border-top:1px solid #1e293b;text-align:center;">
-    <p style="color:#64748b;font-size:12px;margin:0 0 4px;">
-      ImplantX® — Tecnología de IA para Evaluación Dental
-    </p>
-    <p style="color:#475569;font-size:11px;margin:0 0 4px;">
-      Desarrollado por Clínica Miró · clinicamiro.cl
-    </p>
-    <p style="color:#334155;font-size:10px;margin:0;">
-      © 2026 Todos los derechos reservados
-    </p>
-  </div>
+  // ---- TABLE ----
+  drawTable(headers: string[], rows: string[][], opts: {
+    colWidths?: number[];
+    headerBg?: any;
+    headerColor?: any;
+    altRowBg?: any;
+    fontSize?: number;
+  } = {}) {
+    const {
+      colWidths = headers.map(() => CONTENT_W / headers.length),
+      headerBg = C.DARK_BG,
+      headerColor = C.GOLD_LIGHT,
+      altRowBg = C.BEIGE_BG,
+      fontSize = 8,
+    } = opts;
 
-</div>
-</body>
-</html>`;
-};
+    const rowH = 20;
+    const headerH = 22;
+
+    // Check if we need a new page
+    const totalH = headerH + rows.length * rowH;
+    if (this.y - totalH < M_BOTTOM + FOOTER_H + 20) {
+      // If table is too tall, we'll draw what fits and continue on next page
+      // For simplicity, just ensure header fits
+      if (this.y < M_BOTTOM + FOOTER_H + 60) {
+        this.newPage();
+        this.drawHeader(this.currentSubtitle);
+      }
+    }
+
+    // Header row
+    let xPos = M_LEFT;
+    this.page.drawRectangle({
+      x: M_LEFT, y: this.y - headerH + 6, width: CONTENT_W, height: headerH, color: headerBg
+    });
+
+    for (let i = 0; i < headers.length; i++) {
+      const truncated = this.truncateText(headers[i], colWidths[i] - 6, fontSize, this.fontBold);
+      this.page.drawText(truncated, {
+        x: xPos + 4,
+        y: this.y - 8,
+        size: fontSize,
+        font: this.fontBold,
+        color: headerColor,
+      });
+      xPos += colWidths[i];
+    }
+    this.y -= headerH;
+
+    // Data rows
+    for (let r = 0; r < rows.length; r++) {
+      if (this.y < M_BOTTOM + FOOTER_H + 20) {
+        this.newPage();
+        this.drawHeader(this.currentSubtitle);
+      }
+
+      // Alternating row bg
+      if (r % 2 === 1) {
+        this.page.drawRectangle({
+          x: M_LEFT, y: this.y - rowH + 6, width: CONTENT_W, height: rowH, color: altRowBg
+        });
+      }
+
+      xPos = M_LEFT;
+      for (let i = 0; i < rows[r].length; i++) {
+        const cellText = rows[r][i] || '';
+        const truncated = this.truncateText(cellText, (colWidths[i] || 80) - 6, fontSize, this.fontRegular);
+        this.page.drawText(truncated, {
+          x: xPos + 4,
+          y: this.y - 8,
+          size: fontSize,
+          font: this.fontRegular,
+          color: C.TEXT,
+        });
+        xPos += (colWidths[i] || 80);
+      }
+      this.y -= rowH;
+    }
+
+    // Bottom border
+    this.page.drawRectangle({
+      x: M_LEFT, y: this.y + 6, width: CONTENT_W, height: 0.5, color: C.MED_GRAY
+    });
+    this.y -= 6;
+  }
+
+  truncateText(text: string, maxW: number, size: number, font: PDFFont): string {
+    if (font.widthOfTextAtSize(text, size) <= maxW) return text;
+    let t = text;
+    while (t.length > 0 && font.widthOfTextAtSize(t + '...', size) > maxW) {
+      t = t.slice(0, -1);
+    }
+    return t + '...';
+  }
+
+  // ---- COLORED BOX ----
+  drawBox(opts: {
+    x?: number; width?: number; height: number;
+    bgColor: any; borderColor?: any; borderWidth?: number;
+    radius?: number;
+  }) {
+    const {
+      x = M_LEFT, width = CONTENT_W, height,
+      bgColor, borderColor, borderWidth = 0, radius = 0
+    } = opts;
+
+    // Simple rectangle (pdf-lib doesn't support rounded corners natively)
+    this.page.drawRectangle({
+      x, y: this.y - height, width, height,
+      color: bgColor,
+      borderColor: borderColor || bgColor,
+      borderWidth,
+    });
+  }
+
+  // ---- RESULT BOX (probability display) ----
+  drawResultBox(data: ReportData, showProbability: boolean) {
+    const boxH = showProbability ? 85 : 75;
+
+    if (this.y - boxH < M_BOTTOM + FOOTER_H + 20) {
+      this.newPage();
+      this.drawHeader(this.currentSubtitle);
+    }
+
+    // Background
+    this.drawBox({ height: boxH, bgColor: C.BEIGE_BG, borderColor: C.GOLD, borderWidth: 1 });
+
+    const boxTop = this.y;
+
+    // "Resultado de la Evaluacion"
+    this.page.drawText("RESULTADO DE LA EVALUACION", {
+      x: M_LEFT + 10, y: boxTop - 16, size: 8,
+      font: this.fontBold, color: C.GOLD_DARK,
+    });
+
+    if (showProbability && data.successProbability) {
+      // Big probability number
+      const probText = `${data.successProbability}%`;
+      const probW = this.fontBold.widthOfTextAtSize(probText, 42);
+      this.page.drawText(probText, {
+        x: M_LEFT + 10, y: boxTop - 58, size: 42,
+        font: this.fontBold, color: C.GOLD,
+      });
+
+      // "probabilidad de exito"
+      this.page.drawText("probabilidad de exito", {
+        x: M_LEFT + probW + 16, y: boxTop - 42, size: 9,
+        font: this.fontItalic, color: C.MED_GRAY,
+      });
+    } else {
+      // Hidden probability for free tier
+      this.page.drawText("- - %", {
+        x: M_LEFT + 10, y: boxTop - 52, size: 36,
+        font: this.fontBold, color: C.LIGHT_GRAY,
+      });
+      this.page.drawText("Disponible en informe Base", {
+        x: M_LEFT + 110, y: boxTop - 40, size: 8,
+        font: this.fontItalic, color: C.MED_GRAY,
+      });
+    }
+
+    // Prognosis level (right side)
+    const progLabel = data.pronosticoLabel || 'Favorable';
+    const progLevel = data.pronosticoLevel || 3;
+    const levelText = `Nivel ${progLevel}/5`;
+    const levelTextW = this.fontBold.widthOfTextAtSize(levelText, 10);
+
+    this.page.drawText(levelText, {
+      x: PAGE_W - M_RIGHT - levelTextW - 10, y: boxTop - 30, size: 10,
+      font: this.fontBold, color: this.getPronosticoColor(progLevel),
+    });
+
+    const progLabelW = this.fontRegular.widthOfTextAtSize(progLabel, 8);
+    this.page.drawText(progLabel, {
+      x: PAGE_W - M_RIGHT - progLabelW - 10, y: boxTop - 44, size: 8,
+      font: this.fontRegular, color: this.getPronosticoColor(progLevel),
+    });
+
+    // Verdict badge
+    const verdict = this.getVerdict(progLevel);
+    const verdictColor = this.getPronosticoColor(progLevel);
+    const verdictBg = progLevel <= 2 ? rgb(0.9, 1, 0.9) : progLevel <= 3 ? rgb(1, 0.97, 0.88) : rgb(1, 0.92, 0.92);
+
+    this.page.drawRectangle({
+      x: PAGE_W - M_RIGHT - 170, y: boxTop - 68,
+      width: 160, height: 18,
+      color: verdictBg, borderColor: verdictColor, borderWidth: 0.5,
+    });
+    const verdictW = this.fontBold.widthOfTextAtSize(verdict, 8);
+    this.page.drawText(verdict, {
+      x: PAGE_W - M_RIGHT - 170 + (160 - verdictW) / 2, y: boxTop - 63,
+      size: 8, font: this.fontBold, color: verdictColor,
+    });
+
+    this.y -= boxH + 8;
+  }
+
+  getPronosticoColor(level: number) {
+    if (level <= 1) return C.GREEN_OK;
+    if (level <= 2) return rgb(0.1, 0.6, 0.1);
+    if (level <= 3) return C.YELLOW_WARN;
+    if (level <= 4) return C.ORANGE_MED;
+    return C.RED_ALERT;
+  }
+
+  getVerdict(level: number): string {
+    if (level <= 1) return 'CANDIDATO EXCELENTE';
+    if (level <= 2) return 'CANDIDATO FAVORABLE';
+    if (level <= 3) return 'CANDIDATO CON CONDICIONES';
+    if (level <= 4) return 'REQUIERE PREPARACION';
+    return 'REQUIERE ATENCION ESPECIAL';
+  }
+
+  // ---- RISK GAUGE ----
+  drawRiskGauge(probability: number) {
+    if (this.y < M_BOTTOM + FOOTER_H + 50) {
+      this.newPage();
+      this.drawHeader(this.currentSubtitle);
+    }
+
+    const gaugeY = this.y - 10;
+    const gaugeW = CONTENT_W;
+    const gaugeH = 14;
+    const segmentW = gaugeW / 5;
+
+    // 5 color segments
+    const colors = [C.RED_ALERT, C.ORANGE_MED, C.YELLOW_WARN, rgb(0.5, 0.75, 0.2), C.GREEN_OK];
+    const labels = ['<60%', '60-69%', '70-79%', '80-89%', '90%+'];
+
+    for (let i = 0; i < 5; i++) {
+      this.page.drawRectangle({
+        x: M_LEFT + i * segmentW, y: gaugeY - gaugeH,
+        width: segmentW - 1, height: gaugeH,
+        color: colors[i],
+      });
+
+      // Label below
+      const lw = this.fontRegular.widthOfTextAtSize(labels[i], 6);
+      this.page.drawText(labels[i], {
+        x: M_LEFT + i * segmentW + (segmentW - lw) / 2,
+        y: gaugeY - gaugeH - 10,
+        size: 6, font: this.fontRegular, color: C.MED_GRAY,
+      });
+    }
+
+    // Pointer triangle
+    const pct = Math.max(0, Math.min(100, probability));
+    const pointerX = M_LEFT + (pct / 100) * gaugeW;
+
+    // Draw small triangle above gauge
+    this.page.drawText("v", {
+      x: pointerX - 3, y: gaugeY + 4, size: 10, font: this.fontBold, color: C.DARK_BG,
+    });
+
+    this.y -= 45;
+  }
+
+  // ---- DISCLAIMER ----
+  drawDisclaimer() {
+    this.space(10);
+    this.drawGoldDivider();
+
+    const disclaimerText = "AVISO LEGAL: Este informe es una herramienta de orientacion basada en inteligencia artificial y no reemplaza la evaluacion clinica presencial. Los resultados son estimaciones basadas en la informacion proporcionada y literatura cientifica disponible (meta-analisis con n>50,000 pacientes). Consulte siempre con su implantologo antes de tomar decisiones de tratamiento.";
+
+    this.drawText(disclaimerText, {
+      size: 6.5, color: C.MED_GRAY, font: this.fontItalic, lineHeight: 9,
+    });
+
+    this.space(6);
+
+    this.drawText("Dr. Carlos Montoya | Director Clinico | 11,000+ implantes | 27 anos de experiencia", {
+      size: 7, color: C.GOLD_DARK, font: this.fontBold,
+    });
+
+    this.drawText("Ex-Director Postgrado Implantes, Universidad Mayor (2006-2020)", {
+      size: 6.5, color: C.MED_GRAY, font: this.fontItalic,
+    });
+  }
+
+  // ---- UPSELL BOX ----
+  drawUpsellBox(targetTier: 'base' | 'completo', price: string) {
+    const boxH = 90;
+
+    if (this.y - boxH < M_BOTTOM + FOOTER_H + 20) {
+      this.newPage();
+      this.drawHeader(this.currentSubtitle);
+    }
+
+    this.drawBox({ height: boxH, bgColor: C.CREAM_BG, borderColor: C.GOLD, borderWidth: 1.5 });
+
+    const bTop = this.y + boxH;
+
+    const title = targetTier === 'base'
+      ? 'DESBLOQUEA TU INFORME BASE'
+      : 'ACCEDE AL INFORME COMPLETO';
+
+    this.page.drawText(title, {
+      x: M_LEFT + 10, y: bTop - 18, size: 11,
+      font: this.fontBold, color: C.GOLD_DARK,
+    });
+
+    const features = targetTier === 'base'
+      ? [
+          '- Probabilidad de exito exacta con gauge visual',
+          '- Factores de riesgo detallados con RR',
+          '- 6 recomendaciones personalizadas',
+          '- Videoconferencia con especialista incluida',
+        ]
+      : [
+          '- Todo lo del informe Base PLUS:',
+          '- Sinergias de riesgo con multiplicadores',
+          '- Plan quirurgico por zona anatomica',
+          '- Protocolo de preparacion priorizado',
+        ];
+
+    let fY = bTop - 34;
+    for (const f of features) {
+      this.page.drawText(f, {
+        x: M_LEFT + 14, y: fY, size: 7.5,
+        font: this.fontRegular, color: C.TEXT,
+      });
+      fY -= 12;
+    }
+
+    // Price badge
+    const priceW = this.fontBold.widthOfTextAtSize(price, 14);
+    this.page.drawText(price, {
+      x: PAGE_W - M_RIGHT - priceW - 15, y: bTop - 55, size: 14,
+      font: this.fontBold, color: C.GOLD,
+    });
+
+    this.y -= boxH + 8;
+  }
+
+  // ---- PRIORITY BADGE ----
+  drawPriorityBadge(priority: string, x: number, y: number) {
+    const bgColor = priority === 'CRITICO' ? C.RED_ALERT
+      : priority === 'IMPORTANTE' ? C.ORANGE_MED
+      : C.GREEN_OK;
+
+    const badgeW = this.fontBold.widthOfTextAtSize(priority, 6) + 8;
+    this.page.drawRectangle({
+      x, y: y - 3, width: badgeW, height: 12,
+      color: bgColor,
+    });
+    this.page.drawText(priority, {
+      x: x + 4, y: y, size: 6, font: this.fontBold, color: C.WHITE,
+    });
+  }
+
+  async save(): Promise<Uint8Array> {
+    return await this.doc.save();
+  }
+}
+
+// ============================================================
+//  REPORT GENERATORS
+// ============================================================
+
+// ─────────────── GRATIS (1 page) ───────────────
+async function generateFreeReport(data: ReportData): Promise<Uint8Array> {
+  const b = new PDFBuilder();
+  await b.init('free');
+  b.currentSubtitle = 'PRE-INFORME ORIENTATIVO';
+  b.totalPages = 1;
+
+  // Header
+  b.drawHeader('PRE-INFORME ORIENTATIVO');
+
+  // Patient info table
+  b.drawSectionTitle('Datos del Paciente');
+  b.drawTable(
+    ['Campo', 'Informacion', 'Campo', 'Informacion'],
+    [
+      ['Paciente', data.patientName || '-', 'Edad', `${data.patientAge || '-'} anos`],
+      ['Ciudad', data.patientCity || '-', 'Fecha', data.date || '-'],
+      ['Codigo', data.id || '-', 'Piezas ausentes', (data.missingTeeth || []).join(', ') || '-'],
+    ],
+    { colWidths: [80, 145, 80, CONTENT_W - 305], headerBg: C.GOLD_DARK, headerColor: C.WHITE }
+  );
+
+  b.space(8);
+
+  // Result box (probability HIDDEN)
+  b.drawResultBox(data, false);
+
+  // Summary
+  b.drawSectionTitle('Resumen Orientativo');
+  const numFactors = (data.factors || []).filter(f => f.impact < -2 || (f.rr && f.rr > 1.0)).length;
+  const summaryText = `Se han identificado ${numFactors} factores clinicos relevantes en su evaluacion. Su perfil sugiere que ${data.pronosticoLevel && data.pronosticoLevel <= 2 ? 'usted es un buen candidato para implantes dentales' : 'es necesario un trabajo preparatorio antes de proceder con la colocacion de implantes'}. Para obtener su probabilidad exacta de exito y recomendaciones personalizadas, consulte el Informe Base.`;
+
+  b.drawText(summaryText, { size: 9, lineHeight: 13, color: C.DARK_GRAY });
+
+  b.space(6);
+
+  // What includes / What doesn't
+  b.drawSectionTitle('Que Incluye Este Pre-Informe');
+  const includes = [
+    'Nivel de pronostico general (1-5)',
+    'Veredicto de candidatura (orientativo)',
+    'Cantidad de factores de riesgo identificados',
+  ];
+  for (const item of includes) {
+    b.drawText(`  + ${item}`, { size: 8, color: C.GREEN_OK, font: b.fontRegular });
+  }
+
+  b.space(4);
+  b.drawText('No incluye:', { size: 8, color: C.RED_ALERT, font: b.fontBold });
+  const notIncludes = [
+    'Probabilidad de exito exacta',
+    'Detalle de factores de riesgo con RR',
+    'Recomendaciones personalizadas',
+    'Sinergias de riesgo',
+    'Plan de tratamiento por zona',
+  ];
+  for (const item of notIncludes) {
+    b.drawText(`  x ${item}`, { size: 8, color: C.MED_GRAY, font: b.fontRegular });
+  }
+
+  b.space(8);
+
+  // Upsell to Base
+  b.drawUpsellBox('base', '$14.000 CLP');
+
+  // Disclaimer
+  b.drawDisclaimer();
+
+  // Footer
+  b.drawFooter('PRE-INFORME GRATIS', 1, 1);
+
+  return b.save();
+}
+
+// ─────────────── BASE - $14.000 (2 pages) ───────────────
+async function generateBaseReport(data: ReportData): Promise<Uint8Array> {
+  const b = new PDFBuilder();
+  await b.init('plan-accion');
+  b.currentSubtitle = 'INFORME BASE';
+  b.totalPages = 2;
+
+  // ═══════ PAGE 1 ═══════
+  b.drawHeader('INFORME DE EVALUACION - IMPLANTX BASE');
+
+  // Patient info
+  b.drawSectionTitle('Datos del Paciente');
+  b.drawTable(
+    ['Campo', 'Informacion', 'Campo', 'Informacion'],
+    [
+      ['Paciente', data.patientName || '-', 'Edad', `${data.patientAge || '-'} anos`],
+      ['Ciudad', data.patientCity || '-', 'Fecha', data.date || '-'],
+      ['Codigo', data.id || '-', 'Piezas', (data.missingTeeth || []).join(', ') || '-'],
+    ],
+    { colWidths: [80, 145, 80, CONTENT_W - 305], headerBg: C.GOLD_DARK, headerColor: C.WHITE }
+  );
+
+  b.space(8);
+
+  // Result box (probability VISIBLE)
+  b.drawResultBox(data, true);
+
+  // Risk gauge
+  if (data.successProbability) {
+    b.drawText('Escala visual de riesgo:', { size: 8, color: C.MED_GRAY, font: b.fontItalic });
+    b.drawRiskGauge(data.successProbability);
+  }
+
+  // Risk factors table
+  if (data.factors && data.factors.length > 0) {
+    b.drawSectionTitle('Factores de Riesgo Identificados');
+    const factorRows = data.factors.map(f => [
+      f.name,
+      f.value,
+      f.rr ? `${f.rr.toFixed(1)}x` : `${Math.abs(f.impact)}%`,
+      f.rr && f.rr > 1.5 ? 'ALTO' : f.rr && f.rr > 1.2 ? 'MODERADO' : 'BAJO',
+    ]);
+
+    b.drawTable(
+      ['Factor Clinico', 'Condicion', 'RR / Impacto', 'Nivel'],
+      factorRows,
+      { colWidths: [170, 140, 80, CONTENT_W - 390] }
+    );
+
+    b.space(2);
+    b.drawText('RR = Riesgo Relativo. Un RR de 2.0x indica el doble de riesgo respecto a la poblacion base.', {
+      size: 6.5, color: C.MED_GRAY, font: b.fontItalic,
+    });
+  }
+
+  // ═══════ PAGE 2 ═══════
+  b.newPage();
+  b.drawHeader('INFORME DE EVALUACION - IMPLANTX BASE');
+
+  // Recommendations
+  if (data.recommendations && data.recommendations.length > 0) {
+    b.drawSectionTitle('Recomendaciones Personalizadas');
+
+    for (let i = 0; i < data.recommendations.length; i++) {
+      const rec = data.recommendations[i];
+      b.drawText(`${i + 1}. ${rec.text}`, { size: 9, font: b.fontBold, color: C.DARK_GRAY });
+      if (rec.evidence) {
+        b.drawText(`   Evidencia: ${rec.evidence}`, { size: 7.5, color: C.MED_GRAY, font: b.fontItalic });
+      }
+      b.space(4);
+    }
+  }
+
+  b.space(6);
+
+  // What's available in Completo
+  b.drawSectionTitle('Disponible en Informe Completo');
+  const completoFeatures = [
+    'Sinergias de riesgo con multiplicadores de interaccion',
+    'Plan de tratamiento detallado por zona anatomica',
+    'Protocolo de preparacion priorizado (Critico / Importante / Recomendado)',
+    'Resumen clinico narrativo integrador',
+  ];
+  for (const f of completoFeatures) {
+    b.drawText(`  >> ${f}`, { size: 8, color: C.BLUE_ACCENT, font: b.fontRegular });
+  }
+
+  b.space(8);
+
+  // Upsell to Completo
+  b.drawUpsellBox('completo', '$29.900 CLP');
+
+  b.space(8);
+
+  // Next steps
+  b.drawSectionTitle('Proximos Pasos');
+  const steps = [
+    '1. Videoconferencia con especialista (incluida en todos los planes)',
+    '2. El pago de su informe se abona integramente al tratamiento si decide operar',
+    '3. Incluye 2 noches de estadia en Santiago durante su tratamiento',
+  ];
+  for (const s of steps) {
+    b.drawText(s, { size: 8.5, color: C.TEXT });
+    b.space(2);
+  }
+
+  // Disclaimer
+  b.drawDisclaimer();
+
+  // Footers for both pages
+  const pages = b.doc.getPages();
+
+  // Draw footers manually on each page
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    // Gold line
+    p.drawRectangle({ x: M_LEFT, y: FOOTER_H + 12, width: CONTENT_W, height: 0.8, color: C.GOLD });
+    // Info
+    p.drawText("Clinica Miro | Av. Nueva Providencia 2214 Of 189, Providencia", {
+      x: M_LEFT, y: FOOTER_H, size: 6.5, font: b.fontRegular, color: C.MED_GRAY,
+    });
+    const tierLabel = "INFORME BASE";
+    const tw = b.fontBold.widthOfTextAtSize(tierLabel, 6.5);
+    p.drawText(tierLabel, {
+      x: (PAGE_W - tw) / 2, y: FOOTER_H, size: 6.5, font: b.fontBold, color: C.GOLD,
+    });
+    const pgText = `${i + 1} / ${pages.length}`;
+    const pgW = b.fontRegular.widthOfTextAtSize(pgText, 6.5);
+    p.drawText(pgText, {
+      x: PAGE_W - M_RIGHT - pgW, y: FOOTER_H, size: 6.5, font: b.fontRegular, color: C.MED_GRAY,
+    });
+  }
+
+  return b.save();
+}
+
+// ─────────────── COMPLETO - $29.900 (3 pages) ───────────────
+async function generateCompletoReport(data: ReportData): Promise<Uint8Array> {
+  const b = new PDFBuilder();
+  await b.init('premium');
+  b.currentSubtitle = 'INFORME CLINICO COMPLETO';
+  b.totalPages = 3;
+
+  // ═══════ PAGE 1 ═══════
+  b.drawHeader('INFORME CLINICO COMPLETO - IMPLANTX');
+
+  // Patient info
+  b.drawSectionTitle('Datos del Paciente');
+  b.drawTable(
+    ['Campo', 'Informacion', 'Campo', 'Informacion'],
+    [
+      ['Paciente', data.patientName || '-', 'Edad', `${data.patientAge || '-'} anos`],
+      ['Ciudad', data.patientCity || '-', 'Region', data.patientRegion || '-'],
+      ['Fecha', data.date || '-', 'Codigo', data.id || '-'],
+      ['Piezas ausentes', (data.missingTeeth || []).join(', ') || '-', 'Cantidad', `${data.nTeeth || '-'} piezas`],
+    ],
+    { colWidths: [90, 140, 80, CONTENT_W - 310], headerBg: C.GOLD_DARK, headerColor: C.WHITE }
+  );
+
+  b.space(8);
+
+  // Result box (probability VISIBLE)
+  b.drawResultBox(data, true);
+
+  // Risk gauge
+  if (data.successProbability) {
+    b.drawRiskGauge(data.successProbability);
+  }
+
+  // Clinical narrative
+  b.drawSectionTitle('Resumen Clinico');
+  const narrative = data.pronosticoMessage || `El paciente presenta un perfil de riesgo ${data.pronosticoLabel?.toLowerCase() || 'moderado'} para rehabilitacion con implantes dentales. Se identificaron ${(data.factors || []).length} factores clinicos relevantes y ${(data.synergies || []).length} sinergias de riesgo que interactuan entre si. La probabilidad de exito estimada es de ${data.successProbability || '--'}%, lo que corresponde a un pronostico de nivel ${data.pronosticoLevel || '--'}/5. Se recomienda seguir el protocolo de preparacion priorizado antes de proceder con la cirugia.`;
+
+  b.drawText(narrative, { size: 9, lineHeight: 13, color: C.DARK_GRAY });
+
+  b.space(6);
+
+  // Risk factors with ACTION column
+  if (data.factors && data.factors.length > 0) {
+    b.drawSectionTitle('Factores de Riesgo Detallados');
+
+    const factorRows = data.factors.map(f => [
+      f.name,
+      f.value,
+      f.rr ? `${f.rr.toFixed(1)}x` : `${Math.abs(f.impact)}%`,
+      f.action || 'Monitorizar',
+    ]);
+
+    b.drawTable(
+      ['Factor', 'Condicion', 'RR', 'Accion Requerida'],
+      factorRows,
+      { colWidths: [130, 115, 55, CONTENT_W - 300] }
+    );
+  }
+
+  // ═══════ PAGE 2 ═══════
+  b.newPage();
+  b.drawHeader('INFORME CLINICO COMPLETO - IMPLANTX');
+
+  // SYNERGIES (exclusive to Completo)
+  if (data.synergies && data.synergies.length > 0) {
+    b.drawSectionTitle('Sinergias de Riesgo (Exclusivo)');
+
+    b.drawText('Las sinergias representan interacciones entre factores que multiplican el riesgo mas alla de su efecto individual.', {
+      size: 8, color: C.MED_GRAY, font: b.fontItalic,
+    });
+    b.space(4);
+
+    const synergyRows = data.synergies.map(s => [
+      s.text,
+      s.multiplier ? `${s.multiplier.toFixed(1)}x` : '-',
+      s.implication || 'Requiere atencion especial',
+    ]);
+
+    b.drawTable(
+      ['Combinacion de Factores', 'Multiplicador', 'Implicancia Clinica'],
+      synergyRows,
+      {
+        colWidths: [200, 80, CONTENT_W - 280],
+        headerBg: C.RED_ALERT,
+        headerColor: C.WHITE,
+        altRowBg: C.PINK_LIGHT,
+      }
+    );
+  }
+
+  b.space(8);
+
+  // TREATMENT PLAN BY ZONE (exclusive to Completo)
+  if (data.treatmentZones && data.treatmentZones.length > 0) {
+    b.drawSectionTitle('Plan de Tratamiento por Zona Anatomica (Exclusivo)');
+
+    const zoneRows = data.treatmentZones.map(z => [
+      z.zone,
+      `${z.implants}`,
+      z.complexity,
+      z.notes,
+    ]);
+
+    // Add total row
+    const totalImplants = data.treatmentZones.reduce((sum, z) => sum + z.implants, 0);
+    zoneRows.push(['TOTAL', `${totalImplants}`, '-', 'Implantes planificados']);
+
+    b.drawTable(
+      ['Zona Anatomica', 'Implantes', 'Complejidad', 'Notas Clinicas'],
+      zoneRows,
+      {
+        colWidths: [150, 65, 85, CONTENT_W - 300],
+        headerBg: C.BLUE_ACCENT,
+        headerColor: C.WHITE,
+        altRowBg: C.BLUE_LIGHT,
+      }
+    );
+  } else {
+    // Generate default zones from missing teeth
+    b.drawSectionTitle('Plan de Tratamiento por Zona Anatomica (Exclusivo)');
+    b.drawText('Las zonas de tratamiento se determinaran durante la videoconferencia con el especialista, utilizando la informacion radiografica complementaria.', {
+      size: 8.5, color: C.DARK_GRAY,
+    });
+  }
+
+  // ═══════ PAGE 3 ═══════
+  b.newPage();
+  b.drawHeader('INFORME CLINICO COMPLETO - IMPLANTX');
+
+  // PRIORITIZED PREPARATION PROTOCOL
+  if (data.recommendations && data.recommendations.length > 0) {
+    b.drawSectionTitle('Protocolo de Preparacion Priorizado');
+
+    for (let i = 0; i < data.recommendations.length; i++) {
+      const rec = data.recommendations[i];
+      const priority = rec.priority || (i < 2 ? 'CRITICO' : i < 4 ? 'IMPORTANTE' : 'RECOMENDADO');
+
+      if (b.y < M_BOTTOM + FOOTER_H + 40) {
+        b.newPage();
+        b.drawHeader(b.currentSubtitle);
+      }
+
+      // Priority badge
+      b.drawPriorityBadge(priority, M_LEFT, b.y);
+
+      // Recommendation text next to badge
+      const badgeW = b.fontBold.widthOfTextAtSize(priority, 6) + 14;
+      b.drawText(`${i + 1}. ${rec.text}`, {
+        x: M_LEFT + badgeW,
+        size: 9,
+        font: b.fontBold,
+        color: C.DARK_GRAY,
+        maxWidth: CONTENT_W - badgeW,
+      });
+
+      if (rec.evidence) {
+        b.drawText(`Evidencia: ${rec.evidence}`, {
+          x: M_LEFT + badgeW,
+          size: 7,
+          color: C.MED_GRAY,
+          font: b.fontItalic,
+          maxWidth: CONTENT_W - badgeW,
+        });
+      }
+      b.space(6);
+    }
+  }
+
+  b.space(8);
+
+  // NEXT STEPS (expanded)
+  b.drawSectionTitle('Proximos Pasos');
+  const stepsText = [
+    '1. Videoconferencia con el Dr. Montoya para revision del informe (incluida)',
+    '2. Envio de imagenes radiograficas complementarias (panoramica o CBCT)',
+    '3. El pago de $29.900 se abona integramente al tratamiento final',
+    '4. Incluye 2 noches de estadia en Santiago durante el tratamiento',
+    '5. Coordinacion de agenda quirurgica segun protocolo personalizado',
+  ];
+
+  for (const s of stepsText) {
+    b.drawText(s, { size: 8.5, color: C.TEXT });
+    b.space(3);
+  }
+
+  b.space(6);
+
+  // CTA Box
+  const ctaH = 55;
+  if (b.y - ctaH > M_BOTTOM + FOOTER_H + 20) {
+    b.drawBox({ height: ctaH, bgColor: C.GOLD_DARK, borderColor: C.GOLD, borderWidth: 1 });
+    const ctaTop = b.y + ctaH;
+
+    b.page.drawText('AGENDE SU VIDEOCONFERENCIA', {
+      x: M_LEFT + 15, y: ctaTop - 20, size: 13,
+      font: b.fontBold, color: C.WHITE,
+    });
+    b.page.drawText('Contacto directo: +56 9 7415 7966 | WhatsApp', {
+      x: M_LEFT + 15, y: ctaTop - 36, size: 9,
+      font: b.fontRegular, color: C.GOLD_LIGHT,
+    });
+    b.page.drawText('clinicamiro.cl | implantx.cl', {
+      x: M_LEFT + 15, y: ctaTop - 48, size: 8,
+      font: b.fontItalic, color: C.GOLD_LIGHT,
+    });
+
+    b.y -= ctaH + 8;
+  }
+
+  // Disclaimer
+  b.drawDisclaimer();
+
+  // Draw footers on ALL pages
+  const pages = b.doc.getPages();
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    p.drawRectangle({ x: M_LEFT, y: FOOTER_H + 12, width: CONTENT_W, height: 0.8, color: C.GOLD });
+    p.drawText("Clinica Miro | Av. Nueva Providencia 2214 Of 189, Providencia", {
+      x: M_LEFT, y: FOOTER_H, size: 6.5, font: b.fontRegular, color: C.MED_GRAY,
+    });
+    const tierLabel = "INFORME COMPLETO";
+    const tw = b.fontBold.widthOfTextAtSize(tierLabel, 6.5);
+    p.drawText(tierLabel, {
+      x: (PAGE_W - tw) / 2, y: FOOTER_H, size: 6.5, font: b.fontBold, color: C.GOLD,
+    });
+    const pgText = `${i + 1} / ${pages.length}`;
+    const pgW = b.fontRegular.widthOfTextAtSize(pgText, 6.5);
+    p.drawText(pgText, {
+      x: PAGE_W - M_RIGHT - pgW, y: FOOTER_H, size: 6.5, font: b.fontRegular, color: C.MED_GRAY,
+    });
+  }
+
+  return b.save();
+}
 
 // ============================================================
 //  HANDLER
@@ -419,20 +1115,37 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const reportData: ReportData = await req.json();
     const purchaseLevel = reportData.purchaseLevel || 'free';
-    console.log('Generating report:', reportData.id, 'Level:', purchaseLevel);
+    console.log('Generating PDF report:', reportData.id, 'Level:', purchaseLevel);
 
-    const html = generateReportHTML(reportData);
+    let pdfBytes: Uint8Array;
 
-    const levelSuffix = purchaseLevel === 'premium' ? '_Evaluacion_Avanzada'
-      : purchaseLevel === 'plan-accion' ? '_Guia_Clinica'
-      : '_Evaluacion_Inicial';
+    switch (purchaseLevel) {
+      case 'premium':
+        pdfBytes = await generateCompletoReport(reportData);
+        break;
+      case 'plan-accion':
+        pdfBytes = await generateBaseReport(reportData);
+        break;
+      default:
+        pdfBytes = await generateFreeReport(reportData);
+        break;
+    }
+
+    // Convert to base64 for JSON response
+    const base64Pdf = btoa(String.fromCharCode(...pdfBytes));
+
+    const levelSuffix = purchaseLevel === 'premium' ? '_Completo'
+      : purchaseLevel === 'plan-accion' ? '_Base'
+      : '_Gratis';
 
     return new Response(
       JSON.stringify({
         success: true,
-        html,
-        downloadName: `ImplantX${levelSuffix}_${reportData.id}.html`,
-        contentType: 'text/html',
+        pdf: base64Pdf,
+        downloadName: `ImplantX_Informe${levelSuffix}_${reportData.id}.pdf`,
+        contentType: 'application/pdf',
+        // Also include HTML fallback for email
+        html: null,
       }),
       {
         status: 200,
@@ -440,9 +1153,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error generating report:", error);
+    console.error("Error generating PDF report:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message, stack: error.stack }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
