@@ -1,11 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Restrict CORS to production domain
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://implantx.lovable.app';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// CORS configuration - allow production and preview domains
+const getAllowedOrigin = (requestOrigin: string | null): string => {
+  const allowedPatterns = [
+    'https://implantx.cl',
+    'https://www.implantx.cl',
+    'https://implantx.lovable.app',
+    'https://predict-care-report.lovable.app',
+    /^https:\/\/.*\.lovableproject\.com$/,
+    /^https:\/\/.*\.lovable\.app$/,
+  ];
+  
+  if (!requestOrigin) return '*';
+  
+  for (const pattern of allowedPatterns) {
+    if (typeof pattern === 'string' && requestOrigin === pattern) return requestOrigin;
+    if (pattern instanceof RegExp && pattern.test(requestOrigin)) return requestOrigin;
+  }
+  
+  return 'https://implantx.cl';
 };
 
 type PurchaseLevel = 'free' | 'plan-accion' | 'premium';
@@ -30,6 +43,11 @@ interface ReportData {
 }
 
 serve(async (req) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': getAllowedOrigin(req.headers.get('origin')),
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -897,7 +915,7 @@ function generateReportHTML(data: ReportData): string {
     <div class="footer">
       <div class="footer-logo">Implant<span>X</span>™</div>
       <p>Powered by <a href="https://humanaia.cl">humana.ia</a></p>
-      <p style="margin-top: 8px;">© 2025 ImplantX · Este reporte es orientativo. La evaluación final debe ser realizada por un especialista.</p>
+      <p style="margin-top: 8px;">© 2026 ImplantX · Este reporte es orientativo. La evaluación final debe ser realizada por un especialista.</p>
     </div>
   </div>
 </body>
