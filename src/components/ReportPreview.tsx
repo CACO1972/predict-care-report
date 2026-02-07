@@ -235,9 +235,12 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
           purchaseLevel,
           irpScore: evaluation.irpResult?.score,
           irpLevel: evaluation.irpResult?.level,
+          irpResult: evaluation.irpResult,
           pronosticoLabel: evaluation.pronosticoLabel,
+          pronosticoMessage: evaluation.pronosticoMessage,
           factors: evaluation.factors,
           recommendations: evaluation.recommendations,
+          synergies: evaluation.synergies,
         }
       });
 
@@ -265,20 +268,20 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
       return (
         <span className="px-3 py-1 bg-gradient-to-r from-yellow-500/20 to-primary/20 text-yellow-500 text-[10px] font-bold rounded-full border border-yellow-500/30 flex items-center gap-1">
           <Crown className="w-3 h-3" />
-          PREMIUM
+          EVAL. CLÍNICA AVANZADA
         </span>
       );
     }
     if (purchaseLevel === 'plan-accion') {
       return (
         <span className="px-3 py-1 bg-primary/20 text-primary text-[10px] font-bold rounded-full border border-primary/30">
-          📋 PLAN DE ACCIÓN
+          📋 GUÍA CLÍNICA
         </span>
       );
     }
     return (
       <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full">
-        BÁSICO
+        EVALUACIÓN INICIAL
       </span>
     );
   };
@@ -783,7 +786,7 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
             <div className="text-center">
               <span className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-primary text-primary-foreground rounded-full text-sm font-bold">
                 <Crown className="w-4 h-4" />
-                CONTENIDO EXCLUSIVO PREMIUM
+                CONTENIDO EXCLUSIVO — EVALUACIÓN AVANZADA
               </span>
             </div>
 
@@ -1027,3 +1030,4 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
 };
 
 export default ReportPreview;
+
