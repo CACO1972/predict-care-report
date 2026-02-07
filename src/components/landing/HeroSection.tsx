@@ -59,52 +59,87 @@ const HeroSection = () => {
         Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada.
       </p>
 
-      {/* Video Avatar Section - Vertical 9:16 */}
-      <div className="relative w-48 sm:w-56 md:w-64 lg:w-72 mx-auto mb-8 sm:mb-10">
-        {/* Glow effect */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/20 blur-2xl scale-105 opacity-60" />
+      {/* Two Column Layout: Video + Report Demo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 mb-8 sm:mb-10 max-w-4xl mx-auto">
         
-        {/* Video container with 9:16 aspect ratio */}
-        <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background aspect-[9/16]">
-          <video
-            key="hero-intro-v5"
-            ref={videoRef}
-            src="/hero-intro-v5.mp4"
-            poster={rioThumbnail}
-            playsInline
-            preload="metadata"
-            onEnded={handleVideoEnded}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          
-          {/* Play/Pause button - moves to corner when playing */}
-          <button
-            onClick={togglePlay}
-            className={`absolute transition-all duration-500 ease-out ${
-              isPlaying 
-                ? 'bottom-2 right-2 sm:bottom-3 sm:right-3 opacity-70 hover:opacity-100' 
-                : 'inset-0 flex items-center justify-center'
-            }`}
-          >
-            <div className={`rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-110 ${
-              isPlaying ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-14 h-14 sm:w-16 sm:h-16'
-            }`}>
-              {isPlaying ? (
-                <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
-              ) : (
-                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground ml-1" />
+        {/* Video Avatar Section - Vertical 9:16 */}
+        <div className="flex justify-center lg:justify-end">
+          <div className="relative w-48 sm:w-56 md:w-64">
+            {/* Glow effect */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/20 blur-2xl scale-105 opacity-60" />
+            
+            {/* Video container with 9:16 aspect ratio */}
+            <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background aspect-[9/16]">
+              <video
+                key="hero-intro-v5"
+                ref={videoRef}
+                src="/hero-intro-v5.mp4"
+                poster={rioThumbnail}
+                playsInline
+                preload="metadata"
+                onEnded={handleVideoEnded}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              
+              {/* Play/Pause button - moves to corner when playing */}
+              <button
+                onClick={togglePlay}
+                className={`absolute transition-all duration-500 ease-out ${
+                  isPlaying 
+                    ? 'bottom-2 right-2 sm:bottom-3 sm:right-3 opacity-70 hover:opacity-100' 
+                    : 'inset-0 flex items-center justify-center'
+                }`}
+              >
+                <div className={`rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-110 ${
+                  isPlaying ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-14 h-14 sm:w-16 sm:h-16'
+                }`}>
+                  {isPlaying ? (
+                    <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+                  ) : (
+                    <Play className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground ml-1" />
+                  )}
+                </div>
+              </button>
+              
+              {/* Video label */}
+              {!isPlaying && (
+                <div className="absolute bottom-2 sm:bottom-3 left-2 right-2 sm:left-3 sm:right-3 flex items-center justify-center">
+                  <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-[0.65rem] sm:text-xs font-medium text-foreground/80">
+                    🎬 Conoce a Río
+                  </span>
+                </div>
               )}
             </div>
-          </button>
-          
-          {/* Video label */}
-          {!isPlaying && (
-            <div className="absolute bottom-2 sm:bottom-3 left-2 right-2 sm:left-3 sm:right-3 flex items-center justify-center">
-              <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-[0.65rem] sm:text-xs font-medium text-foreground/80">
-                🎬 Conoce a Río, tu asistente de IA
-              </span>
+          </div>
+        </div>
+
+        {/* Report Demo Section */}
+        <div className="flex justify-center lg:justify-start">
+          <div className="relative w-full max-w-xs sm:max-w-sm">
+            {/* Glow effect */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 via-accent/10 to-primary/15 blur-2xl scale-105 opacity-50" />
+            
+            {/* Report container */}
+            <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-card">
+              {/* Header badge */}
+              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center py-2 bg-gradient-to-b from-background/95 to-background/0">
+                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[0.65rem] sm:text-xs font-medium text-primary">
+                  📊 Vista previa del informe
+                </span>
+              </div>
+              
+              {/* Iframe container with fixed height */}
+              <div className="aspect-[3/4] sm:aspect-[9/14]">
+                <iframe 
+                  src="https://claude.site/public/artifacts/94bc6324-3271-4209-91ab-ae9a123af81e/embed" 
+                  title="Demo Informe ImplantX" 
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  allow="clipboard-write"
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
