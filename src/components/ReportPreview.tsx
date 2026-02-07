@@ -172,22 +172,65 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
         body: {
           id: evaluation.id,
           date: evaluation.date,
-          patientName: evaluation.patient,
+          patientName: evaluation.patient || 'Paciente',
+          patientAge: (evaluation as any).patientAge,
+          patientCity: (evaluation as any).patientCity,
+          patientRegion: (evaluation as any).patientRegion,
           pronosticoLabel: evaluation.pronosticoLabel || 'Favorable',
           pronosticoMessage: evaluation.pronosticoMessage || 'Tu perfil muestra buenas condiciones para el tratamiento.',
+          pronosticoLevel: (evaluation as any).pronosticoLevel,
+          successProbability: evaluation.successProbability,
           successRange: getSuccessRange(evaluation.successProbability),
-          factors: evaluation.factors,
-          recommendations: evaluation.recommendations,
-          synergies: evaluation.synergies,
+          factors: evaluation.factors?.map(f => ({
+            name: f.name,
+            value: f.value,
+            impact: f.impact,
+            rr: (f as any).rr,
+            action: (f as any).action
+          })),
+          recommendations: evaluation.recommendations?.map(r => ({
+            text: r.text,
+            evidence: r.evidence,
+            priority: (r as any).priority
+          })),
+          synergies: evaluation.synergies?.map(s => 
+            typeof s === 'string' 
+              ? { text: s }
+              : s
+          ),
           purchaseLevel: purchaseLevel,
-          irpResult: evaluation.irpResult
+          irpResult: evaluation.irpResult,
+          nTeeth: evaluation.nTeeth,
+          missingTeeth: (evaluation as any).missingTeeth,
+          treatmentZones: (evaluation as any).treatmentZones,
         }
       });
 
       if (error) throw error;
 
-      if (data?.success && data.html) {
-        // Create blob and download
+      if (data?.success && data.pdf) {
+        // ═══ NEW: Real PDF binary download ═══
+        const binaryString = atob(data.pdf);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = data.downloadName || `ImplantX_Reporte_${evaluation.id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast.success("Reporte PDF descargado", {
+          description: "Tu informe se ha guardado como archivo PDF"
+        });
+      } else if (data?.success && data.html) {
+        // ═══ FALLBACK: Old HTML format ═══
         const blob = new Blob([data.html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
