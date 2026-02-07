@@ -54,6 +54,28 @@ const IRPResultScreen = ({
   // Check for test mode
   const testMode = getTestMode();
 
+  // Restore payment state after MercadoPago redirect (mobile popup fallback)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('implantx_pending_payment');
+      if (saved) {
+        const { email, level, timestamp } = JSON.parse(saved);
+        // Only restore if less than 10 minutes old
+        if (Date.now() - timestamp < 600000) {
+          setPaymentEmail(email);
+          setPendingLevel(level);
+          setShowPolling(true);
+          startPolling(email);
+          toast({
+            title: "Verificando tu pago...",
+            description: "Estamos confirmando tu transacción",
+          });
+        }
+        localStorage.removeItem('implantx_pending_payment');
+      }
+    } catch (e) { /* localStorage may not be available */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
@@ -73,12 +95,28 @@ const IRPResultScreen = ({
   };
 
   // Start polling for payment
+  const MAX_POLLING_SECONDS = 300; // 5 minutos máximo
+
   const startPolling = (email: string) => {
     setPollingSeconds(0);
     
-    // Poll every 3 seconds
+    // Poll every 3 seconds, max 5 minutes
     pollingIntervalRef.current = setInterval(async () => {
-      setPollingSeconds(prev => prev + 3);
+      setPollingSeconds(prev => {
+        const next = prev + 3;
+        // Timeout: stop polling after 5 minutes
+        if (next >= MAX_POLLING_SECONDS) {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+          }
+          toast({
+            title: "Verificación en proceso",
+            description: "Tu pago puede tardar unos minutos. Usa el botón de verificación manual o revisa tu email.",
+            variant: "default",
+          });
+        }
+        return next;
+      });
       
       const result = await verifyPayment({ payerEmail: email.trim().toLowerCase() });
       
@@ -87,6 +125,9 @@ const IRPResultScreen = ({
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
         }
+        
+        // Clean up localStorage state
+        try { localStorage.removeItem('implantx_pending_payment'); } catch (e) {}
         
         toast({
           title: "¡Pago verificado!",
@@ -114,9 +155,21 @@ const IRPResultScreen = ({
       return;
     }
 
-    // Open MercadoPago
+    // Open MercadoPago with popup blocker fallback
     const url = pendingLevel === 'premium' ? MERCADOPAGO_PREMIUM : MERCADOPAGO_PLAN_ACCION;
-    window.open(url, '_blank');
+    const popup = window.open(url, '_blank');
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      // Popup blocked (common on mobile) - save state and redirect
+      try {
+        localStorage.setItem('implantx_pending_payment', JSON.stringify({
+          email: paymentEmail.trim().toLowerCase(),
+          level: pendingLevel,
+          timestamp: Date.now(),
+        }));
+      } catch (e) { /* localStorage may not be available */ }
+      window.location.href = url;
+      return;
+    }
     
     // Switch to polling view
     setShowEmailPrompt(false);
