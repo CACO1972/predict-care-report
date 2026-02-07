@@ -387,10 +387,16 @@ const generateNotificationEmail = (data: SafePayload): string => {
 };
 
 // ============================================================
-//  GENERATE REPORT HTML (self-contained - no external call)
+//  GENERATE PDF ATTACHMENT (calls generate-pdf-report for binary PDF)
 // ============================================================
-const generateReportAttachment = async (data: ReportEmailRequest): Promise<{ html: string; filename: string }> => {
-  // Build the report data payload
+interface PdfAttachment {
+  content: string;      // base64 encoded
+  filename: string;
+  contentType: string;
+}
+
+const generatePdfAttachment = async (data: ReportEmailRequest): Promise<PdfAttachment> => {
+  // Build the report data payload matching generate-pdf-report interface
   const reportPayload = {
     id: data.reportId,
     date: data.date,
@@ -408,7 +414,8 @@ const generateReportAttachment = async (data: ReportEmailRequest): Promise<{ htm
     } : undefined),
   };
 
-  // Call generate-pdf-report Edge Function
+  console.log("📄 Calling generate-pdf-report for binary PDF...");
+
   try {
     const reportResponse = await fetch(`${SUPABASE_URL}/functions/v1/generate-pdf-report`, {
       method: 'POST',
@@ -421,22 +428,30 @@ const generateReportAttachment = async (data: ReportEmailRequest): Promise<{ htm
 
     if (reportResponse.ok) {
       const result = await reportResponse.json();
-      if (result.success && result.html) {
+      
+      // ✅ Now correctly using result.pdf (base64 PDF) instead of result.html
+      if (result.success && result.pdf) {
+        console.log("✅ PDF binary received, size:", result.pdf.length, "chars (base64)");
         return {
-          html: result.html,
-          filename: result.downloadName || `ImplantX_Reporte_${data.reportId}.html`,
+          content: result.pdf,  // Already base64 encoded from generate-pdf-report
+          filename: result.downloadName || `ImplantX_Informe_${data.reportId}.pdf`,
+          contentType: 'application/pdf',
         };
+      } else {
+        console.warn("⚠️ generate-pdf-report returned success but no PDF:", Object.keys(result));
       }
+    } else {
+      const errorText = await reportResponse.text();
+      console.error("❌ generate-pdf-report failed:", reportResponse.status, errorText);
     }
-    console.warn('generate-pdf-report call failed, using inline fallback');
   } catch (err) {
-    console.warn('Could not call generate-pdf-report:', err);
+    console.error("❌ Error calling generate-pdf-report:", err);
   }
 
-  // Fallback: minimal inline report
+  // Fallback: Generate minimal HTML as PDF substitute
+  console.warn("⚠️ Using HTML fallback (PDF generation failed)");
   const levelLabel = getTierLabel(data.purchaseLevel);
-  return {
-    html: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ImplantX - ${levelLabel}</title></head>
+  const fallbackHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ImplantX - ${levelLabel}</title></head>
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;">
 <h1>ImplantX — ${levelLabel}</h1>
 <p><strong>Paciente:</strong> ${data.patientName}</p>
@@ -448,8 +463,16 @@ ${data.pronosticoLabel ? `<p>${data.pronosticoLabel}</p>` : ''}
 ${data.irpScore !== undefined ? `<h3>IRP: ${data.irpScore} (Riesgo ${data.irpLevel})</h3>` : ''}
 <hr>
 <p style="color:#666;font-size:12px;">© 2026 ImplantX by Clínica Miró</p>
-</body></html>`,
+</body></html>`;
+  
+  const encoder = new TextEncoder();
+  const htmlBytes = encoder.encode(fallbackHtml);
+  const base64Html = btoa(String.fromCharCode(...htmlBytes));
+  
+  return {
+    content: base64Html,
     filename: `ImplantX_Reporte_${data.reportId}.html`,
+    contentType: 'text/html',
   };
 };
 
@@ -497,21 +520,16 @@ const handler = async (req: Request): Promise<Response> => {
     // 1. Generate notification email HTML with safe payload
     const notificationHTML = generateNotificationEmail(safePayload);
 
-    // 2. Generate report attachment (uses original data for PDF generation)
-    const report = await generateReportAttachment(rawData);
-    console.log("Report generated:", report.filename, "size:", report.html.length);
+    // 2. Generate PDF attachment (binary PDF from generate-pdf-report)
+    const pdfAttachment = await generatePdfAttachment(rawData);
+    console.log("📎 Attachment ready:", pdfAttachment.filename, "type:", pdfAttachment.contentType);
 
-    // 3. Base64 encode the report for Resend attachment
-    const encoder = new TextEncoder();
-    const reportBytes = encoder.encode(report.html);
-    const base64Report = btoa(String.fromCharCode(...reportBytes));
-
-    // 4. Build subject line
+    // 3. Build subject line
     const tierLabel = getTierLabel(safePayload.purchaseLevel);
     const subject = `${getTierEmoji(safePayload.purchaseLevel)} Tu ${tierLabel} ImplantX — ${safePayload.patientName}`;
 
-    // 5. Send via Resend with attachment
-    console.log("Sending email to:", safePayload.email);
+    // 4. Send via Resend with PDF attachment
+    console.log("📧 Sending email to:", safePayload.email);
 
     const emailPayload: any = {
       from: "ImplantX <implantes@clinicamiro.cl>",
@@ -520,9 +538,9 @@ const handler = async (req: Request): Promise<Response> => {
       html: notificationHTML,
       attachments: [
         {
-          filename: report.filename,
-          content: base64Report,
-          content_type: "text/html",
+          filename: pdfAttachment.filename,
+          content: pdfAttachment.content,  // Already base64 from generatePdfAttachment
+          content_type: pdfAttachment.contentType,  // "application/pdf" or fallback "text/html"
         }
       ],
     };
