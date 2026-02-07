@@ -2,13 +2,31 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
-// Restrict CORS to production domain
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://implantx.lovable.app';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// CORS configuration - allow production and preview domains
+const getAllowedOrigin = (requestOrigin: string | null): string => {
+  const allowedPatterns = [
+    'https://implantx.cl',
+    'https://www.implantx.cl',
+    'https://implantx.lovable.app',
+    'https://predict-care-report.lovable.app',
+    /^https:\/\/.*\.lovableproject\.com$/,
+    /^https:\/\/.*\.lovable\.app$/,
+  ];
+  
+  if (!requestOrigin) return '*';
+  
+  for (const pattern of allowedPatterns) {
+    if (typeof pattern === 'string' && requestOrigin === pattern) return requestOrigin;
+    if (pattern instanceof RegExp && pattern.test(requestOrigin)) return requestOrigin;
+  }
+  
+  return 'https://implantx.cl';
 };
+
+const getCorsHeaders = (requestOrigin: string | null) => ({
+  "Access-Control-Allow-Origin": getAllowedOrigin(requestOrigin),
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+});
 
 interface ReportEmailRequest {
   email: string;
@@ -302,7 +320,7 @@ const generateEmailHTML = (data: ReportEmailRequest): string => {
                 Este informe fue generado por ImplantX®
               </p>
               <p style="margin: 0; color: #64748b; font-size: 11px;">
-                © 2024 ImplantX - Tecnología de Inteligencia Artificial para Evaluación Dental
+                © 2026 ImplantX - Tecnología de Inteligencia Artificial para Evaluación Dental
               </p>
               <p style="margin: 12px 0 0 0; color: #475569; font-size: 10px;">
                 Si no solicitaste este correo, puedes ignorarlo de forma segura.
@@ -321,6 +339,7 @@ const generateEmailHTML = (data: ReportEmailRequest): string => {
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-report-email function invoked");
+  const corsHeaders = getCorsHeaders(req.headers.get('origin'));
   
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -351,7 +370,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "ImplantX <onboarding@resend.dev>",
+        from: "ImplantX <implantes@clinicamiro.cl>",
         to: [data.email],
         subject,
         html,
