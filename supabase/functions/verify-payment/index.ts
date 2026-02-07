@@ -5,6 +5,7 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
   const allowedPatterns = [
     'https://implantx.cl',
     'https://www.implantx.cl',
+    'https://app.implantx.cl',
     'https://implantx.lovable.app',
     'https://predict-care-report.lovable.app',
     /^https:\/\/.*\.lovableproject\.com$/,
