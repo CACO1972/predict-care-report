@@ -1,4 +1,4 @@
-import { RefObject } from "react";
+import { RefObject, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
@@ -11,6 +11,38 @@ interface WelcomeStepProps {
 }
 
 const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: WelcomeStepProps) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Play welcome audio when component mounts and user is not muted
+  useEffect(() => {
+    const audio = new Audio("/audio/hola-soy-rio.mp3");
+    audioRef.current = audio;
+    
+    if (!isMuted) {
+      audio.play().catch(err => {
+        console.log("Audio autoplay blocked:", err);
+      });
+    }
+
+    return () => {
+      audio.pause();
+      audio.src = "";
+    };
+  }, []);
+
+  // Handle mute toggle for audio
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMuted) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(err => {
+          console.log("Audio play blocked:", err);
+        });
+      }
+    }
+  }, [isMuted]);
+
   return (
     <div className="space-y-8 animate-fade-in text-center">
       <div className="relative bg-gradient-to-b from-card to-card/80 border border-primary/20 rounded-3xl p-6 sm:p-10 shadow-2xl shadow-primary/5 overflow-hidden">
@@ -26,7 +58,7 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
               autoPlay
               playsInline
               preload="metadata"
-              muted={isMuted}
+              muted
               loop
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -34,9 +66,6 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
             <button
               onClick={() => {
                 setIsMuted(!isMuted);
-                if (welcomeVideoRef.current) {
-                  welcomeVideoRef.current.muted = !isMuted;
-                }
               }}
               className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-background transition-colors"
             >
