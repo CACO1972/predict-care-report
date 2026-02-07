@@ -470,6 +470,7 @@ const handler = async (req: Request): Promise<Response> => {
     // 🔥 VALIDACIÓN CON CAMPOS SEGUROS
     const safePayload = createSafePayload(rawData);
     
+    // 🔍 DEBUG: Log all incoming data
     console.log("📧 Enviando email con datos:", {
       email: safePayload.email,
       patientName: safePayload.patientName,
@@ -479,6 +480,14 @@ const handler = async (req: Request): Promise<Response> => {
       irpLevel: safePayload.irpLevel,
       factorsCount: safePayload.factors.length,
       recommendationsCount: safePayload.recommendations.length,
+    });
+    
+    // 🔍 DEBUG PDF: Check if pdfUrl was provided
+    console.log("🔍 DEBUG PDF:", {
+      hasPdfUrl: !!(rawData as any).pdfUrl,
+      pdfUrl: (rawData as any).pdfUrl || "NOT PROVIDED",
+      reportId: safePayload.reportId,
+      note: "Currently using generate-pdf-report internal call, not external pdfUrl"
     });
 
     if (!safePayload.email || !safePayload.email.includes('@')) {
