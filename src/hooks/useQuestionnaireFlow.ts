@@ -446,7 +446,7 @@ export const useQuestionnaireFlow = () => {
     
     if (purchaseLevel === 'free' && assessmentResult) {
       try {
-        const reportId = `EV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+        const reportId = `EV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
         const { error } = await supabase.functions.invoke('send-report-email', {
           body: {
             email: data.email,
