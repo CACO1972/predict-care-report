@@ -134,6 +134,51 @@ interface AdherenceScenario {
   specialWarning?: string;
 }
 
+// What-If Simulator types
+interface WhatIfFactor {
+  id: string;
+  name: string;
+  icon: string;
+  currentState: string;
+  currentRR: number;
+  optimizedRR: number;
+  improvement: string;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  actionRequired: string;
+}
+
+interface WhatIfData {
+  factors: WhatIfFactor[];
+  currentSuccess: number;
+  optimizedSuccess: number;
+  currentCost: number;
+  optimizedCost: number;
+}
+
+// Treatment Alternatives types
+interface TreatmentOption {
+  id: string;
+  name: string;
+  description: string;
+  pros: string[];
+  cons: string[];
+  initialCost: number;
+  maintenanceCost: number;
+  lifespan: string;
+  totalCost25Years: number;
+  successRate: string;
+  satisfaction: string;
+  timeline: string;
+  bestFor: string;
+  warnings?: string[];
+}
+
+interface TreatmentAlternativesData {
+  options: TreatmentOption[];
+  recommendedId: string;
+  patientProfile: string;
+}
+
 interface ReportDataV3 {
   reportId: string;
   patientName: string;
@@ -153,10 +198,14 @@ interface ReportDataV3 {
   preparationTimeline: PreparationTimeline[];
   postOpProtocol: PostOpPhase[];
   
-  // PREMIUM tier
+  // BASE + PREMIUM tier
+  whatIfData?: WhatIfData;
+  
+  // PREMIUM tier only
   factorSynergies?: FactorSynergy[];
   anatomicalSectors?: AnatomicalSector[];
   adherenceScenarios?: AdherenceScenario[];
+  treatmentAlternatives?: TreatmentAlternativesData;
 }
 
 // ============================================================
@@ -532,7 +581,8 @@ class PDFBuilderV3 {
 
     const pct = Math.max(0, Math.min(100, probability));
     const pointerX = M_LEFT + (pct / 100) * gaugeW;
-    this.page.drawText("▼", { x: pointerX - 4, y: gaugeY + 3, size: 10, font: this.fontBold, color: C.DARK_BG });
+    // Draw pointer as simple "V" text (font doesn't support Unicode triangles)
+    this.page.drawText("V", { x: pointerX - 4, y: gaugeY + 4, size: 12, font: this.fontBold, color: C.DARK_BG });
     this.y -= 50;
   }
 
@@ -676,7 +726,7 @@ function drawExecutiveSummaryPage(b: PDFBuilderV3, data: ReportDataV3, showProba
   for (let i = 0; i < topFactors.length; i++) {
     const f = topFactors[i];
     const icon = i === 0 ? '1' : i === 1 ? '2' : '3';
-    b.drawText(`${icon}. ${f.factorName} ─────────── Impacto: ${f.relativeRisk.toFixed(1)}x`, {
+    b.drawText(`${icon}. ${f.factorName} ----------- Impacto: ${f.relativeRisk.toFixed(1)}x`, {
       size: 10, font: b.fontBold, color: f.relativeRisk > 1.5 ? C.RED_ALERT : C.YELLOW_WARN,
     });
     b.space(6);
@@ -995,6 +1045,443 @@ function drawAdherenceScenariosPage(b: PDFBuilderV3, data: ReportDataV3) {
   });
 }
 
+// ----- WHAT-IF SIMULATOR (BASE + PREMIUM) -----
+function drawWhatIfSimulatorPage(b: PDFBuilderV3, data: ReportDataV3) {
+  // Generate default What-If data from risk factors if not provided
+  const whatIfData = data.whatIfData || generateDefaultWhatIfData(data);
+  if (!whatIfData || whatIfData.factors.length === 0) return;
+  
+  b.newPage();
+  b.drawHeader('SIMULADOR WHAT-IF');
+  
+  // Header section
+  b.drawSectionTitle('🔮 Simulador What-If');
+  b.drawText('Descubre como mejoraria tu resultado optimizando cada factor de riesgo', {
+    size: 10, color: C.MED_GRAY, font: b.fontItalic,
+  });
+  b.space(8);
+  
+  // Individual factors
+  for (const factor of whatIfData.factors.slice(0, 4)) {
+    const priorityColor = factor.priority === 'CRITICAL' ? C.RED_ALERT :
+                          factor.priority === 'HIGH' ? C.ORANGE_MED :
+                          factor.priority === 'MEDIUM' ? C.YELLOW_WARN : C.BLUE_ACCENT;
+    
+    // Factor box
+    const boxH = 70;
+    if (b.y - boxH < M_BOTTOM + FOOTER_H + 20) {
+      b.newPage();
+      b.drawHeader('SIMULADOR WHAT-IF');
+    }
+    
+    // Left border colored by priority
+    b.page.drawRectangle({
+      x: M_LEFT, y: b.y - boxH, width: 4, height: boxH, color: priorityColor
+    });
+    b.page.drawRectangle({
+      x: M_LEFT + 4, y: b.y - boxH, width: CONTENT_W - 4, height: boxH, 
+      color: C.BEIGE_BG, borderColor: C.LIGHT_GRAY, borderWidth: 0.5
+    });
+    
+    const boxTop = b.y;
+    
+    // Header with icon and name
+    b.page.drawText(`${factor.icon} ${factor.name}`, {
+      x: M_LEFT + 12, y: boxTop - 14, size: 11, font: b.fontBold, color: C.DARK_BG
+    });
+    
+    // Priority badge
+    const badgeW = b.fontBold.widthOfTextAtSize(factor.priority, 7) + 8;
+    b.page.drawRectangle({
+      x: PAGE_W - M_RIGHT - badgeW - 10, y: boxTop - 18, width: badgeW, height: 14, color: priorityColor
+    });
+    b.page.drawText(factor.priority, {
+      x: PAGE_W - M_RIGHT - badgeW - 6, y: boxTop - 14, size: 7, font: b.fontBold, color: C.WHITE
+    });
+    
+    // Current state
+    b.page.drawText(factor.currentState, {
+      x: M_LEFT + 12, y: boxTop - 28, size: 8, font: b.fontRegular, color: C.MED_GRAY
+    });
+    
+    // RR comparison
+    b.page.drawText(`ACTUAL: ${factor.currentRR}x`, {
+      x: M_LEFT + 12, y: boxTop - 44, size: 9, font: b.fontBold, color: C.RED_ALERT
+    });
+    b.page.drawText('→', {
+      x: M_LEFT + 90, y: boxTop - 44, size: 10, font: b.fontBold, color: C.GOLD
+    });
+    b.page.drawText(`OPTIMIZADO: ${factor.optimizedRR}x`, {
+      x: M_LEFT + 105, y: boxTop - 44, size: 9, font: b.fontBold, color: C.GREEN_OK
+    });
+    
+    // Improvement text
+    b.page.drawText(`Impacto: ${factor.improvement}`, {
+      x: M_LEFT + 220, y: boxTop - 44, size: 8, font: b.fontRegular, color: C.GREEN_OK
+    });
+    
+    // Action required
+    b.page.drawText(`✓ ${factor.actionRequired}`, {
+      x: M_LEFT + 12, y: boxTop - 60, size: 8, font: b.fontRegular, color: C.BLUE_ACCENT
+    });
+    
+    b.y -= boxH + 8;
+  }
+  
+  // Global simulation result
+  b.space(10);
+  const resultBoxH = 100;
+  if (b.y - resultBoxH < M_BOTTOM + FOOTER_H + 20) {
+    b.newPage();
+    b.drawHeader('SIMULADOR WHAT-IF');
+  }
+  
+  // Gradient effect simulation with dark background
+  b.page.drawRectangle({
+    x: M_LEFT, y: b.y - resultBoxH, width: CONTENT_W, height: resultBoxH, 
+    color: C.DARK_BG, borderColor: C.GOLD, borderWidth: 2
+  });
+  
+  const resTop = b.y;
+  
+  b.page.drawText('📊 RESULTADO DE TU SIMULACION', {
+    x: M_LEFT + (CONTENT_W - b.fontBold.widthOfTextAtSize('RESULTADO DE TU SIMULACION', 12)) / 2 + 10,
+    y: resTop - 18, size: 12, font: b.fontBold, color: C.GOLD
+  });
+  
+  // Current vs Optimized columns
+  const colW = (CONTENT_W - 40) / 3;
+  
+  // Current
+  b.page.drawRectangle({
+    x: M_LEFT + 15, y: resTop - 85, width: colW, height: 55, color: C.WHITE
+  });
+  b.page.drawText('ACTUAL', {
+    x: M_LEFT + 15 + (colW - b.fontBold.widthOfTextAtSize('ACTUAL', 8)) / 2,
+    y: resTop - 40, size: 8, font: b.fontBold, color: C.MED_GRAY
+  });
+  b.page.drawText(`${whatIfData.currentSuccess}%`, {
+    x: M_LEFT + 15 + (colW - b.fontBold.widthOfTextAtSize(`${whatIfData.currentSuccess}%`, 20)) / 2,
+    y: resTop - 60, size: 20, font: b.fontBold, color: C.RED_ALERT
+  });
+  b.page.drawText(`$${(whatIfData.currentCost / 1000000).toFixed(1)}M`, {
+    x: M_LEFT + 15 + (colW - b.fontRegular.widthOfTextAtSize(`$${(whatIfData.currentCost / 1000000).toFixed(1)}M`, 9)) / 2,
+    y: resTop - 78, size: 9, font: b.fontRegular, color: C.TEXT
+  });
+  
+  // Arrow/Improvement
+  const improvement = whatIfData.optimizedSuccess - whatIfData.currentSuccess;
+  const costSavings = whatIfData.currentCost - whatIfData.optimizedCost;
+  b.page.drawText(`+${improvement}%`, {
+    x: M_LEFT + 15 + colW + (colW - b.fontBold.widthOfTextAtSize(`+${improvement}%`, 16)) / 2,
+    y: resTop - 55, size: 16, font: b.fontBold, color: C.GOLD
+  });
+  b.page.drawText(`-$${(costSavings / 1000).toFixed(0)}K`, {
+    x: M_LEFT + 15 + colW + (colW - b.fontRegular.widthOfTextAtSize(`-$${(costSavings / 1000).toFixed(0)}K`, 10)) / 2,
+    y: resTop - 72, size: 10, font: b.fontRegular, color: C.GREEN_OK
+  });
+  
+  // Optimized
+  b.page.drawRectangle({
+    x: M_LEFT + 25 + colW * 2, y: resTop - 85, width: colW, height: 55, color: C.WHITE
+  });
+  b.page.drawText('OPTIMIZADO', {
+    x: M_LEFT + 25 + colW * 2 + (colW - b.fontBold.widthOfTextAtSize('OPTIMIZADO', 8)) / 2,
+    y: resTop - 40, size: 8, font: b.fontBold, color: C.MED_GRAY
+  });
+  b.page.drawText(`${whatIfData.optimizedSuccess}%`, {
+    x: M_LEFT + 25 + colW * 2 + (colW - b.fontBold.widthOfTextAtSize(`${whatIfData.optimizedSuccess}%`, 20)) / 2,
+    y: resTop - 60, size: 20, font: b.fontBold, color: C.GREEN_OK
+  });
+  b.page.drawText(`$${(whatIfData.optimizedCost / 1000000).toFixed(1)}M`, {
+    x: M_LEFT + 25 + colW * 2 + (colW - b.fontRegular.widthOfTextAtSize(`$${(whatIfData.optimizedCost / 1000000).toFixed(1)}M`, 9)) / 2,
+    y: resTop - 78, size: 9, font: b.fontRegular, color: C.TEXT
+  });
+  
+  b.y -= resultBoxH + 10;
+  
+  // Disclaimer
+  b.drawText('* Las mejoras mostradas asumen adherencia completa al protocolo de optimizacion.', {
+    size: 7, color: C.MED_GRAY, font: b.fontItalic
+  });
+}
+
+// Helper to generate default What-If data from risk factors
+function generateDefaultWhatIfData(data: ReportDataV3): WhatIfData {
+  const factors: WhatIfFactor[] = data.riskFactors.slice(0, 4).map((rf, idx) => {
+    const priority = rf.relativeRisk > 1.8 ? 'CRITICAL' :
+                     rf.relativeRisk > 1.4 ? 'HIGH' :
+                     rf.relativeRisk > 1.2 ? 'MEDIUM' : 'LOW';
+    const optimizedRR = Math.max(1.0, rf.relativeRisk * 0.5);
+    const reductionPct = Math.round((1 - optimizedRR / rf.relativeRisk) * 100);
+    
+    return {
+      id: `factor-${idx}`,
+      name: rf.factorName.toUpperCase(),
+      icon: idx === 0 ? '🚬' : idx === 1 ? '💉' : idx === 2 ? '🦷' : '⚠️',
+      currentState: rf.yourSituation,
+      currentRR: rf.relativeRisk,
+      optimizedRR: Math.round(optimizedRR * 10) / 10,
+      improvement: `RR ${rf.relativeRisk.toFixed(1)}x → ${optimizedRR.toFixed(1)}x (-${reductionPct}% de riesgo)`,
+      priority: priority as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW',
+      actionRequired: rf.requiredActions[0] || 'Consultar con especialista'
+    };
+  });
+  
+  const currentSuccess = data.successProbability;
+  const optimizedSuccess = Math.min(98, currentSuccess + 15);
+  
+  return {
+    factors,
+    currentSuccess,
+    optimizedSuccess,
+    currentCost: 4200000,
+    optimizedCost: 3300000
+  };
+}
+
+// ----- TREATMENT ALTERNATIVES (PREMIUM ONLY) - 2 pages -----
+function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
+  // Generate default alternatives if not provided
+  const altData = data.treatmentAlternatives || generateDefaultAlternatives();
+  if (!altData || altData.options.length === 0) return;
+  
+  // PAGE 1: Detailed options
+  b.newPage();
+  b.drawHeader('ALTERNATIVAS DE TRATAMIENTO');
+  
+  b.drawSectionTitle('🔀 Alternativas de Tratamiento');
+  b.drawText(`Compara ${altData.options.length} opciones viables para tu caso. Analiza pros, contras, costos y resultados esperados.`, {
+    size: 9, color: C.MED_GRAY, font: b.fontItalic
+  });
+  b.space(8);
+  
+  for (const option of altData.options.slice(0, 2)) {
+    const isRecommended = option.id === altData.recommendedId;
+    const borderColor = isRecommended ? C.GOLD : C.LIGHT_GRAY;
+    const boxH = 150;
+    
+    if (b.y - boxH < M_BOTTOM + FOOTER_H + 20) {
+      b.newPage();
+      b.drawHeader('ALTERNATIVAS DE TRATAMIENTO');
+    }
+    
+    // Box
+    b.page.drawRectangle({
+      x: M_LEFT, y: b.y - boxH, width: CONTENT_W, height: boxH,
+      color: C.WHITE, borderColor, borderWidth: isRecommended ? 3 : 1
+    });
+    
+    const boxTop = b.y;
+    
+    // Recommended badge
+    if (isRecommended) {
+      const badgeText = '🏆 RECOMENDADO';
+      const badgeW = b.fontBold.widthOfTextAtSize(badgeText, 9) + 16;
+      b.page.drawRectangle({
+        x: M_LEFT + (CONTENT_W - badgeW) / 2, y: boxTop + 2, width: badgeW, height: 18, color: C.GOLD
+      });
+      b.page.drawText(badgeText, {
+        x: M_LEFT + (CONTENT_W - b.fontBold.widthOfTextAtSize(badgeText, 9)) / 2,
+        y: boxTop + 6, size: 9, font: b.fontBold, color: C.WHITE
+      });
+    }
+    
+    // Title
+    b.page.drawText(option.name, {
+      x: M_LEFT + 12, y: boxTop - 18, size: 14, font: b.fontBold, color: C.DARK_BG
+    });
+    b.page.drawText(option.description, {
+      x: M_LEFT + 12, y: boxTop - 32, size: 8, font: b.fontRegular, color: C.MED_GRAY
+    });
+    
+    // Pros column
+    const colW = (CONTENT_W - 30) / 2;
+    b.page.drawRectangle({
+      x: M_LEFT + 8, y: boxTop - 95, width: colW, height: 55, color: rgb(0.95, 1, 0.95)
+    });
+    b.page.drawText('✓ PROS', {
+      x: M_LEFT + 12, y: boxTop - 48, size: 8, font: b.fontBold, color: C.GREEN_OK
+    });
+    let proY = boxTop - 60;
+    for (const pro of option.pros.slice(0, 3)) {
+      const truncPro = pro.length > 40 ? pro.substring(0, 37) + '...' : pro;
+      b.page.drawText(`• ${truncPro}`, {
+        x: M_LEFT + 12, y: proY, size: 7, font: b.fontRegular, color: C.TEXT
+      });
+      proY -= 11;
+    }
+    
+    // Cons column
+    b.page.drawRectangle({
+      x: M_LEFT + 18 + colW, y: boxTop - 95, width: colW, height: 55, color: rgb(1, 0.95, 0.95)
+    });
+    b.page.drawText('✗ CONTRAS', {
+      x: M_LEFT + 22 + colW, y: boxTop - 48, size: 8, font: b.fontBold, color: C.RED_ALERT
+    });
+    let conY = boxTop - 60;
+    for (const con of option.cons.slice(0, 3)) {
+      const truncCon = con.length > 40 ? con.substring(0, 37) + '...' : con;
+      b.page.drawText(`• ${truncCon}`, {
+        x: M_LEFT + 22 + colW, y: conY, size: 7, font: b.fontRegular, color: C.TEXT
+      });
+      conY -= 11;
+    }
+    
+    // Cost row
+    b.page.drawText(`💰 Inicial: $${(option.initialCost / 1000000).toFixed(1)}M`, {
+      x: M_LEFT + 12, y: boxTop - 110, size: 9, font: b.fontBold, color: C.BLUE_ACCENT
+    });
+    b.page.drawText(`Anual: $${(option.maintenanceCost / 1000).toFixed(0)}K`, {
+      x: M_LEFT + 130, y: boxTop - 110, size: 8, font: b.fontRegular, color: C.TEXT
+    });
+    b.page.drawText(`Total 25 años: $${(option.totalCost25Years / 1000000).toFixed(1)}M`, {
+      x: M_LEFT + 230, y: boxTop - 110, size: 9, font: b.fontBold, color: C.GOLD
+    });
+    
+    // Stats row
+    b.page.drawText(`Éxito: ${option.successRate}`, {
+      x: M_LEFT + 12, y: boxTop - 125, size: 8, font: b.fontRegular, color: C.TEXT
+    });
+    b.page.drawText(`Durabilidad: ${option.lifespan}`, {
+      x: M_LEFT + 130, y: boxTop - 125, size: 8, font: b.fontRegular, color: C.TEXT
+    });
+    b.page.drawText(`Tiempo: ${option.timeline}`, {
+      x: M_LEFT + 280, y: boxTop - 125, size: 8, font: b.fontRegular, color: C.TEXT
+    });
+    
+    // Best for
+    b.page.drawText(`🎯 Mejor para: ${option.bestFor.substring(0, 60)}${option.bestFor.length > 60 ? '...' : ''}`, {
+      x: M_LEFT + 12, y: boxTop - 142, size: 7, font: b.fontItalic, color: C.GOLD_DARK
+    });
+    
+    b.y -= boxH + 12;
+  }
+  
+  // PAGE 2: Comparison table + third option + recommendation
+  if (altData.options.length > 2) {
+    b.newPage();
+    b.drawHeader('ALTERNATIVAS DE TRATAMIENTO');
+    
+    // Third option (compact)
+    const opt3 = altData.options[2];
+    if (opt3) {
+      b.drawSubsectionTitle(`OPCION C: ${opt3.name}`);
+      b.drawText(opt3.description, { size: 8, color: C.MED_GRAY });
+      b.space(4);
+      b.drawText(`💰 Total 25 años: $${(opt3.totalCost25Years / 1000000).toFixed(1)}M | Éxito: ${opt3.successRate} | Durabilidad: ${opt3.lifespan}`, {
+        size: 9, color: C.TEXT
+      });
+      if (opt3.warnings && opt3.warnings.length > 0) {
+        b.space(4);
+        b.drawText(`⚠️ ${opt3.warnings[0]}`, { size: 8, color: C.YELLOW_WARN, font: b.fontBold });
+      }
+      b.drawGoldDivider();
+    }
+  }
+  
+  // Comparison table
+  b.drawSectionTitle('📊 Tabla Comparativa');
+  
+  const headers = ['Criterio', ...altData.options.slice(0, 3).map((_, i) => `Opcion ${String.fromCharCode(65 + i)}`)];
+  const rows = [
+    ['Durabilidad', ...altData.options.slice(0, 3).map(o => o.lifespan)],
+    ['Éxito', ...altData.options.slice(0, 3).map(o => o.successRate)],
+    ['Satisfaccion', ...altData.options.slice(0, 3).map(o => o.satisfaction)],
+    ['Total 25 años', ...altData.options.slice(0, 3).map(o => `$${(o.totalCost25Years / 1000000).toFixed(1)}M`)],
+  ];
+  
+  const numCols = headers.length;
+  b.drawTable(headers, rows, {
+    colWidths: [120, ...Array(numCols - 1).fill((CONTENT_W - 120) / (numCols - 1))],
+    fontSize: 8
+  });
+  
+  // Final recommendation box
+  b.space(10);
+  const recommended = altData.options.find(o => o.id === altData.recommendedId);
+  if (recommended) {
+    const recBoxH = 70;
+    b.page.drawRectangle({
+      x: M_LEFT, y: b.y - recBoxH, width: CONTENT_W, height: recBoxH,
+      color: C.DARK_BG, borderColor: C.GOLD, borderWidth: 2
+    });
+    
+    const recTop = b.y;
+    b.page.drawText('🏆 RECOMENDACION PARA SU CASO', {
+      x: M_LEFT + 15, y: recTop - 20, size: 12, font: b.fontBold, color: C.GOLD
+    });
+    b.page.drawText(recommended.name, {
+      x: M_LEFT + 15, y: recTop - 40, size: 14, font: b.fontBold, color: C.WHITE
+    });
+    b.page.drawText(recommended.bestFor.substring(0, 80), {
+      x: M_LEFT + 15, y: recTop - 55, size: 8, font: b.fontRegular, color: C.GOLD_LIGHT
+    });
+    b.page.drawText('⚠️ Decision final en consulta con su cirujano', {
+      x: M_LEFT + 15, y: recTop - 68, size: 7, font: b.fontItalic, color: C.MED_GRAY
+    });
+    
+    b.y -= recBoxH + 10;
+  }
+}
+
+// Helper to generate default treatment alternatives
+function generateDefaultAlternatives(): TreatmentAlternativesData {
+  return {
+    options: [
+      {
+        id: 'implante',
+        name: 'IMPLANTE DENTAL',
+        description: 'Raiz artificial de titanio con corona de porcelana',
+        pros: ['Preserva hueso alveolar', 'No dania dientes adyacentes', 'Sensacion natural al masticar', 'Durabilidad excepcional'],
+        cons: ['Mayor inversion inicial', 'Requiere cirugia', 'Tiempo de oseointegracion 3-6 meses'],
+        initialCost: 2500000,
+        maintenanceCost: 50000,
+        lifespan: '25+ años',
+        totalCost25Years: 3750000,
+        successRate: '95-98%',
+        satisfaction: '96%',
+        timeline: '4-6 meses',
+        bestFor: 'Pacientes que buscan solucion definitiva con minimo impacto en dientes adyacentes'
+      },
+      {
+        id: 'puente',
+        name: 'PUENTE FIJO',
+        description: 'Protesis fija que usa dientes adyacentes como pilares',
+        pros: ['Sin cirugia', 'Resultado inmediato', 'Menor costo inicial'],
+        cons: ['Desgasta dientes sanos adyacentes', 'No previene perdida osea', 'Vida util limitada'],
+        initialCost: 1200000,
+        maintenanceCost: 80000,
+        lifespan: '10-15 años',
+        totalCost25Years: 4200000,
+        successRate: '85-90%',
+        satisfaction: '78%',
+        timeline: '2-4 semanas',
+        bestFor: 'Pacientes que prefieren evitar cirugia o tienen contraindicaciones',
+        warnings: ['Requiere desgastar dientes sanos', 'Puede necesitar reemplazo cada 10-15 años']
+      },
+      {
+        id: 'removible',
+        name: 'PROTESIS REMOVIBLE',
+        description: 'Protesis parcial removible con ganchos metalicos',
+        pros: ['Bajo costo', 'No invasivo', 'Facil reparacion'],
+        cons: ['Incomodidad al comer', 'Se mueve', 'Acelera perdida osea', 'Requiere ajustes frecuentes'],
+        initialCost: 400000,
+        maintenanceCost: 120000,
+        lifespan: '5-8 años',
+        totalCost25Years: 4400000,
+        successRate: '70-80%',
+        satisfaction: '52%',
+        timeline: '1-2 semanas',
+        bestFor: 'Solucion temporal o pacientes con limitaciones economicas',
+        warnings: ['Menor calidad de vida', 'Acelera reabsorcion osea', 'Puede dañar dientes pilares']
+      }
+    ],
+    recommendedId: 'implante',
+    patientProfile: 'Candidato a implante con factores modificables'
+  };
+}
+
 // ----- PRÓXIMOS PASOS (PREMIUM) -----
 function drawNextStepsPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
@@ -1093,7 +1580,7 @@ async function generateFreeReportV3(data: ReportDataV3): Promise<Uint8Array> {
   return b.save();
 }
 
-// BASE: 7 pages
+// BASE: 8 pages (was 7, now includes What-If)
 async function generateBaseReportV3(data: ReportDataV3): Promise<Uint8Array> {
   const b = new PDFBuilderV3();
   await b.init('BASE');
@@ -1114,8 +1601,11 @@ async function generateBaseReportV3(data: ReportDataV3): Promise<Uint8Array> {
   // Page 6: Timeline
   drawTimelinePage(b, data);
   
-  // Page 7: Post-Op Protocol + Upsell
+  // Page 7: Post-Op Protocol
   drawPostOpPage(b, data);
+  
+  // Page 8: What-If Simulator (NEW)
+  drawWhatIfSimulatorPage(b, data);
   b.space(10);
   b.drawUpsellBox('COMPLETE', '$29.990 CLP');
   
@@ -1123,7 +1613,7 @@ async function generateBaseReportV3(data: ReportDataV3): Promise<Uint8Array> {
   return b.save();
 }
 
-// COMPLETE: 12 pages
+// COMPLETE: 15 pages (was 12, now includes What-If + Treatment Alternatives)
 async function generateCompleteReportV3(data: ReportDataV3): Promise<Uint8Array> {
   const b = new PDFBuilderV3();
   await b.init('COMPLETE');
@@ -1147,16 +1637,22 @@ async function generateCompleteReportV3(data: ReportDataV3): Promise<Uint8Array>
   // Page 7: Post-Op Protocol
   drawPostOpPage(b, data);
   
-  // Pages 8-9: Synergies Analysis (PREMIUM EXCLUSIVE)
+  // Page 8: What-If Simulator (NEW - shared with BASE)
+  drawWhatIfSimulatorPage(b, data);
+  
+  // Pages 9-10: Synergies Analysis (PREMIUM EXCLUSIVE)
   drawSynergiesPages(b, data);
   
-  // Page 10: Anatomical Sectors (PREMIUM EXCLUSIVE)
+  // Pages 11-12: Treatment Alternatives (NEW - PREMIUM EXCLUSIVE)
+  drawTreatmentAlternativesPages(b, data);
+  
+  // Page 13: Anatomical Sectors (PREMIUM EXCLUSIVE)
   drawAnatomicalSectorPage(b, data);
   
-  // Page 11: Adherence Scenarios (PREMIUM EXCLUSIVE)
+  // Page 14: Adherence Scenarios (PREMIUM EXCLUSIVE)
   drawAdherenceScenariosPage(b, data);
   
-  // Page 12: Next Steps (PREMIUM EXCLUSIVE)
+  // Page 15: Next Steps (PREMIUM EXCLUSIVE)
   drawNextStepsPage(b, data);
   
   b.drawFooterAllPages('EVALUACION CLINICA AVANZADA (PREMIUM)');
@@ -1185,11 +1681,11 @@ const handler = async (req: Request): Promise<Response> => {
     switch (plan) {
       case 'COMPLETE':
         pdfBytes = await generateCompleteReportV3(data);
-        numPages = 12;
+        numPages = 15; // Updated: was 12, now includes What-If + Alternatives
         break;
       case 'BASE':
         pdfBytes = await generateBaseReportV3(data);
-        numPages = 7;
+        numPages = 8; // Updated: was 7, now includes What-If
         break;
       default:
         pdfBytes = await generateFreeReportV3(data);
