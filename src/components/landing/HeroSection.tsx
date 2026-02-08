@@ -2,6 +2,7 @@ import { ArrowRight, Play, Pause } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
+import ReportDemoPreview from "@/components/landing/ReportDemoPreview";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -119,7 +120,7 @@ const HeroSection = () => {
             {/* Glow effect */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 via-accent/10 to-primary/15 blur-2xl scale-105 opacity-50" />
             
-            {/* Report container */}
+            {/* Report container - scrollable */}
             <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-card">
               {/* Header badge */}
               <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center py-2 bg-gradient-to-b from-background/95 to-background/0">
@@ -128,15 +129,9 @@ const HeroSection = () => {
                 </span>
               </div>
               
-              {/* Iframe container with fixed height */}
-              <div className="aspect-[3/4] sm:aspect-[9/14]">
-                <iframe 
-                  src="https://claude.site/public/artifacts/94bc6324-3271-4209-91ab-ae9a123af81e/embed" 
-                  title="Demo Informe ImplantX" 
-                  className="w-full h-full border-0"
-                  loading="lazy"
-                  allow="clipboard-write"
-                />
+              {/* Native React Report Preview - scrollable */}
+              <div className="h-[400px] sm:h-[480px] overflow-y-auto pt-10 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                <ReportDemoPreview />
               </div>
             </div>
           </div>
