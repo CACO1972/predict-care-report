@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, Zap } from "lucide-react";
+import { Menu, X, Zap, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
+import { Badge } from "@/components/ui/badge";
 const LandingNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,8 +61,20 @@ const LandingNavbar = () => {
             ))}
           </nav>
 
-          {/* Desktop CTA + humana.ia */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Desktop CTA + Badges */}
+          <div className="hidden md:flex items-center gap-3">
+            {/* SafeCreative Seal */}
+            <a 
+              href="/docs/SafeCreative_Certificate.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 border border-success/30 hover:bg-success/20 transition-colors group"
+              title="Propiedad Intelectual Registrada"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-success" />
+              <span className="text-[10px] font-medium text-success tracking-wide">SafeCreative®</span>
+            </a>
+            
             <a 
               href="https://humanaia.cl" 
               target="_blank" 
@@ -107,6 +119,16 @@ const LandingNavbar = () => {
             ))}
             
             <div className="pt-4 border-t border-border flex flex-col gap-3">
+              {/* SafeCreative Badge Mobile */}
+              <a 
+                href="/docs/SafeCreative_Certificate.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-success/10 border border-success/30"
+              >
+                <ShieldCheck className="w-4 h-4 text-success" />
+                <span className="text-sm font-medium text-success">Propiedad Registrada SafeCreative®</span>
+              </a>
               <a 
                 href="https://humanaia.cl" 
                 target="_blank" 
