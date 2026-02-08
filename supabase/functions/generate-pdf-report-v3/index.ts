@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont } from "npm:pdf-lib@1.17.1";
 
 // ============================================================
-//  ImplantX PDF Report Generator v3.0 - pdf-lib Adapter
-//  Adapts v3.0 data format to existing pdf-lib renderer
+//  ImplantX PDF Report Generator v3.0 - FULL 12-PAGE VERSION
+//  Structure: FREE(3 pages) | BASE(7 pages) | COMPLETE(12 pages)
 // ============================================================
 
 const getAllowedOrigin = (requestOrigin: string | null): string => {
@@ -31,7 +31,7 @@ const corsHeaders = (origin: string | null) => ({
 });
 
 // ============================================================
-//  V3 TYPES (from INSTRUCCIONES-LOVABLE.md)
+//  V3 TYPES
 // ============================================================
 type PlanType = 'FREE' | 'BASE' | 'COMPLETE';
 
@@ -71,6 +71,7 @@ interface PreparationTimeline {
 
 interface PostOpPhase {
   period: string;
+  title?: string;
   actions: string[];
 }
 
@@ -159,7 +160,7 @@ interface ReportDataV3 {
 }
 
 // ============================================================
-//  COLORS
+//  COLORS - Gold/Dark Premium Theme
 // ============================================================
 const C = {
   DARK_BG:     rgb(10/255, 10/255, 10/255),
@@ -217,7 +218,6 @@ class PDFBuilderV3 {
     this.fontBold = await this.doc.embedFont(StandardFonts.HelveticaBold);
     this.fontItalic = await this.doc.embedFont(StandardFonts.HelveticaOblique);
     this.plan = plan;
-    this.newPage();
   }
 
   newPage() {
@@ -295,6 +295,11 @@ class PDFBuilderV3 {
     }
   }
 
+  drawBulletPoint(text: string, opts: { size?: number; color?: any; indent?: number } = {}) {
+    const { size = 9, color = C.TEXT, indent = 0 } = opts;
+    this.drawText(`• ${text}`, { x: M_LEFT + 10 + indent, size, color, maxWidth: CONTENT_W - 20 - indent });
+  }
+
   drawSectionTitle(text: string) {
     this.y -= 8;
     if (this.y < M_BOTTOM + FOOTER_H + 40) {
@@ -306,6 +311,14 @@ class PDFBuilderV3 {
       x: M_LEFT + 10, y: this.y, size: 11, font: this.fontBold, color: C.DARK_BG,
     });
     this.y -= 20;
+  }
+
+  drawSubsectionTitle(text: string) {
+    this.y -= 4;
+    this.page.drawText(text, {
+      x: M_LEFT, y: this.y, size: 9, font: this.fontBold, color: C.GOLD_DARK,
+    });
+    this.y -= 14;
   }
 
   drawGoldDivider() {
@@ -328,6 +341,27 @@ class PDFBuilderV3 {
       x, y: this.y - height, width, height,
       color: bgColor, borderColor: borderColor || bgColor, borderWidth,
     });
+  }
+
+  drawInfoBox(title: string, content: string[], bgColor: any = C.BEIGE_BG, borderColor: any = C.GOLD) {
+    const boxH = 20 + content.length * 14;
+    if (this.y - boxH < M_BOTTOM + FOOTER_H + 20) {
+      this.newPage();
+      this.drawHeader(this.currentSubtitle);
+    }
+    this.drawBox({ height: boxH, bgColor, borderColor, borderWidth: 1 });
+    const boxTop = this.y;
+    this.page.drawText(title, {
+      x: M_LEFT + 10, y: boxTop - 14, size: 9, font: this.fontBold, color: C.DARK_BG,
+    });
+    let yPos = boxTop - 28;
+    for (const line of content) {
+      this.page.drawText(`• ${line}`, {
+        x: M_LEFT + 12, y: yPos, size: 8, font: this.fontRegular, color: C.TEXT,
+      });
+      yPos -= 14;
+    }
+    this.y -= boxH + 8;
   }
 
   drawTable(headers: string[], rows: string[][], opts: {
@@ -407,52 +441,70 @@ class PDFBuilderV3 {
     return C.YELLOW_WARN;
   }
 
+  drawPriorityBadge(priority: string, x: number, y: number): number {
+    const bgColor = priority === 'CRÍTICO' ? C.RED_ALERT : priority === 'IMPORTANTE' ? C.ORANGE_MED : C.GREEN_OK;
+    const badgeW = this.fontBold.widthOfTextAtSize(priority, 6) + 10;
+    this.page.drawRectangle({ x, y: y - 3, width: badgeW, height: 12, color: bgColor });
+    this.page.drawText(priority, { x: x + 5, y, size: 6, font: this.fontBold, color: C.WHITE });
+    return badgeW;
+  }
+
   drawResultBoxV3(data: ReportDataV3, showProbability: boolean) {
-    const boxH = showProbability ? 85 : 75;
+    const boxH = showProbability ? 90 : 75;
     if (this.y - boxH < M_BOTTOM + FOOTER_H + 20) {
       this.newPage();
       this.drawHeader(this.currentSubtitle);
     }
     const classColor = this.getClassificationColor(data.classification);
-    this.drawBox({ height: boxH, bgColor: C.BEIGE_BG, borderColor: C.GOLD, borderWidth: 1 });
+    this.drawBox({ height: boxH, bgColor: C.BEIGE_BG, borderColor: C.GOLD, borderWidth: 1.5 });
     const boxTop = this.y;
 
-    this.page.drawText("RESULTADO DE LA EVALUACION v3.0", {
-      x: M_LEFT + 10, y: boxTop - 16, size: 8, font: this.fontBold, color: C.GOLD_DARK,
+    this.page.drawText("RESULTADO DE LA EVALUACION", {
+      x: M_LEFT + 10, y: boxTop - 16, size: 9, font: this.fontBold, color: C.GOLD_DARK,
     });
 
     if (showProbability) {
       const probText = `${data.successProbability}%`;
-      const probW = this.fontBold.widthOfTextAtSize(probText, 42);
+      const probW = this.fontBold.widthOfTextAtSize(probText, 44);
       this.page.drawText(probText, {
-        x: M_LEFT + 10, y: boxTop - 58, size: 42, font: this.fontBold, color: C.GOLD,
+        x: M_LEFT + 10, y: boxTop - 62, size: 44, font: this.fontBold, color: C.GOLD,
       });
       this.page.drawText("probabilidad de exito", {
-        x: M_LEFT + probW + 16, y: boxTop - 42, size: 9, font: this.fontItalic, color: C.MED_GRAY,
+        x: M_LEFT + probW + 18, y: boxTop - 46, size: 10, font: this.fontItalic, color: C.MED_GRAY,
       });
+      
+      // Draw progress bar for probability
+      const barW = 180;
+      const barH = 8;
+      const barX = M_LEFT + probW + 18;
+      const barY = boxTop - 70;
+      this.page.drawRectangle({ x: barX, y: barY, width: barW, height: barH, color: C.LIGHT_GRAY });
+      const fillW = (data.successProbability / 100) * barW;
+      const fillColor = data.successProbability >= 90 ? C.GREEN_OK : data.successProbability >= 70 ? C.YELLOW_WARN : C.RED_ALERT;
+      this.page.drawRectangle({ x: barX, y: barY, width: fillW, height: barH, color: fillColor });
     } else {
       this.page.drawText("- - %", {
-        x: M_LEFT + 10, y: boxTop - 52, size: 36, font: this.fontBold, color: C.LIGHT_GRAY,
+        x: M_LEFT + 10, y: boxTop - 55, size: 38, font: this.fontBold, color: C.LIGHT_GRAY,
       });
       this.page.drawText("Disponible en Plan de Accion", {
-        x: M_LEFT + 110, y: boxTop - 40, size: 8, font: this.fontItalic, color: C.MED_GRAY,
+        x: M_LEFT + 100, y: boxTop - 42, size: 8, font: this.fontItalic, color: C.MED_GRAY,
       });
     }
 
-    const classW = this.fontBold.widthOfTextAtSize(data.classification, 10);
+    const classW = this.fontBold.widthOfTextAtSize(data.classification, 11);
     this.page.drawText(data.classification, {
       x: PAGE_W - M_RIGHT - classW - 10, y: boxTop - 35,
-      size: 10, font: this.fontBold, color: classColor,
+      size: 11, font: this.fontBold, color: classColor,
     });
 
-    const riskLabel = `Multiplicador: ${data.globalRiskMultiplier.toFixed(1)}x`;
-    const riskW = this.fontRegular.widthOfTextAtSize(riskLabel, 8);
+    const riskLabel = `Indice de Riesgo: ${data.globalRiskMultiplier.toFixed(2)}x`;
+    const riskW = this.fontRegular.widthOfTextAtSize(riskLabel, 9);
     this.page.drawText(riskLabel, {
-      x: PAGE_W - M_RIGHT - riskW - 10, y: boxTop - 50,
-      size: 8, font: this.fontRegular, color: C.MED_GRAY,
+      x: PAGE_W - M_RIGHT - riskW - 10, y: boxTop - 52,
+      size: 9, font: this.fontRegular, color: C.MED_GRAY,
     });
 
-    this.y -= boxH + 8;
+    this.y -= boxH + 10;
   }
 
   drawRiskGauge(probability: number) {
@@ -462,7 +514,7 @@ class PDFBuilderV3 {
     }
     const gaugeY = this.y - 10;
     const gaugeW = CONTENT_W;
-    const gaugeH = 14;
+    const gaugeH = 16;
     const segmentW = gaugeW / 5;
     const colors = [C.RED_ALERT, C.ORANGE_MED, C.YELLOW_WARN, rgb(0.5, 0.75, 0.2), C.GREEN_OK];
     const labels = ['<60%', '60-69%', '70-79%', '80-89%', '90%+'];
@@ -471,23 +523,23 @@ class PDFBuilderV3 {
       this.page.drawRectangle({
         x: M_LEFT + i * segmentW, y: gaugeY - gaugeH, width: segmentW - 1, height: gaugeH, color: colors[i],
       });
-      const lw = this.fontRegular.widthOfTextAtSize(labels[i], 6);
+      const lw = this.fontRegular.widthOfTextAtSize(labels[i], 7);
       this.page.drawText(labels[i], {
-        x: M_LEFT + i * segmentW + (segmentW - lw) / 2, y: gaugeY - gaugeH - 10,
-        size: 6, font: this.fontRegular, color: C.MED_GRAY,
+        x: M_LEFT + i * segmentW + (segmentW - lw) / 2, y: gaugeY - gaugeH - 12,
+        size: 7, font: this.fontRegular, color: C.MED_GRAY,
       });
     }
 
     const pct = Math.max(0, Math.min(100, probability));
     const pointerX = M_LEFT + (pct / 100) * gaugeW;
-    this.page.drawText("v", { x: pointerX - 3, y: gaugeY + 4, size: 10, font: this.fontBold, color: C.DARK_BG });
-    this.y -= 45;
+    this.page.drawText("▼", { x: pointerX - 4, y: gaugeY + 3, size: 10, font: this.fontBold, color: C.DARK_BG });
+    this.y -= 50;
   }
 
   drawDisclaimer() {
     this.space(10);
     this.drawGoldDivider();
-    const disclaimerText = "AVISO LEGAL: Este informe v3.0 es una herramienta de orientacion basada en inteligencia artificial y no reemplaza la evaluacion clinica presencial. Los resultados son estimaciones basadas en la informacion proporcionada y literatura cientifica disponible (meta-analisis con n>50,000 pacientes). Consulte siempre con su implantologo antes de tomar decisiones de tratamiento.";
+    const disclaimerText = "AVISO LEGAL: Este informe es una herramienta de orientacion basada en inteligencia artificial y NO reemplaza la evaluacion clinica presencial. Los resultados son estimaciones basadas en la informacion proporcionada y literatura cientifica disponible (meta-analisis con n>50,000 pacientes). Consulte SIEMPRE con su implantologo antes de tomar decisiones de tratamiento.";
     this.drawText(disclaimerText, { size: 6.5, color: C.MED_GRAY, font: this.fontItalic, lineHeight: 9 });
     this.space(6);
     this.drawText("Dr. Carlos Montoya | Director Clinico | 11,000+ implantes | 27 anos de experiencia", {
@@ -496,51 +548,45 @@ class PDFBuilderV3 {
   }
 
   drawUpsellBox(targetPlan: 'BASE' | 'COMPLETE', price: string) {
-    const boxH = 90;
+    const boxH = 95;
     if (this.y - boxH < M_BOTTOM + FOOTER_H + 20) {
       this.newPage();
       this.drawHeader(this.currentSubtitle);
     }
-    this.drawBox({ height: boxH, bgColor: C.CREAM_BG, borderColor: C.GOLD, borderWidth: 1.5 });
+    this.drawBox({ height: boxH, bgColor: C.CREAM_BG, borderColor: C.GOLD, borderWidth: 2 });
     const bTop = this.y + boxH;
 
     const title = targetPlan === 'BASE' ? 'DESBLOQUEA TU PLAN DE ACCION' : 'ACCEDE A LA EVALUACION CLINICA AVANZADA';
     this.page.drawText(title, {
-      x: M_LEFT + 10, y: bTop - 18, size: 11, font: this.fontBold, color: C.GOLD_DARK,
+      x: M_LEFT + 10, y: bTop - 18, size: 12, font: this.fontBold, color: C.GOLD_DARK,
     });
 
     const features = targetPlan === 'BASE'
       ? [
           '>> Probabilidad de exito exacta con gauge visual',
-          '>> Factores de riesgo detallados con RR',
+          '>> 3 factores de riesgo detallados (1 pagina cada uno)',
           '>> Timeline de preparacion 4-6 semanas',
           '>> Protocolo post-operatorio completo',
         ]
       : [
           '>> Todo lo del Plan de Accion PLUS:',
-          '>> Analisis de sinergias de factores',
+          '>> Analisis de sinergias de factores (2 paginas)',
           '>> Planificacion por sector anatomico',
-          '>> Escenarios de adherencia y costos',
+          '>> Escenarios de adherencia con costos',
+          '>> Proximos pasos personalizados',
         ];
 
-    let fY = bTop - 34;
+    let fY = bTop - 36;
     for (const f of features) {
-      this.page.drawText(f, { x: M_LEFT + 14, y: fY, size: 7.5, font: this.fontRegular, color: C.TEXT });
+      this.page.drawText(f, { x: M_LEFT + 14, y: fY, size: 8, font: this.fontRegular, color: C.TEXT });
       fY -= 12;
     }
 
-    const priceW = this.fontBold.widthOfTextAtSize(price, 14);
+    const priceW = this.fontBold.widthOfTextAtSize(price, 16);
     this.page.drawText(price, {
-      x: PAGE_W - M_RIGHT - priceW - 15, y: bTop - 55, size: 14, font: this.fontBold, color: C.GOLD,
+      x: PAGE_W - M_RIGHT - priceW - 15, y: bTop - 55, size: 16, font: this.fontBold, color: C.GOLD,
     });
     this.y -= boxH + 8;
-  }
-
-  drawPriorityBadge(priority: string, x: number, y: number) {
-    const bgColor = priority === 'CRÍTICO' ? C.RED_ALERT : priority === 'IMPORTANTE' ? C.ORANGE_MED : C.GREEN_OK;
-    const badgeW = this.fontBold.widthOfTextAtSize(priority, 6) + 8;
-    this.page.drawRectangle({ x, y: y - 3, width: badgeW, height: 12, color: bgColor });
-    this.page.drawText(priority, { x: x + 4, y, size: 6, font: this.fontBold, color: C.WHITE });
   }
 
   async save(): Promise<Uint8Array> {
@@ -549,290 +595,571 @@ class PDFBuilderV3 {
 }
 
 // ============================================================
-//  REPORT GENERATORS V3
+//  PAGE GENERATORS
 // ============================================================
 
+// ----- PORTADA (Cover Page) -----
+function drawCoverPage(b: PDFBuilderV3, data: ReportDataV3) {
+  b.newPage();
+  const p = b.page;
+  
+  // Full dark background
+  p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.DARK_BG });
+  
+  // Gold decorative lines
+  p.drawRectangle({ x: 50, y: PAGE_H - 100, width: PAGE_W - 100, height: 2, color: C.GOLD });
+  p.drawRectangle({ x: 50, y: 180, width: PAGE_W - 100, height: 2, color: C.GOLD });
+  
+  // Title
+  const title = "IMPLANTX";
+  const titleW = b.fontBold.widthOfTextAtSize(title, 48);
+  p.drawText(title, { x: (PAGE_W - titleW) / 2, y: PAGE_H - 200, size: 48, font: b.fontBold, color: C.GOLD });
+  
+  const subtitle = "Evaluacion Inteligente de Implantes Dentales";
+  const subW = b.fontRegular.widthOfTextAtSize(subtitle, 14);
+  p.drawText(subtitle, { x: (PAGE_W - subW) / 2, y: PAGE_H - 230, size: 14, font: b.fontRegular, color: C.GOLD_LIGHT });
+  
+  const report = "Informe Clinico Personalizado";
+  const repW = b.fontItalic.widthOfTextAtSize(report, 16);
+  p.drawText(report, { x: (PAGE_W - repW) / 2, y: PAGE_H - 290, size: 16, font: b.fontItalic, color: C.WHITE });
+  
+  // Patient info block
+  const infoY = PAGE_H - 380;
+  const planLabel = data.plan === 'COMPLETE' ? 'PREMIUM - $29.990 CLP' : data.plan === 'BASE' ? 'PLAN DE ACCION - $14.900 CLP' : 'EVALUACION INICIAL';
+  const numPages = data.plan === 'COMPLETE' ? '12' : data.plan === 'BASE' ? '7' : '3';
+  
+  const infos = [
+    ['Paciente:', data.patientName || '-'],
+    ['Edad:', `${data.age || '-'} anos`],
+    ['Ciudad:', data.city || '-'],
+    ['ID Reporte:', data.reportId || '-'],
+    ['Fecha de Evaluacion:', data.evaluationDate || '-'],
+  ];
+  
+  let yPos = infoY;
+  for (const [label, value] of infos) {
+    p.drawText(label, { x: M_LEFT + 100, y: yPos, size: 11, font: b.fontRegular, color: C.MED_GRAY });
+    p.drawText(value, { x: M_LEFT + 240, y: yPos, size: 11, font: b.fontBold, color: C.WHITE });
+    yPos -= 24;
+  }
+  
+  // Plan badge
+  const badgeY = 280;
+  const badgeW = b.fontBold.widthOfTextAtSize(`[${planLabel}]`, 14);
+  p.drawText(`[${planLabel}]`, { x: (PAGE_W - badgeW) / 2, y: badgeY, size: 14, font: b.fontBold, color: C.GOLD });
+  
+  // Footer text
+  const footerText = `Este reporte contiene ${numPages} paginas de analisis clinico personalizado`;
+  const footerW = b.fontRegular.widthOfTextAtSize(footerText, 10);
+  p.drawText(footerText, { x: (PAGE_W - footerW) / 2, y: 220, size: 10, font: b.fontRegular, color: C.GOLD_LIGHT });
+  
+  const footerText2 = "basado en evidencia cientifica de nivel internacional";
+  const footerW2 = b.fontRegular.widthOfTextAtSize(footerText2, 10);
+  p.drawText(footerText2, { x: (PAGE_W - footerW2) / 2, y: 205, size: 10, font: b.fontRegular, color: C.GOLD_LIGHT });
+}
+
+// ----- RESUMEN EJECUTIVO (Executive Summary) -----
+function drawExecutiveSummaryPage(b: PDFBuilderV3, data: ReportDataV3, showProbability: boolean) {
+  b.newPage();
+  b.drawHeader('RESUMEN EJECUTIVO');
+  
+  b.drawSectionTitle('Resumen Ejecutivo');
+  b.drawResultBoxV3(data, showProbability);
+  
+  if (showProbability) {
+    b.drawRiskGauge(data.successProbability);
+  }
+  
+  // Top 3 factors
+  b.drawSectionTitle('Top 3 Factores que Mas Afectan');
+  const topFactors = data.riskFactors.slice(0, 3);
+  for (let i = 0; i < topFactors.length; i++) {
+    const f = topFactors[i];
+    const icon = i === 0 ? '1' : i === 1 ? '2' : '3';
+    b.drawText(`${icon}. ${f.factorName} ─────────── Impacto: ${f.relativeRisk.toFixed(1)}x`, {
+      size: 10, font: b.fontBold, color: f.relativeRisk > 1.5 ? C.RED_ALERT : C.YELLOW_WARN,
+    });
+    b.space(6);
+  }
+  
+  // Critical alert box
+  b.space(10);
+  const alertBgColor = data.classification === 'DESFAVORABLE' ? C.PINK_LIGHT : C.CREAM_BG;
+  b.drawInfoBox(
+    '⚠️ ALERTA CRITICA',
+    [
+      'Su perfil de riesgo requiere optimizacion ANTES de proceder con cirugia.',
+      'La preparacion adecuada puede reducir el riesgo hasta en un 60-70%.',
+      'Siga el protocolo de preparacion incluido en este informe.',
+    ],
+    alertBgColor,
+    data.classification === 'DESFAVORABLE' ? C.RED_ALERT : C.GOLD
+  );
+}
+
+// ----- FACTOR DE RIESGO (1 page per factor) -----
+function drawRiskFactorPage(b: PDFBuilderV3, factor: RiskFactorV3, index: number, total: number) {
+  b.newPage();
+  b.drawHeader(`FACTOR ${index + 1} DE ${total}`);
+  
+  // Title box
+  const titleBoxH = 45;
+  b.drawBox({ height: titleBoxH, bgColor: C.BEIGE_BG, borderColor: C.GOLD, borderWidth: 1.5 });
+  const boxTop = b.y + titleBoxH;
+  b.page.drawText(factor.factorName.toUpperCase(), {
+    x: M_LEFT + 15, y: boxTop - 22, size: 16, font: b.fontBold, color: C.DARK_BG,
+  });
+  const rrText = `[RR: ${factor.relativeRisk.toFixed(1)}x]`;
+  const rrW = b.fontBold.widthOfTextAtSize(rrText, 14);
+  b.page.drawText(rrText, {
+    x: PAGE_W - M_RIGHT - rrW - 15, y: boxTop - 20, size: 14, font: b.fontBold, color: C.RED_ALERT,
+  });
+  const riskLevel = factor.relativeRisk > 1.8 ? 'RIESGO ALTO' : factor.relativeRisk > 1.3 ? 'RIESGO MODERADO' : 'RIESGO BAJO';
+  b.page.drawText(`(${riskLevel})`, {
+    x: M_LEFT + 15, y: boxTop - 36, size: 9, font: b.fontItalic, color: C.MED_GRAY,
+  });
+  b.y -= titleBoxH + 12;
+  
+  // SU SITUACIÓN
+  b.drawSubsectionTitle('📍 SU SITUACION');
+  b.drawText(factor.yourSituation, { size: 10, color: C.TEXT });
+  b.drawGoldDivider();
+  
+  // ¿QUÉ SIGNIFICA PARA USTED?
+  b.drawSubsectionTitle('📊 ¿QUE SIGNIFICA PARA USTED?');
+  b.drawText(factor.realWorldComparison, { size: 9, color: C.TEXT, lineHeight: 13 });
+  b.drawGoldDivider();
+  
+  // ¿POR QUÉ AFECTA LOS IMPLANTES? - Biological Mechanisms
+  b.drawSubsectionTitle('🔬 ¿POR QUE AFECTA LOS IMPLANTES?');
+  for (const mech of factor.biologicalMechanisms.slice(0, 3)) {
+    b.drawInfoBox(mech.title, mech.points, C.BLUE_LIGHT, C.BLUE_ACCENT);
+  }
+  
+  // ACCIÓN REQUERIDA
+  b.drawSubsectionTitle('✅ ACCION REQUERIDA');
+  for (const action of factor.requiredActions) {
+    b.drawBulletPoint(action, { size: 9 });
+  }
+  b.space(6);
+  
+  // BENEFICIO SI SIGUE EL PROTOCOLO
+  b.drawSubsectionTitle('🎯 BENEFICIO SI SIGUE EL PROTOCOLO');
+  b.drawBulletPoint(`Reduccion de riesgo: ${factor.adherenceBenefit.riskReduction}`, { size: 9, color: C.GREEN_OK });
+  b.drawBulletPoint(`Aumento de exito: ${factor.adherenceBenefit.successIncrease}`, { size: 9, color: C.GREEN_OK });
+  b.drawBulletPoint(`Menos complicaciones: ${factor.adherenceBenefit.complicationsReduction}`, { size: 9, color: C.GREEN_OK });
+  b.space(6);
+  
+  // RECURSOS DE APOYO
+  if (factor.supportResources && factor.supportResources.length > 0) {
+    b.drawSubsectionTitle('🆘 RECURSOS DE APOYO');
+    for (const res of factor.supportResources.slice(0, 4)) {
+      b.drawBulletPoint(res, { size: 8, color: C.BLUE_ACCENT });
+    }
+    b.space(4);
+  }
+  
+  // EVIDENCIA CIENTÍFICA
+  b.drawGoldDivider();
+  const evidenceLabel = factor.evidenceLevel === 'A' ? 'Nivel A (Maxima evidencia)' :
+                        factor.evidenceLevel === 'B' ? 'Nivel B (Buena evidencia)' : 'Nivel C (Evidencia moderada)';
+  b.drawText(`📚 EVIDENCIA CIENTIFICA: ${evidenceLabel}`, { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+  b.drawText(factor.scientificReference, { size: 7, color: C.MED_GRAY, font: b.fontItalic });
+}
+
+// ----- TIMELINE DE PREPARACIÓN -----
+function drawTimelinePage(b: PDFBuilderV3, data: ReportDataV3) {
+  b.newPage();
+  b.drawHeader('PROTOCOLO DE PREPARACION');
+  
+  b.drawSectionTitle('📅 Protocolo de Preparacion Pre-operatoria');
+  b.drawText('Periodo: 4-6 semanas antes de la cirugia', { size: 10, font: b.fontItalic, color: C.GOLD_DARK });
+  b.space(4);
+  b.drawText('Este protocolo personalizado optimiza su organismo para maximizar las probabilidades de exito. Cada accion tiene impacto directo y cuantificable en el resultado final.', {
+    size: 9, color: C.TEXT, lineHeight: 13,
+  });
+  b.drawGoldDivider();
+  
+  for (const week of data.preparationTimeline) {
+    b.drawSubsectionTitle(`🗓️ ${week.weekLabel}`);
+    for (const action of week.actions) {
+      const badgeW = b.drawPriorityBadge(action.category, M_LEFT + 5, b.y);
+      b.drawText(action.action, {
+        x: M_LEFT + badgeW + 12, size: 8.5, color: C.TEXT, maxWidth: CONTENT_W - badgeW - 20,
+      });
+      b.space(6);
+    }
+    b.space(8);
+  }
+}
+
+// ----- PROTOCOLO POST-OPERATORIO -----
+function drawPostOpPage(b: PDFBuilderV3, data: ReportDataV3) {
+  b.newPage();
+  b.drawHeader('PROTOCOLO POST-OPERATORIO');
+  
+  b.drawSectionTitle('🏥 Protocolo Post-Operatorio');
+  
+  for (const phase of data.postOpProtocol) {
+    b.drawSubsectionTitle(`⏰ ${phase.period}${phase.title ? ` - ${phase.title}` : ''}`);
+    for (const action of phase.actions) {
+      b.drawBulletPoint(action, { size: 9 });
+    }
+    b.space(8);
+  }
+  
+  // Alert box
+  b.space(10);
+  b.drawInfoBox(
+    '⚠️ SENALES DE ALARMA - CONTACTAR INMEDIATAMENTE',
+    [
+      'Sangrado abundante NO cede despues de 2 horas',
+      'Fiebre >38.5°C despues de 48 horas',
+      'Dolor severo NO responde a analgesicos',
+      'Inflamacion AUMENTA despues del dia 4',
+      'Pus o secrecion con mal olor',
+      'Movilidad del implante',
+      '📞 Urgencias 24/7: +56 9 7415 7966',
+    ],
+    C.PINK_LIGHT,
+    C.RED_ALERT
+  );
+}
+
+// ----- ANÁLISIS DE SINERGIAS (PREMIUM) - 2 pages -----
+function drawSynergiesPages(b: PDFBuilderV3, data: ReportDataV3) {
+  if (!data.factorSynergies || data.factorSynergies.length === 0) return;
+  
+  // PAGE 1: Mechanisms
+  b.newPage();
+  b.drawHeader('ANALISIS DE SINERGIAS');
+  
+  b.drawSectionTitle('🔗 Analisis de Sinergias de Riesgo');
+  
+  for (const synergy of data.factorSynergies.slice(0, 2)) {
+    b.drawSubsectionTitle(`SINERGIA: ${synergy.factorsCombined.join(' × ')}`);
+    
+    // Show multiplication effect
+    b.drawText('TU PERFIL:', { size: 9, font: b.fontBold, color: C.TEXT });
+    b.space(2);
+    for (let i = 0; i < synergy.factorsCombined.length; i++) {
+      b.drawText(`  ${synergy.factorsCombined[i]}`, { size: 8, color: C.MED_GRAY });
+    }
+    b.space(4);
+    
+    b.drawText(`❌ SUMA SIMPLE (incorrecto): Suma individual`, { size: 8, color: C.MED_GRAY });
+    b.drawText(`✓ EFECTO MULTIPLICATIVO (real): ${synergy.actualMultiplier.toFixed(2)}x`, { size: 9, font: b.fontBold, color: C.RED_ALERT });
+    b.space(6);
+    
+    b.drawText('¿POR QUE SE MULTIPLICA EN LUGAR DE SUMAR?', { size: 9, font: b.fontBold, color: C.GOLD_DARK });
+    b.space(4);
+    
+    for (const mech of synergy.biologicalSynergies.slice(0, 3)) {
+      b.drawInfoBox(mech.title, mech.points, C.PINK_LIGHT, C.RED_ALERT);
+    }
+    
+    b.space(4);
+    b.drawText('EVIDENCIA CIENTIFICA:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+    b.drawText(synergy.scientificEvidence, { size: 7, color: C.MED_GRAY, font: b.fontItalic });
+    b.drawGoldDivider();
+  }
+  
+  // PAGE 2: Intervention Strategy
+  b.newPage();
+  b.drawHeader('ESTRATEGIA DE INTERVENCION');
+  
+  b.drawSectionTitle('🎯 Estrategia de Intervencion Priorizada');
+  
+  for (const synergy of data.factorSynergies.slice(0, 1)) {
+    for (const intervention of synergy.prioritizedInterventions) {
+      b.drawSubsectionTitle(`PRIORIDAD #${intervention.priority}: ${intervention.action}`);
+      b.drawText(`Impacto: ${intervention.impact}`, { size: 9, color: C.TEXT });
+      b.drawText(`Si completa protocolo: ${intervention.resultIfCompletes}`, { size: 9, color: C.GREEN_OK, font: b.fontBold });
+      b.space(8);
+    }
+    
+    // Final optimization result
+    b.drawGoldDivider();
+    b.drawSectionTitle('Resultado Final de Optimizacion');
+    b.drawText(`Actual: ${synergy.finalRiskReduction.currentRisk} → Optimizado: ${synergy.finalRiskReduction.optimizedRisk}`, {
+      size: 11, font: b.fontBold, color: C.GOLD_DARK,
+    });
+    b.drawText(`REDUCCION TOTAL: ${synergy.finalRiskReduction.totalReduction}`, {
+      size: 12, font: b.fontBold, color: C.GREEN_OK,
+    });
+  }
+}
+
+// ----- SECTORES ANATÓMICOS (PREMIUM) -----
+function drawAnatomicalSectorPage(b: PDFBuilderV3, data: ReportDataV3) {
+  if (!data.anatomicalSectors || data.anatomicalSectors.length === 0) return;
+  
+  b.newPage();
+  b.drawHeader('PLANIFICACION ANATOMICA');
+  
+  b.drawSectionTitle('🦷 Planificacion por Sector Anatomico');
+  
+  for (const sector of data.anatomicalSectors.slice(0, 2)) {
+    b.drawSubsectionTitle(`SECTOR: ${sector.sectorName} (${sector.teeth})`);
+    
+    const sacLabel = sector.sacClassification === 'S' ? 'SIMPLE' : sector.sacClassification === 'A' ? 'AVANZADO' : 'COMPLEJO';
+    b.drawText(`Clasificacion ITI-SAC: ${sacLabel} | Nivel de Riesgo: ${sector.riskLevel}`, {
+      size: 9, font: b.fontBold, color: sector.riskLevel === 'ALTO' ? C.RED_ALERT : C.YELLOW_WARN,
+    });
+    b.space(6);
+    
+    // Anatomical challenges
+    b.drawText('DESAFIOS ANATOMICOS:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+    for (const challenge of sector.anatomicalChallenges.slice(0, 3)) {
+      b.drawBulletPoint(`${challenge.challenge} → ${challenge.impact}`, { size: 8 });
+    }
+    b.space(6);
+    
+    // Protocol table
+    if (sector.specificProtocol.length > 0) {
+      b.drawText('PROTOCOLO ESPECIFICO:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+      b.space(4);
+      const rows = sector.specificProtocol.map(p => [p.phase, p.timing, p.details, p.duration]);
+      b.drawTable(['Fase', 'Timing', 'Detalles', 'Duracion'], rows, {
+        colWidths: [90, 70, 180, CONTENT_W - 340],
+        fontSize: 7,
+      });
+    }
+    
+    b.drawText(`TIMELINE TOTAL: ${sector.totalTimeline}`, { size: 9, font: b.fontBold, color: C.BLUE_ACCENT });
+    b.space(4);
+    
+    // Specific risks
+    b.drawText('RIESGOS ESPECIFICOS:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+    for (const risk of sector.specificRisks.slice(0, 3)) {
+      b.drawBulletPoint(`${risk.riskType}: ${risk.probabilityRange}`, { size: 8, color: C.RED_ALERT });
+    }
+    b.space(4);
+    
+    // Cost
+    b.drawText(`COSTO ESTIMADO: ${sector.estimatedCost}`, { size: 10, font: b.fontBold, color: C.GOLD });
+    b.drawGoldDivider();
+  }
+}
+
+// ----- ESCENARIOS DE ADHERENCIA (PREMIUM) -----
+function drawAdherenceScenariosPage(b: PDFBuilderV3, data: ReportDataV3) {
+  if (!data.adherenceScenarios || data.adherenceScenarios.length === 0) return;
+  
+  b.newPage();
+  b.drawHeader('ESCENARIOS DE ADHERENCIA');
+  
+  b.drawSectionTitle('📊 Comparacion de Escenarios de Adherencia');
+  
+  for (const scenario of data.adherenceScenarios) {
+    const bgColor = scenario.adherenceLevel === '100%' ? C.BLUE_LIGHT :
+                    scenario.adherenceLevel === 'PARCIAL' ? C.CREAM_BG : C.PINK_LIGHT;
+    const borderColor = scenario.adherenceLevel === '100%' ? C.GREEN_OK :
+                        scenario.adherenceLevel === 'PARCIAL' ? C.YELLOW_WARN : C.RED_ALERT;
+    
+    // Scenario header
+    b.drawSubsectionTitle(`${scenario.icon} ESCENARIO: ${scenario.scenarioName}`);
+    
+    // Actions
+    b.drawText('ACCIONES:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+    for (const action of scenario.actions.slice(0, 4)) {
+      b.drawBulletPoint(action, { size: 8 });
+    }
+    b.space(4);
+    
+    // Results
+    b.drawText('RESULTADOS:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+    b.drawText(`  Exito global: ${scenario.results.successProbabilityOverall}`, { size: 8, color: borderColor, font: b.fontBold });
+    b.drawText(`  Oseointegracion: ${scenario.results.healingTime}`, { size: 8, color: C.TEXT });
+    b.drawText(`  Complicaciones menores: ${scenario.results.complicationsMinor} | Mayores: ${scenario.results.complicationsMajor}`, { size: 8, color: C.TEXT });
+    b.drawText(`  Vida util esperada: ${scenario.results.qualityOfLife.expectedDurability}`, { size: 8, color: C.TEXT });
+    b.drawText(`  Costo total: ${scenario.results.totalEstimatedCost.total}`, { size: 9, font: b.fontBold, color: C.GOLD_DARK });
+    
+    if (scenario.results.totalEstimatedCost.percentageVsOptimal !== '0%') {
+      b.drawText(`  (${scenario.results.totalEstimatedCost.percentageVsOptimal} vs Escenario Optimo)`, { size: 7, color: C.RED_ALERT, font: b.fontItalic });
+    }
+    
+    if (scenario.specialWarning) {
+      b.space(4);
+      b.drawText(`⚠️ ${scenario.specialWarning}`, { size: 8, font: b.fontBold, color: C.RED_ALERT });
+    }
+    
+    b.drawGoldDivider();
+  }
+  
+  // Conclusion
+  b.space(6);
+  b.drawSectionTitle('Conclusion Comparativa');
+  b.drawText('LA ADHERENCIA AL PROTOCOLO ES TAN IMPORTANTE COMO LA CIRUGIA MISMA.', {
+    size: 11, font: b.fontBold, color: C.GOLD_DARK,
+  });
+}
+
+// ----- PRÓXIMOS PASOS (PREMIUM) -----
+function drawNextStepsPage(b: PDFBuilderV3, data: ReportDataV3) {
+  b.newPage();
+  b.drawHeader('PROXIMOS PASOS');
+  
+  b.drawSectionTitle('➡️ Proximos Pasos');
+  
+  // Step 1
+  b.drawSubsectionTitle('1️⃣ VIDEOCONFERENCIA CON DR. MONTOYA');
+  b.drawText('Revision personalizada de su reporte (INCLUIDA)', { size: 9, color: C.TEXT });
+  b.drawText('Duracion: 30-45 minutos', { size: 9, color: C.TEXT });
+  b.space(4);
+  b.drawText('Agende aqui: clinicamiro.cl/videoconsulta', { size: 9, color: C.BLUE_ACCENT, font: b.fontBold });
+  b.drawText('WhatsApp: +56 9 7415 7966', { size: 9, color: C.BLUE_ACCENT });
+  b.drawGoldDivider();
+  
+  // Step 2
+  b.drawSubsectionTitle('2️⃣ EXAMENES COMPLEMENTARIOS');
+  b.drawBulletPoint('Radiografia panoramica digital', { size: 9 });
+  b.drawBulletPoint('CBCT (tomografia 3D) si complejidad anatomica', { size: 9 });
+  b.drawBulletPoint('Fotografias clinicas intraorales', { size: 9 });
+  b.space(4);
+  b.drawText('Puede enviarnos imagenes previas por WhatsApp', { size: 8, color: C.MED_GRAY, font: b.fontItalic });
+  b.drawGoldDivider();
+  
+  // Step 3
+  b.drawSubsectionTitle('3️⃣ BENEFICIO ECONOMICO');
+  const price = data.plan === 'COMPLETE' ? '$29.990' : '$14.900';
+  b.drawText(`El pago de ${price} de este reporte se ABONA`, { size: 10, font: b.fontBold, color: C.GREEN_OK });
+  b.drawText('INTEGRAMENTE al tratamiento final.', { size: 10, font: b.fontBold, color: C.GREEN_OK });
+  b.space(6);
+  if (data.plan === 'COMPLETE') {
+    b.drawText('Incluye: 2 noches de estadia en Santiago durante', { size: 9, color: C.TEXT });
+    b.drawText('el tratamiento (para pacientes de regiones)', { size: 9, color: C.TEXT });
+  }
+  b.drawGoldDivider();
+  
+  // Step 4
+  b.drawSubsectionTitle('4️⃣ COORDINACION DE AGENDA');
+  b.drawText('Una vez confirmado el plan de tratamiento:', { size: 9, color: C.TEXT });
+  b.drawBulletPoint('Programacion quirurgica personalizada', { size: 9 });
+  b.drawBulletPoint('Coordinacion con laboratorio', { size: 9 });
+  b.drawBulletPoint('Gestion de pagos fraccionados (sin interes)', { size: 9 });
+  
+  // Disclaimer at bottom
+  b.space(20);
+  b.drawDisclaimer();
+  
+  // Clinic info
+  b.space(10);
+  b.drawText('Dr. Carlos Montoya', { size: 10, font: b.fontBold, color: C.GOLD_DARK });
+  b.drawText('Director Clinico | 11,000+ implantes | 27 anos de experiencia', { size: 8, color: C.MED_GRAY });
+  b.drawText('Ex-Director Postgrado Implantes, Universidad Mayor (2006-2020)', { size: 8, color: C.MED_GRAY });
+  b.space(6);
+  b.drawText('Clinica Miro', { size: 9, font: b.fontBold, color: C.TEXT });
+  b.drawText('Av. Nueva Providencia 2214 Of. 189, Providencia, Santiago', { size: 8, color: C.MED_GRAY });
+  b.drawText('+56 9 7415 7966 | clinicamiro.cl | implantx.cl', { size: 8, color: C.BLUE_ACCENT });
+}
+
+// ============================================================
+//  REPORT GENERATORS - FULL STRUCTURE
+// ============================================================
+
+// FREE: 3 pages
 async function generateFreeReportV3(data: ReportDataV3): Promise<Uint8Array> {
   const b = new PDFBuilderV3();
   await b.init('FREE');
   b.currentSubtitle = 'EVALUACION INICIAL';
-
-  b.drawHeader('EVALUACION INICIAL - IMPLANTX v3.0');
-
-  b.drawSectionTitle('Datos del Paciente');
-  b.drawTable(
-    ['Campo', 'Informacion', 'Campo', 'Informacion'],
-    [
-      ['Paciente', data.patientName || '-', 'Edad', `${data.age || '-'} anos`],
-      ['Ciudad', data.city || '-', 'Fecha', data.evaluationDate || '-'],
-      ['Codigo', data.reportId || '-', 'Plan', 'EVALUACION INICIAL'],
-    ],
-    { colWidths: [80, 145, 80, CONTENT_W - 305], headerBg: C.GOLD_DARK, headerColor: C.WHITE }
-  );
-
-  b.space(8);
-  b.drawResultBoxV3(data, false);
-
-  b.drawSectionTitle('Resumen Orientativo');
-  const topFactors = data.mainAffectingFactors?.slice(0, 3).join(', ') || 'Multiples factores identificados';
-  const summaryText = `Se han identificado ${data.riskFactors.length} factores clinicos relevantes en su evaluacion. Los principales son: ${topFactors}. Su clasificacion global es ${data.classification}. Para obtener su probabilidad exacta de exito y plan de accion personalizado, consulte el Plan de Accion.`;
-  b.drawText(summaryText, { size: 9, lineHeight: 13, color: C.DARK_GRAY });
-
-  b.space(6);
-  b.drawSectionTitle('Que Incluye Esta Evaluacion');
-  const includes = ['Clasificacion de riesgo global', 'Top 3 factores de riesgo identificados', 'Multiplicador de riesgo combinado'];
-  for (const item of includes) {
-    b.drawText(`  + ${item}`, { size: 8, color: C.GREEN_OK, font: b.fontRegular });
-  }
-
-  b.space(4);
-  b.drawText('No incluye:', { size: 8, color: C.RED_ALERT, font: b.fontBold });
-  const notIncludes = ['Probabilidad de exito exacta', 'Detalle de factores con RR y mecanismos', 'Timeline de preparacion 4-6 semanas', 'Protocolo post-operatorio'];
-  for (const item of notIncludes) {
-    b.drawText(`  x ${item}`, { size: 8, color: C.MED_GRAY, font: b.fontRegular });
-  }
-
-  b.space(8);
+  
+  // Page 1: Cover
+  drawCoverPage(b, data);
+  
+  // Page 2: Executive Summary (without exact probability)
+  drawExecutiveSummaryPage(b, data, false);
+  
+  // Page 3: Upsell
+  b.newPage();
+  b.drawHeader('EVALUACION INICIAL');
+  
+  b.drawSectionTitle('Contenido de Esta Evaluacion');
+  b.drawText('✓ Clasificacion de riesgo global', { size: 10, color: C.GREEN_OK });
+  b.drawText('✓ Top 3 factores de riesgo identificados', { size: 10, color: C.GREEN_OK });
+  b.drawText('✓ Multiplicador de riesgo combinado', { size: 10, color: C.GREEN_OK });
+  b.space(10);
+  
+  b.drawText('✗ Probabilidad de exito exacta', { size: 10, color: C.MED_GRAY });
+  b.drawText('✗ Detalle de factores con RR y mecanismos biologicos', { size: 10, color: C.MED_GRAY });
+  b.drawText('✗ Timeline de preparacion 4-6 semanas', { size: 10, color: C.MED_GRAY });
+  b.drawText('✗ Protocolo post-operatorio completo', { size: 10, color: C.MED_GRAY });
+  b.space(15);
+  
   b.drawUpsellBox('BASE', '$14.900 CLP');
   b.drawDisclaimer();
+  
   b.drawFooterAllPages('EVALUACION INICIAL (GRATIS)');
-
   return b.save();
 }
 
+// BASE: 7 pages
 async function generateBaseReportV3(data: ReportDataV3): Promise<Uint8Array> {
   const b = new PDFBuilderV3();
   await b.init('BASE');
   b.currentSubtitle = 'PLAN DE ACCION';
-
-  // PAGE 1
-  b.drawHeader('PLAN DE ACCION - IMPLANTX v3.0');
-
-  b.drawSectionTitle('Datos del Paciente');
-  b.drawTable(
-    ['Campo', 'Informacion', 'Campo', 'Informacion'],
-    [
-      ['Paciente', data.patientName || '-', 'Edad', `${data.age || '-'} anos`],
-      ['Ciudad', data.city || '-', 'Fecha', data.evaluationDate || '-'],
-      ['Codigo', data.reportId || '-', 'Plan', 'PLAN DE ACCION'],
-    ],
-    { colWidths: [80, 145, 80, CONTENT_W - 305], headerBg: C.GOLD_DARK, headerColor: C.WHITE }
-  );
-
-  b.space(8);
-  b.drawResultBoxV3(data, true);
-
-  if (data.successProbability) {
-    b.drawText('Escala visual de riesgo:', { size: 8, color: C.MED_GRAY, font: b.fontItalic });
-    b.drawRiskGauge(data.successProbability);
+  
+  // Page 1: Cover
+  drawCoverPage(b, data);
+  
+  // Page 2: Executive Summary (with probability)
+  drawExecutiveSummaryPage(b, data, true);
+  
+  // Pages 3-5: Risk Factors (1 full page each, up to 3 factors)
+  const topFactors = data.riskFactors.slice(0, 3);
+  for (let i = 0; i < topFactors.length; i++) {
+    drawRiskFactorPage(b, topFactors[i], i, topFactors.length);
   }
-
-  // Risk Factors with RR
-  if (data.riskFactors && data.riskFactors.length > 0) {
-    b.drawSectionTitle('Factores de Riesgo Detallados');
-    const factorRows = data.riskFactors.map(f => [
-      f.factorName,
-      f.yourSituation,
-      `${f.relativeRisk.toFixed(1)}x`,
-      f.relativeRisk > 1.5 ? 'ALTO' : f.relativeRisk > 1.2 ? 'MODERADO' : 'BAJO',
-    ]);
-    b.drawTable(['Factor Clinico', 'Su Situacion', 'RR', 'Nivel'], factorRows, {
-      colWidths: [140, 170, 55, CONTENT_W - 365]
-    });
-    b.space(2);
-    b.drawText('RR = Riesgo Relativo. Un RR de 2.0x indica el doble de riesgo respecto a la poblacion base.', {
-      size: 6.5, color: C.MED_GRAY, font: b.fontItalic,
-    });
-  }
-
-  // PAGE 2 - Timeline
-  b.newPage();
-  b.drawHeader('PLAN DE ACCION - IMPLANTX v3.0');
-
-  if (data.preparationTimeline && data.preparationTimeline.length > 0) {
-    b.drawSectionTitle('Timeline de Preparacion');
-    for (const week of data.preparationTimeline) {
-      b.drawText(`${week.weekLabel}`, { size: 10, font: b.fontBold, color: C.GOLD_DARK });
-      for (const action of week.actions) {
-        b.drawPriorityBadge(action.category, M_LEFT + 10, b.y);
-        const badgeW = b.fontBold.widthOfTextAtSize(action.category, 6) + 18;
-        b.drawText(action.action, {
-          x: M_LEFT + badgeW, size: 8, color: C.TEXT, maxWidth: CONTENT_W - badgeW,
-        });
-        b.space(4);
-      }
-      b.space(6);
-    }
-  }
-
-  // Post-Op Protocol
-  if (data.postOpProtocol && data.postOpProtocol.length > 0) {
-    b.drawSectionTitle('Protocolo Post-Operatorio');
-    for (const phase of data.postOpProtocol) {
-      b.drawText(`${phase.period}:`, { size: 9, font: b.fontBold, color: C.BLUE_ACCENT });
-      for (const action of phase.actions) {
-        b.drawText(`  - ${action}`, { size: 8, color: C.TEXT });
-      }
-      b.space(4);
-    }
-  }
-
+  
+  // Page 6: Timeline
+  drawTimelinePage(b, data);
+  
+  // Page 7: Post-Op Protocol + Upsell
+  drawPostOpPage(b, data);
   b.space(10);
   b.drawUpsellBox('COMPLETE', '$29.990 CLP');
-
-  b.drawDisclaimer();
+  
   b.drawFooterAllPages('PLAN DE ACCION');
-
   return b.save();
 }
 
+// COMPLETE: 12 pages
 async function generateCompleteReportV3(data: ReportDataV3): Promise<Uint8Array> {
   const b = new PDFBuilderV3();
   await b.init('COMPLETE');
   b.currentSubtitle = 'EVALUACION CLINICA AVANZADA';
-
-  // PAGE 1
-  b.drawHeader('EVALUACION CLINICA AVANZADA - IMPLANTX v3.0');
-
-  b.drawSectionTitle('Datos del Paciente');
-  b.drawTable(
-    ['Campo', 'Informacion', 'Campo', 'Informacion'],
-    [
-      ['Paciente', data.patientName || '-', 'Edad', `${data.age || '-'} anos`],
-      ['Ciudad', data.city || '-', 'Fecha', data.evaluationDate || '-'],
-      ['Codigo', data.reportId || '-', 'Plan', 'PREMIUM'],
-    ],
-    { colWidths: [80, 145, 80, CONTENT_W - 305], headerBg: C.GOLD_DARK, headerColor: C.WHITE }
-  );
-
-  b.space(8);
-  b.drawResultBoxV3(data, true);
-
-  if (data.successProbability) {
-    b.drawRiskGauge(data.successProbability);
+  
+  // Page 1: Cover
+  drawCoverPage(b, data);
+  
+  // Page 2: Executive Summary
+  drawExecutiveSummaryPage(b, data, true);
+  
+  // Pages 3-5: Risk Factors (1 full page each)
+  const topFactors = data.riskFactors.slice(0, 3);
+  for (let i = 0; i < topFactors.length; i++) {
+    drawRiskFactorPage(b, topFactors[i], i, topFactors.length);
   }
-
-  // Risk Factors with full detail
-  if (data.riskFactors && data.riskFactors.length > 0) {
-    b.drawSectionTitle('Factores de Riesgo con Acciones');
-    const factorRows = data.riskFactors.map(f => [
-      f.factorName,
-      f.yourSituation,
-      `${f.relativeRisk.toFixed(1)}x`,
-      f.requiredActions[0] || 'Monitorizar',
-    ]);
-    b.drawTable(['Factor', 'Su Situacion', 'RR', 'Accion Principal'], factorRows, {
-      colWidths: [120, 135, 50, CONTENT_W - 305]
-    });
-  }
-
-  // PAGE 2 - Timeline + Protocol
-  b.newPage();
-  b.drawHeader('EVALUACION CLINICA AVANZADA - IMPLANTX v3.0');
-
-  if (data.preparationTimeline && data.preparationTimeline.length > 0) {
-    b.drawSectionTitle('Timeline de Preparacion Detallado');
-    for (const week of data.preparationTimeline) {
-      b.drawText(`${week.weekLabel}`, { size: 10, font: b.fontBold, color: C.GOLD_DARK });
-      for (const action of week.actions) {
-        b.drawPriorityBadge(action.category, M_LEFT + 10, b.y);
-        const badgeW = b.fontBold.widthOfTextAtSize(action.category, 6) + 18;
-        b.drawText(action.action, {
-          x: M_LEFT + badgeW, size: 8, color: C.TEXT, maxWidth: CONTENT_W - badgeW,
-        });
-        b.space(4);
-      }
-      b.space(6);
-    }
-  }
-
-  // Post-Op Protocol
-  if (data.postOpProtocol && data.postOpProtocol.length > 0) {
-    b.drawSectionTitle('Protocolo Post-Operatorio');
-    for (const phase of data.postOpProtocol) {
-      b.drawText(`${phase.period}:`, { size: 9, font: b.fontBold, color: C.BLUE_ACCENT });
-      for (const action of phase.actions) {
-        b.drawText(`  - ${action}`, { size: 8, color: C.TEXT });
-      }
-      b.space(4);
-    }
-  }
-
-  // PAGE 3 - Synergies (PREMIUM EXCLUSIVE)
-  b.newPage();
-  b.drawHeader('EVALUACION CLINICA AVANZADA - IMPLANTX v3.0');
-
-  if (data.factorSynergies && data.factorSynergies.length > 0) {
-    b.drawSectionTitle('Analisis de Sinergias de Factores (Exclusivo)');
-    b.drawText('Las sinergias representan interacciones entre factores que multiplican el riesgo mas alla de la simple suma.', {
-      size: 8, color: C.MED_GRAY, font: b.fontItalic,
-    });
-    b.space(6);
-    const synergyRows = data.factorSynergies.map(s => [
-      s.factorsCombined.join(' + '),
-      `${s.actualMultiplier.toFixed(1)}x`,
-      s.finalRiskReduction.totalReduction,
-    ]);
-    b.drawTable(['Combinacion de Factores', 'Multiplicador', 'Reduccion Posible'], synergyRows, {
-      colWidths: [200, 80, CONTENT_W - 280], headerBg: C.RED_ALERT, headerColor: C.WHITE, altRowBg: C.PINK_LIGHT,
-    });
-  }
-
-  // Anatomical Sectors (PREMIUM EXCLUSIVE)
-  if (data.anatomicalSectors && data.anatomicalSectors.length > 0) {
-    b.drawSectionTitle('Planificacion por Sector Anatomico (Exclusivo)');
-    const sectorRows = data.anatomicalSectors.map(s => [
-      s.sectorName,
-      s.teeth,
-      s.sacClassification,
-      s.riskLevel,
-      s.estimatedCost,
-    ]);
-    b.drawTable(['Sector', 'Dientes', 'SAC', 'Riesgo', 'Costo Est.'], sectorRows, {
-      colWidths: [100, 90, 40, 90, CONTENT_W - 320], headerBg: C.BLUE_ACCENT, headerColor: C.WHITE, altRowBg: C.BLUE_LIGHT,
-    });
-  }
-
-  // PAGE 4 - Scenarios (PREMIUM EXCLUSIVE)
-  b.newPage();
-  b.drawHeader('EVALUACION CLINICA AVANZADA - IMPLANTX v3.0');
-
-  if (data.adherenceScenarios && data.adherenceScenarios.length > 0) {
-    b.drawSectionTitle('Escenarios de Adherencia (Exclusivo)');
-    for (const scenario of data.adherenceScenarios) {
-      const bgColor = scenario.adherenceLevel === '100%' ? C.GREEN_OK :
-                      scenario.adherenceLevel === 'PARCIAL' ? C.YELLOW_WARN : C.RED_ALERT;
-      b.drawText(`${scenario.icon} ${scenario.scenarioName}`, { size: 10, font: b.fontBold, color: bgColor });
-      b.drawText(`Exito: ${scenario.results.successProbabilityOverall} | Cicatrizacion: ${scenario.results.healingTime}`, {
-        size: 8, color: C.TEXT,
-      });
-      b.drawText(`Costo total: ${scenario.results.totalEstimatedCost.total}`, {
-        size: 8, color: C.MED_GRAY, font: b.fontItalic,
-      });
-      if (scenario.specialWarning) {
-        b.drawText(`⚠️ ${scenario.specialWarning}`, { size: 7, color: C.RED_ALERT, font: b.fontBold });
-      }
-      b.space(8);
-    }
-  }
-
-  // CTA
-  b.space(8);
-  b.drawSectionTitle('Proximos Pasos');
-  const steps = [
-    '1. Videoconferencia con el Dr. Montoya para revision del informe (incluida)',
-    '2. Envio de imagenes radiograficas complementarias (panoramica o CBCT)',
-    '3. El pago de $29.990 se abona integramente al tratamiento final',
-    '4. Incluye 2 noches de estadia en Santiago durante el tratamiento',
-  ];
-  for (const s of steps) {
-    b.drawText(s, { size: 8.5, color: C.TEXT });
-    b.space(3);
-  }
-
-  b.drawDisclaimer();
+  
+  // Page 6: Timeline
+  drawTimelinePage(b, data);
+  
+  // Page 7: Post-Op Protocol
+  drawPostOpPage(b, data);
+  
+  // Pages 8-9: Synergies Analysis (PREMIUM EXCLUSIVE)
+  drawSynergiesPages(b, data);
+  
+  // Page 10: Anatomical Sectors (PREMIUM EXCLUSIVE)
+  drawAnatomicalSectorPage(b, data);
+  
+  // Page 11: Adherence Scenarios (PREMIUM EXCLUSIVE)
+  drawAdherenceScenariosPage(b, data);
+  
+  // Page 12: Next Steps (PREMIUM EXCLUSIVE)
+  drawNextStepsPage(b, data);
+  
   b.drawFooterAllPages('EVALUACION CLINICA AVANZADA (PREMIUM)');
-
   return b.save();
 }
 
@@ -853,16 +1180,20 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Generating v3 PDF report:', data.reportId, 'Plan:', plan);
 
     let pdfBytes: Uint8Array;
+    let numPages: number;
 
     switch (plan) {
       case 'COMPLETE':
         pdfBytes = await generateCompleteReportV3(data);
+        numPages = 12;
         break;
       case 'BASE':
         pdfBytes = await generateBaseReportV3(data);
+        numPages = 7;
         break;
       default:
         pdfBytes = await generateFreeReportV3(data);
+        numPages = 3;
         break;
     }
 
@@ -871,7 +1202,6 @@ const handler = async (req: Request): Promise<Response> => {
       : plan === 'BASE' ? '_PlanAccion'
       : '_Inicial';
 
-    const numPages = plan === 'COMPLETE' ? 4 : plan === 'BASE' ? 2 : 1;
     console.log('v3 PDF generated successfully, pages:', numPages);
 
     return new Response(
