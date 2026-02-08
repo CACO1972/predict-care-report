@@ -102,26 +102,26 @@ const TrustSection = () => {
             </p>
             
             {/* Document Links */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center lg:justify-start gap-2 sm:gap-3">
               <a
                 href="/docs/SafeCreative_Certificate.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-medium text-primary transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-medium text-primary transition-colors whitespace-nowrap"
               >
-                <FileCheck className="w-3.5 h-3.5" />
-                Ver Certificado
-                <ExternalLink className="w-3 h-3 opacity-60" />
+                <FileCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Ver Certificado</span>
+                <ExternalLink className="w-3 h-3 opacity-60 flex-shrink-0" />
               </a>
               <a
                 href="/docs/SafeCreative_Inscription.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
               >
-                <FileCheck className="w-3.5 h-3.5" />
-                Inscripción de Derechos
-                <ExternalLink className="w-3 h-3 opacity-60" />
+                <FileCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Inscripción de Derechos</span>
+                <ExternalLink className="w-3 h-3 opacity-60 flex-shrink-0" />
               </a>
             </div>
           </div>
