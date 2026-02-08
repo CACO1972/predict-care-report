@@ -70,9 +70,9 @@ const HeroSection = () => {
                 Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso.
               </p>
 
-              {/* Video Preview - Horizontal on mobile, vertical on desktop */}
+              {/* Video Preview - Larger size */}
               <div className="flex justify-center mb-4 sm:mb-5">
-                <div className="relative w-24 sm:w-28 lg:w-36">
+                <div className="relative w-40 sm:w-48 lg:w-56">
                   <div className="relative rounded-xl overflow-hidden border border-primary/20 shadow-lg shadow-primary/10 bg-background aspect-[9/16]">
                     <video
                       key="hero-intro-v5"
@@ -145,9 +145,9 @@ const HeroSection = () => {
           {/* Glow effect */}
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 via-accent/10 to-primary/15 blur-2xl scale-105 opacity-50" />
           
-          {/* Report container - scrollable, smaller on mobile */}
-          <div className="relative w-full max-w-[280px] sm:max-w-xs lg:max-w-sm rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-card">
-            <div className="h-[380px] sm:h-[450px] lg:h-[520px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+          {/* Report container - smaller size */}
+          <div className="relative w-full max-w-[200px] sm:max-w-[220px] lg:max-w-[260px] rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-card">
+            <div className="h-[280px] sm:h-[320px] lg:h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
               <ReportDemoPreview />
             </div>
           </div>
