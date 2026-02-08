@@ -25,8 +25,8 @@ const HeroSection = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16 pb-8 sm:pb-12">
-      {/* Trust Badges */}
+    <div className="max-w-7xl mx-auto px-4 pt-8 sm:pt-12 lg:pt-16 pb-8 sm:pb-12">
+      {/* Trust Badges - Centered */}
       <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
@@ -40,117 +40,116 @@ const HeroSection = () => {
         </span>
       </div>
 
-      {/* Emotional Hook */}
-      <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4 leading-tight">
-        <span className="bg-gradient-to-b from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
-          Recupera tu sonrisa
-        </span>
-        <br />
-        <span className="bg-gradient-to-b from-primary via-primary to-primary/70 bg-clip-text text-transparent">
-          sin perder tiempo ni dinero
-        </span>
-      </h1>
-
-      {/* Value Proposition */}
-      <p className="text-base sm:text-lg lg:text-xl text-foreground/80 font-medium mb-2 sm:mb-3">
-        Descubre en 5 minutos si eres candidato a implantes dentales
-      </p>
-
-      <p className="text-sm text-foreground/50 font-normal max-w-lg mx-auto leading-relaxed px-4 mb-6 sm:mb-8">
-        Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada.
-      </p>
-
-      {/* Two Column Layout: Video + Report Demo */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 mb-8 sm:mb-10 max-w-4xl mx-auto">
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         
-        {/* Video Avatar Section - Vertical 9:16 */}
-        <div className="flex justify-center lg:justify-end">
-          <div className="relative w-48 sm:w-56 md:w-64">
+        {/* Left Side - CTA Section */}
+        <div className="flex flex-col justify-center">
+          <div className="bg-card rounded-2xl p-6 sm:p-8 border border-primary/20 relative overflow-hidden">
             {/* Glow effect */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/20 blur-2xl scale-105 opacity-60" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-32 bg-primary/10 rounded-full blur-3xl" />
             
-            {/* Video container with 9:16 aspect ratio */}
-            <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-background aspect-[9/16]">
-              <video
-                key="hero-intro-v5"
-                ref={videoRef}
-                src="/hero-intro-v5.mp4"
-                poster={rioThumbnail}
-                playsInline
-                preload="metadata"
-                onEnded={handleVideoEnded}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              
-              {/* Play/Pause button - moves to corner when playing */}
-              <button
-                onClick={togglePlay}
-                className={`absolute transition-all duration-500 ease-out ${
-                  isPlaying 
-                    ? 'bottom-2 right-2 sm:bottom-3 sm:right-3 opacity-70 hover:opacity-100' 
-                    : 'inset-0 flex items-center justify-center'
-                }`}
-              >
-                <div className={`rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-110 ${
-                  isPlaying ? 'w-10 h-10 sm:w-12 sm:h-12' : 'w-14 h-14 sm:w-16 sm:h-16'
-                }`}>
-                  {isPlaying ? (
-                    <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
-                  ) : (
-                    <Play className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground ml-1" />
+            <div className="relative">
+              {/* Headline */}
+              <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-4 leading-tight">
+                <span className="bg-gradient-to-b from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
+                  ¿NECESITAS
+                </span>
+                <br />
+                <span className="bg-gradient-to-b from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+                  IMPLANTES?
+                </span>
+              </h1>
+
+              {/* Value Proposition */}
+              <p className="text-base sm:text-lg text-foreground/80 font-medium mb-2">
+                Descubre en 5 minutos si eres candidato
+              </p>
+
+              <p className="text-sm text-foreground/50 font-normal leading-relaxed mb-6">
+                Evita viajes costosos y consultas innecesarias. Nuestra IA analiza tu caso y te da una orientación personalizada.
+              </p>
+
+              {/* Video Preview (smaller) */}
+              <div className="relative w-32 sm:w-40 mx-auto mb-6">
+                <div className="relative rounded-xl overflow-hidden border border-primary/20 shadow-lg shadow-primary/10 bg-background aspect-[9/16]">
+                  <video
+                    key="hero-intro-v5"
+                    ref={videoRef}
+                    src="/hero-intro-v5.mp4"
+                    poster={rioThumbnail}
+                    playsInline
+                    preload="metadata"
+                    onEnded={handleVideoEnded}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  
+                  {/* Play/Pause button */}
+                  <button
+                    onClick={togglePlay}
+                    className={`absolute transition-all duration-500 ease-out ${
+                      isPlaying 
+                        ? 'bottom-2 right-2 opacity-70 hover:opacity-100' 
+                        : 'inset-0 flex items-center justify-center'
+                    }`}
+                  >
+                    <div className={`rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-110 ${
+                      isPlaying ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'
+                    }`}>
+                      {isPlaying ? (
+                        <Pause className="w-3 h-3 sm:w-4 sm:h-4 text-primary-foreground" />
+                      ) : (
+                        <Play className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground ml-0.5" />
+                      )}
+                    </div>
+                  </button>
+                  
+                  {/* Video label */}
+                  {!isPlaying && (
+                    <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-center">
+                      <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-[0.6rem] font-medium text-foreground/80">
+                        🎬 Conoce a Río
+                      </span>
+                    </div>
                   )}
                 </div>
+              </div>
+
+              {/* Main CTA Button */}
+              <button
+                onClick={() => navigate("/evaluacion")}
+                className="w-full h-14 sm:h-16 flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground text-base sm:text-lg font-bold hover:brightness-110 transition-all duration-300 shadow-lg shadow-primary/25"
+              >
+                <span>Obtén Informe Gratuito</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
-              
-              {/* Video label */}
-              {!isPlaying && (
-                <div className="absolute bottom-2 sm:bottom-3 left-2 right-2 sm:left-3 sm:right-3 flex items-center justify-center">
-                  <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-[0.65rem] sm:text-xs font-medium text-foreground/80">
-                    🎬 Conoce a Río
-                  </span>
-                </div>
-              )}
+
+              <p className="text-center text-muted-foreground/50 text-[0.65rem] sm:text-xs mt-3 tracking-wide">
+                Sin registro · 100% privado · Resultados inmediatos
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Report Demo Section */}
-        <div className="flex justify-center lg:justify-start">
-          <div className="relative w-full max-w-xs sm:max-w-sm">
-            {/* Glow effect */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 via-accent/10 to-primary/15 blur-2xl scale-105 opacity-50" />
-            
-            {/* Report container - scrollable */}
-            <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-card">
-              {/* Header badge */}
-              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center py-2 bg-gradient-to-b from-background/95 to-background/0">
-                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[0.65rem] sm:text-xs font-medium text-primary">
-                  📊 Vista previa del informe
-                </span>
-              </div>
-              
-              {/* Native React Report Preview - scrollable */}
-              <div className="h-[400px] sm:h-[480px] overflow-y-auto pt-10 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-                <ReportDemoPreview />
-              </div>
+        {/* Right Side - Report Preview */}
+        <div className="relative flex justify-center lg:justify-start">
+          {/* Floating Badge */}
+          <div className="absolute -top-3 right-4 lg:right-0 z-20">
+            <div className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold shadow-lg shadow-primary/30 flex items-center gap-2 text-sm">
+              📊 Vista previa del informe
+            </div>
+          </div>
+          
+          {/* Glow effect */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 via-accent/10 to-primary/15 blur-2xl scale-105 opacity-50" />
+          
+          {/* Report container - scrollable */}
+          <div className="relative w-full max-w-sm lg:max-w-md rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-primary/10 bg-card">
+            <div className="h-[500px] sm:h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+              <ReportDemoPreview />
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Main CTA */}
-      <div className="max-w-xs sm:max-w-sm mx-auto mb-6">
-        <button
-          onClick={() => navigate("/evaluacion")}
-          className="w-full h-14 sm:h-16 flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground text-base sm:text-lg font-semibold hover:brightness-110 transition-all duration-300 shadow-lg shadow-primary/25"
-        >
-          <span>Comenzar Evaluación Gratis</span>
-          <ArrowRight className="w-5 h-5" />
-        </button>
-
-        <p className="text-center text-muted-foreground/50 text-[0.65rem] sm:text-xs mt-3 tracking-wide">
-          Sin registro · 100% privado · Resultados inmediatos
-        </p>
       </div>
     </div>
   );
