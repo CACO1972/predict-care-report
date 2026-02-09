@@ -1,11 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-// Allow all origins for Lovable preview and production domains
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// CORS configuration - allow production and preview domains
+const getAllowedOrigin = (requestOrigin: string | null): string => {
+  const allowedPatterns = [
+    'https://implantx.cl',
+    'https://www.implantx.cl',
+    'https://app.implantx.cl',
+    'https://implantx.lovable.app',
+    'https://predict-care-report.lovable.app',
+    /^https:\/\/.*\.lovableproject\.com$/,
+    /^https:\/\/.*\.lovable\.app$/,
+  ];
+  
+  if (!requestOrigin) return 'https://predict-care-report.lovable.app';
+  
+  for (const pattern of allowedPatterns) {
+    if (typeof pattern === 'string' && requestOrigin === pattern) {
+      return requestOrigin;
+    }
+    if (pattern instanceof RegExp && pattern.test(requestOrigin)) {
+      return requestOrigin;
+    }
+  }
+  
+  return 'https://predict-care-report.lovable.app';
 };
+
+const getCorsHeaders = (requestOrigin: string | null) => ({
+  'Access-Control-Allow-Origin': getAllowedOrigin(requestOrigin),
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+});
 
 // Input validation schema
 const FeedbackRequestSchema = z.object({
@@ -38,6 +63,9 @@ const FeedbackRequestSchema = z.object({
 });
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
