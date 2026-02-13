@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import PatientQuestionnaire from "./pages/PatientQuestionnaire";
 import Documentation from "./pages/Documentation";
 import AudioGenerator from "./pages/AudioGenerator";
+import PagoExitoso from "./pages/PagoExitoso";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/evaluacion" element={<PatientQuestionnaire />} />
             <Route path="/documentacion" element={<Documentation />} />
             <Route path="/admin/audio-generator" element={<AudioGenerator />} />
+            <Route path="/pago-exitoso" element={<PagoExitoso />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

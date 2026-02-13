@@ -109,8 +109,10 @@ export type Database = {
           created_at: string
           currency: string | null
           external_reference: string | null
+          flow_order: string | null
+          flow_token: string | null
           id: string
-          mercadopago_id: string
+          mercadopago_id: string | null
           payer_email: string | null
           payer_name: string | null
           payment_type: string | null
@@ -126,8 +128,10 @@ export type Database = {
           created_at?: string
           currency?: string | null
           external_reference?: string | null
+          flow_order?: string | null
+          flow_token?: string | null
           id?: string
-          mercadopago_id: string
+          mercadopago_id?: string | null
           payer_email?: string | null
           payer_name?: string | null
           payment_type?: string | null
@@ -143,8 +147,10 @@ export type Database = {
           created_at?: string
           currency?: string | null
           external_reference?: string | null
+          flow_order?: string | null
+          flow_token?: string | null
           id?: string
-          mercadopago_id?: string
+          mercadopago_id?: string | null
           payer_email?: string | null
           payer_name?: string | null
           payment_type?: string | null

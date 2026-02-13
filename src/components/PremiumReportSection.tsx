@@ -248,26 +248,12 @@ const PremiumReportSection = ({
             Hasta 3 cuotas sin interés
           </p>
           
-          {/* Payment Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a 
-              href="https://mpago.li/2jpxDi2" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#009ee3] text-white hover:bg-[#007bb5] transition-all duration-300 font-semibold shadow-lg hover:scale-[1.02]"
-            >
+          {/* Payment Button */}
+          <div className="flex justify-center">
+            <span className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold opacity-50 cursor-not-allowed">
               <CreditCard className="w-5 h-5" />
-              Pagar con MercadoPago
-            </a>
-            <a 
-              href="https://www.flow.cl/uri/htBg1Fpys" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#00b140] text-white hover:bg-[#009933] transition-all duration-300 font-semibold shadow-lg hover:scale-[1.02]"
-            >
-              <CreditCard className="w-5 h-5" />
-              Pagar con Flow
-            </a>
+              Próximamente - Pagar con Flow
+            </span>
           </div>
         </div>
       </div>

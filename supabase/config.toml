@@ -18,10 +18,7 @@ verify_jwt = false
 [functions.send-report-email]
 verify_jwt = false
 
-[functions.mercadopago-webhook]
-verify_jwt = false
-
-[functions.verify-payment]
+[functions.flow-webhook]
 verify_jwt = false
 
 [functions.dentalink-availability]
