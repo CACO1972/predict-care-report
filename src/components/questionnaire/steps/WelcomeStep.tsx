@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef, useState } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
@@ -17,16 +17,12 @@ interface WelcomeStepProps {
 }
 
 const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: WelcomeStepProps) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const comenzamosAudioRef = useRef<HTMLAudioElement | null>(null);
-  const isMutedRef = useRef(isMuted);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
 
   const handleVideoEnded = () => {
     if (currentVideoIndex < RIO_VIDEOS.length - 1) {
       setCurrentVideoIndex(prev => prev + 1);
     }
-    // Last video: stays on last frame (no loop)
   };
 
   // Auto-play when video source changes
@@ -37,82 +33,10 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
     }
   }, [currentVideoIndex]);
 
-  // Keep muted ref in sync
+  // Sync muted state to video element
   useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
-
-  // Play welcome audio sequence when component mounts
-  useEffect(() => {
-    const welcomeAudio = new Audio("/audio/hola-soy-rio.mp3");
-    audioRef.current = welcomeAudio;
-    
-    // Generate comenzamos audio via TTS
-    const fetchComenzamosAudio = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-            },
-            body: JSON.stringify({
-              text: "¿Comenzamos?",
-              voice_id: "0cheeVA5B3Cv6DGq65cT"
-            })
-          }
-        );
-        if (response.ok) {
-          const audioBlob = await response.blob();
-          const audioUrl = URL.createObjectURL(audioBlob);
-          comenzamosAudioRef.current = new Audio(audioUrl);
-        }
-      } catch (err) {
-        console.log("Failed to fetch comenzamos audio:", err);
-      }
-    };
-    
-    fetchComenzamosAudio();
-    
-    // Chain audios: play "comenzamos?" after welcome audio ends
-    welcomeAudio.addEventListener('ended', () => {
-      if (!isMutedRef.current && comenzamosAudioRef.current) {
-        comenzamosAudioRef.current.play().catch(err => {
-          console.log("Comenzamos audio play blocked:", err);
-        });
-      }
-    });
-
-    if (!isMuted) {
-      welcomeAudio.play().catch(err => {
-        console.log("Audio autoplay blocked:", err);
-      });
-    }
-
-    return () => {
-      welcomeAudio.pause();
-      welcomeAudio.src = "";
-      if (comenzamosAudioRef.current) {
-        comenzamosAudioRef.current.pause();
-        comenzamosAudioRef.current.src = "";
-      }
-    };
-  }, []);
-
-  // Handle mute toggle for audio
-  useEffect(() => {
-    if (isMuted) {
-      audioRef.current?.pause();
-      comenzamosAudioRef.current?.pause();
-    } else {
-      // Resume welcome audio if it hasn't ended
-      if (audioRef.current && audioRef.current.currentTime < audioRef.current.duration) {
-        audioRef.current.play().catch(err => {
-          console.log("Audio play blocked:", err);
-        });
-      }
+    if (welcomeVideoRef.current) {
+      welcomeVideoRef.current.muted = isMuted;
     }
   }, [isMuted]);
 
