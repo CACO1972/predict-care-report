@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
   Activity, ArrowRight, CheckCircle2, FileText, Lock, 
-  Sparkles, TrendingUp, Shield, Zap, Crown, Download, Loader2, Mail,
+  Sparkles, TrendingUp, Shield, Zap, Crown, Download,
   X, Car, Plane, Clock, DollarSign, Bug
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IRPResult, getIRPColorClass } from "@/utils/irpCalculation";
-import { usePaymentVerification } from "@/hooks/usePaymentVerification";
 import { PurchaseLevel } from "@/types/questionnaire";
 import { useToast } from "@/hooks/use-toast";
 import RioAvatar from "./RioAvatar";
@@ -20,8 +19,9 @@ interface IRPResultScreenProps {
   onPurchasePlan: (level: PurchaseLevel) => void;
 }
 
-const MERCADOPAGO_PLAN_ACCION = "https://mpago.la/2eWC5q6"; // $14.900
-const MERCADOPAGO_PREMIUM = "https://mpago.li/2jpxDi2"; // $29.990
+// Payment link placeholders - replace with actual Flow links
+const FLOW_PLAN_ACCION = ""; // TODO: Add Flow link for Plan de Acción ($14.900)
+const FLOW_PREMIUM = ""; // TODO: Add Flow link for Premium ($29.990)
 
 // Test mode bypass - use ?testMode=premium or ?testMode=plan-accion in URL
 const getTestMode = (): PurchaseLevel | null => {
@@ -41,49 +41,32 @@ const IRPResultScreen = ({
   onPurchasePlan 
 }: IRPResultScreenProps) => {
   const [isHoveringPremium, setIsHoveringPremium] = useState(false);
-  const [showEmailPrompt, setShowEmailPrompt] = useState(false);
-  const [showPolling, setShowPolling] = useState(false);
-  const [paymentEmail, setPaymentEmail] = useState('');
-  const [pendingLevel, setPendingLevel] = useState<'plan-accion' | 'premium' | null>(null);
-  const [pollingSeconds, setPollingSeconds] = useState(0);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const colorClasses = getIRPColorClass(irpResult.level);
-  const { verifyPayment, isVerifying } = usePaymentVerification();
   const { toast } = useToast();
   
   // Check for test mode
   const testMode = getTestMode();
 
-  // Restore payment state after MercadoPago redirect (mobile popup fallback)
+  // Check if returning from Flow payment
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('implantx_pending_payment');
+      const saved = localStorage.getItem('implantx_purchase_verified');
       if (saved) {
-        const { email, level, timestamp } = JSON.parse(saved);
-        // Only restore if less than 10 minutes old
-        if (Date.now() - timestamp < 600000) {
-          setPaymentEmail(email);
-          setPendingLevel(level);
-          setShowPolling(true);
-          startPolling(email);
+        const { level, timestamp } = JSON.parse(saved);
+        // Only use if less than 30 minutes old
+        if (Date.now() - timestamp < 1800000) {
           toast({
-            title: "Verificando tu pago...",
-            description: "Estamos confirmando tu transacción",
+            title: "¡Pago verificado!",
+            description: `Tu ${level === 'premium' ? 'Informe Premium' : 'Plan de Acción'} está listo`,
           });
+          localStorage.removeItem('implantx_purchase_verified');
+          onPurchasePlan(level);
+        } else {
+          localStorage.removeItem('implantx_purchase_verified');
         }
-        localStorage.removeItem('implantx_pending_payment');
       }
-    } catch (e) { /* localStorage may not be available */ }
+    } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, []);
   
   // Handle test mode bypass
   const handleTestBypass = (level: PurchaseLevel) => {
@@ -94,124 +77,28 @@ const IRPResultScreen = ({
     onPurchasePlan(level);
   };
 
-  // Start polling for payment
-  const MAX_POLLING_SECONDS = 300; // 5 minutos máximo
-
-  const startPolling = (email: string) => {
-    setPollingSeconds(0);
-    
-    // Poll every 3 seconds, max 5 minutes
-    pollingIntervalRef.current = setInterval(async () => {
-      setPollingSeconds(prev => {
-        const next = prev + 3;
-        // Timeout: stop polling after 5 minutes
-        if (next >= MAX_POLLING_SECONDS) {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-          }
-          toast({
-            title: "Verificación en proceso",
-            description: "Tu pago puede tardar unos minutos. Usa el botón de verificación manual o revisa tu email.",
-            variant: "default",
-          });
-        }
-        return next;
-      });
-      
-      const result = await verifyPayment({ payerEmail: email.trim().toLowerCase() });
-      
-      if (result.verified && result.purchase_level) {
-        // Payment found! Stop polling and continue
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-        }
-        
-        // Clean up localStorage state
-        try { localStorage.removeItem('implantx_pending_payment'); } catch (e) {}
-        
-        toast({
-          title: "¡Pago verificado!",
-          description: `Tu ${result.purchase_level === 'premium' ? 'Informe Premium' : 'Plan de Acción'} está listo`,
-        });
-        
-        setShowPolling(false);
-        onPurchasePlan(result.purchase_level);
-      }
-    }, 3000);
-  };
-
   const handleInitiatePurchase = (level: 'plan-accion' | 'premium') => {
-    setPendingLevel(level);
-    setShowEmailPrompt(true);
-  };
-
-  const handleConfirmEmailAndPay = () => {
-    if (!paymentEmail.trim() || !paymentEmail.includes('@')) {
+    const url = level === 'premium' ? FLOW_PREMIUM : FLOW_PLAN_ACCION;
+    
+    if (!url) {
       toast({
-        title: "Email inválido",
-        description: "Ingresa un email válido para continuar",
+        title: "Link de pago no configurado",
+        description: "Por favor contacta al administrador",
         variant: "destructive",
       });
       return;
     }
 
-    // Open MercadoPago with popup blocker fallback
-    const url = pendingLevel === 'premium' ? MERCADOPAGO_PREMIUM : MERCADOPAGO_PLAN_ACCION;
-    const popup = window.open(url, '_blank');
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      // Popup blocked (common on mobile) - save state and redirect
-      try {
-        localStorage.setItem('implantx_pending_payment', JSON.stringify({
-          email: paymentEmail.trim().toLowerCase(),
-          level: pendingLevel,
-          timestamp: Date.now(),
-        }));
-      } catch (e) { /* localStorage may not be available */ }
-      window.location.href = url;
-      return;
-    }
-    
-    // Switch to polling view
-    setShowEmailPrompt(false);
-    setShowPolling(true);
-    
-    // Start automatic polling
-    startPolling(paymentEmail);
-  };
+    // Save state for when user returns from Flow
+    try {
+      localStorage.setItem('implantx_flow_payment', JSON.stringify({
+        level,
+        timestamp: Date.now(),
+      }));
+    } catch {}
 
-  const handleCancelPolling = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-    setShowPolling(false);
-    setShowEmailPrompt(false);
-    setPendingLevel(null);
-    setPaymentEmail('');
-    setPollingSeconds(0);
-  };
-
-  const handleManualVerify = async () => {
-    const result = await verifyPayment({ payerEmail: paymentEmail.trim().toLowerCase() });
-    
-    if (result.verified && result.purchase_level) {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-      
-      toast({
-        title: "¡Pago verificado!",
-        description: `Tu ${result.purchase_level === 'premium' ? 'Informe Premium' : 'Plan de Acción'} está listo`,
-      });
-      
-      setShowPolling(false);
-      onPurchasePlan(result.purchase_level);
-    } else {
-      toast({
-        title: "Pago no encontrado",
-        description: "Si acabas de pagar, espera unos segundos más",
-        variant: "destructive",
-      });
-    }
+    // Redirect to Flow payment
+    window.location.href = url;
   };
 
   // Características de cada plan
@@ -255,14 +142,12 @@ const IRPResultScreen = ({
   const [selectedPlanAudio, setSelectedPlanAudio] = useState<string | null>(null);
   const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
 
-  // Reproducir audio de intro al montar
   useEffect(() => {
     if (!hasPlayedIntro) {
       setHasPlayedIntro(true);
     }
   }, [hasPlayedIntro]);
 
-  // Función para obtener audio del plan
   const getPlanAudio = (plan: 'free' | 'base' | 'premium') => {
     const audioMap = {
       free: '/audio/rio-plan-gratis.mp3',
@@ -307,22 +192,9 @@ const IRPResultScreen = ({
         <div className="relative text-center space-y-3">
           <div className="relative inline-flex items-center justify-center">
             <svg className="w-32 h-32 transform -rotate-90">
+              <circle cx="64" cy="64" r="56" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/20" />
               <circle
-                cx="64"
-                cy="64"
-                r="56"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                className="text-muted/20"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
+                cx="64" cy="64" r="56" fill="none" stroke="currentColor" strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray={`${(irpResult.score / 100) * 352} 352`}
                 className={colorClasses.text}
@@ -330,23 +202,16 @@ const IRPResultScreen = ({
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={cn("text-3xl font-bold", colorClasses.text)}>
-                {irpResult.score}
-              </span>
+              <span className={cn("text-3xl font-bold", colorClasses.text)}>{irpResult.score}</span>
               <span className="text-xs text-muted-foreground">puntos</span>
             </div>
           </div>
 
           <div className="space-y-1">
-            <div className={cn(
-              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm",
-              colorClasses.bg, colorClasses.text
-            )}>
+            <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm", colorClasses.bg, colorClasses.text)}>
               <span className="font-semibold">{irpResult.levelLabel}</span>
             </div>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              {irpResult.message}
-            </p>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">{irpResult.message}</p>
           </div>
         </div>
       </Card>
@@ -362,15 +227,9 @@ const IRPResultScreen = ({
               💡 Si tuvieras que viajar a Santiago para una evaluación presencial...
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Car className="w-3 h-3" /> Transporte: ~$30.000
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Tiempo: 1 día completo
-              </span>
-              <span className="flex items-center gap-1">
-                <Plane className="w-3 h-3" /> Si vuelas: ~$80.000+
-              </span>
+              <span className="flex items-center gap-1"><Car className="w-3 h-3" /> Transporte: ~$30.000</span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Tiempo: 1 día completo</span>
+              <span className="flex items-center gap-1"><Plane className="w-3 h-3" /> Si vuelas: ~$80.000+</span>
             </div>
             <p className="text-sm font-semibold text-emerald-600">
               Con ImplantX ahorras hasta $100.000 y tienes resultados en 5 minutos
@@ -379,120 +238,7 @@ const IRPResultScreen = ({
         </div>
       </Card>
 
-      {/* Modal para pedir email ANTES de pagar */}
-      {showEmailPrompt && (
-        <Card className="border-2 border-primary/50 p-6 space-y-4 bg-gradient-to-br from-primary/5 to-transparent animate-fade-in">
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mx-auto">
-              <Mail className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="font-bold text-lg text-foreground">Antes de continuar</h3>
-            <p className="text-sm text-muted-foreground">
-              Ingresa el email que usarás en MercadoPago para que podamos verificar tu compra automáticamente
-            </p>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Tu email</label>
-              <input
-                type="email"
-                placeholder="tu@email.com"
-                value={paymentEmail}
-                onChange={(e) => setPaymentEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                autoFocus
-              />
-            </div>
-            <Button 
-              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:brightness-110 text-primary-foreground font-semibold"
-              size="lg"
-              onClick={handleConfirmEmailAndPay}
-            >
-              Continuar a MercadoPago
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full text-muted-foreground text-sm"
-              onClick={() => {
-                setShowEmailPrompt(false);
-                setPendingLevel(null);
-                setPaymentEmail('');
-              }}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Modal de polling automático */}
-      {showPolling && (
-        <Card className="border-2 border-emerald-500/50 p-6 space-y-4 bg-gradient-to-br from-emerald-500/5 to-transparent animate-fade-in">
-          <div className="text-center space-y-3">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-              </div>
-            </div>
-            <h3 className="font-bold text-lg text-foreground">Esperando confirmación de pago</h3>
-            <p className="text-sm text-muted-foreground">
-              Completa el pago en MercadoPago. Detectaremos tu compra automáticamente.
-            </p>
-            <div className="text-xs text-muted-foreground">
-              Verificando... {pollingSeconds}s
-            </div>
-          </div>
-          
-          <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-2">
-            <p className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 text-[10px] font-bold">1</span>
-              Completa el pago en la ventana de MercadoPago
-            </p>
-            <p className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 text-[10px] font-bold">2</span>
-              Vuelve aquí - detectaremos tu pago automáticamente
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Button 
-              className="w-full gap-2"
-              variant="outline"
-              onClick={handleManualVerify}
-              disabled={isVerifying}
-            >
-              {isVerifying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Verificando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Verificar manualmente
-                </>
-              )}
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full text-muted-foreground text-sm"
-              onClick={handleCancelPolling}
-            >
-              Cancelar
-            </Button>
-            
-            <p className="text-[10px] text-center text-muted-foreground">
-              El pago puede tardar unos segundos en procesarse después de completar la transacción.
-            </p>
-          </div>
-        </Card>
-      )}
-
-      {/* TEST MODE BANNER - Only visible when ?testMode=premium or ?testMode=plan-accion */}
+      {/* TEST MODE BANNER */}
       {testMode && (
         <Card className="border-2 border-orange-500 bg-orange-500/10 p-4 space-y-3 animate-fade-in">
           <div className="flex items-center gap-3">
@@ -507,257 +253,161 @@ const IRPResultScreen = ({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={() => handleTestBypass('plan-accion')}
-              variant="outline"
-              className="gap-2 border-orange-500/50 hover:bg-orange-500/10"
-            >
-              <Zap className="w-4 h-4" />
-              Test Plan Acción
+            <Button onClick={() => handleTestBypass('plan-accion')} variant="outline" className="gap-2 border-orange-500/50 hover:bg-orange-500/10">
+              <Zap className="w-4 h-4" />Test Plan Acción
             </Button>
-            <Button
-              onClick={() => handleTestBypass('premium')}
-              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-white"
-            >
-              <Crown className="w-4 h-4" />
-              Test Premium
+            <Button onClick={() => handleTestBypass('premium')} className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-white">
+              <Crown className="w-4 h-4" />Test Premium
             </Button>
           </div>
         </Card>
       )}
 
       {/* Comparación de planes */}
-      {!showEmailPrompt && !showPolling && (
-        <div className="space-y-4">
-          <h3 className="text-center text-lg font-semibold text-foreground">
-            Elige tu nivel de análisis
-          </h3>
-          <p className="text-center text-xs text-muted-foreground">
-            🔊 Toca en cada plan para escuchar a Río explicártelo
-          </p>
+      <div className="space-y-4">
+        <h3 className="text-center text-lg font-semibold text-foreground">Elige tu nivel de análisis</h3>
+        <p className="text-center text-xs text-muted-foreground">🔊 Toca en cada plan para escuchar a Río explicártelo</p>
 
-          {/* Plan Premium - Destacado */}
-          <Card 
-            className={cn(
-              "relative overflow-hidden border-2 transition-all duration-300",
-              isHoveringPremium 
-                ? "border-amber-500 shadow-xl shadow-amber-500/20 scale-[1.01]" 
-                : "border-amber-500/50"
+        {/* Plan Premium - Destacado */}
+        <Card 
+          className={cn(
+            "relative overflow-hidden border-2 transition-all duration-300",
+            isHoveringPremium ? "border-amber-500 shadow-xl shadow-amber-500/20 scale-[1.01]" : "border-amber-500/50"
+          )}
+          onMouseEnter={() => setIsHoveringPremium(true)}
+          onMouseLeave={() => setIsHoveringPremium(false)}
+        >
+          <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold py-1.5 text-center flex items-center justify-center gap-1">
+            <Crown className="w-3.5 h-3.5" />MÁS COMPLETO • RECOMENDADO
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-50" />
+          <div className="relative p-6 pt-10 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-500" />Informe Premium
+                </h3>
+                <p className="text-sm text-muted-foreground">Análisis completo + Simulación de sonrisa con IA</p>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground line-through">$49.990</div>
+                <div className="text-2xl font-bold text-amber-500">$29.990</div>
+                <div className="text-xs text-emerald-600 font-medium">Ahorras $20.000</div>
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              {planFeatures.premium.map((feature, i) => (
+                <div key={i} className={cn("flex items-center gap-2 text-sm", feature.highlight && "font-medium text-amber-600")}>
+                  <CheckCircle2 className={cn("w-4 h-4 flex-shrink-0", feature.highlight ? "text-amber-500" : "text-emerald-500")} />
+                  <span className="text-foreground/90">{feature.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'premium' ? null : 'premium')}>
+                🔊 {selectedPlanAudio === 'premium' ? 'Pausar' : 'Escuchar sobre este plan'}
+              </Button>
+              <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
+                size="lg" onClick={() => handleInitiatePurchase('premium')}>
+                Obtener Informe Premium<ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+            {selectedPlanAudio === 'premium' && (
+              <audio src={getPlanAudio('premium')} autoPlay onEnded={() => setSelectedPlanAudio(null)} />
             )}
-            onMouseEnter={() => setIsHoveringPremium(true)}
-            onMouseLeave={() => setIsHoveringPremium(false)}
-          >
-            {/* Badge más vendido */}
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold py-1.5 text-center flex items-center justify-center gap-1">
-              <Crown className="w-3.5 h-3.5" />
-              MÁS COMPLETO • RECOMENDADO
-            </div>
+          </div>
+        </Card>
 
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-50" />
-
-            <div className="relative p-6 pt-10 space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-amber-500" />
-                    Informe Premium
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Análisis completo + Simulación de sonrisa con IA
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-muted-foreground line-through">$49.990</div>
-                  <div className="text-2xl font-bold text-amber-500">$29.990</div>
-                  <div className="text-xs text-emerald-600 font-medium">Ahorras $20.000</div>
-                </div>
+        {/* Plan Base */}
+        <Card className="relative overflow-hidden border-2 border-primary/30 hover:border-primary/60 transition-all">
+          <div className="absolute top-0 right-0">
+            <div className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />Plan de Acción
+                </h3>
+                <p className="text-sm text-muted-foreground">Tu guía paso a paso para prepararte</p>
               </div>
-
-              <div className="grid gap-1.5">
-                {planFeatures.premium.map((feature, i) => (
-                  <div key={i} className={cn(
-                    "flex items-center gap-2 text-sm",
-                    feature.highlight && "font-medium text-amber-600"
-                  )}>
-                    <CheckCircle2 className={cn(
-                      "w-4 h-4 flex-shrink-0",
-                      feature.highlight ? "text-amber-500" : "text-emerald-500"
-                    )} />
-                    <span className="text-foreground/90">{feature.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Button 
-                  variant="outline"
-                  className="w-full gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
-                  onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'premium' ? null : 'premium')}
-                >
-                  🔊 {selectedPlanAudio === 'premium' ? 'Pausar' : 'Escuchar sobre este plan'}
-                </Button>
-                <Button 
-                  className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
-                  size="lg"
-                  onClick={() => handleInitiatePurchase('premium')}
-                >
-                  Obtener Informe Premium
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              {/* Audio player oculto para premium */}
-              {selectedPlanAudio === 'premium' && (
-                <audio 
-                  src={getPlanAudio('premium')} 
-                  autoPlay 
-                  onEnded={() => setSelectedPlanAudio(null)}
-                />
-              )}
-            </div>
-          </Card>
-
-          {/* Plan Base */}
-          <Card className="relative overflow-hidden border-2 border-primary/30 hover:border-primary/60 transition-all">
-            <div className="absolute top-0 right-0">
-              <div className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg">
-                POPULAR
+              <div className="text-right">
+                <div className="text-xl font-bold text-primary">$14.900</div>
+                <div className="text-xs text-muted-foreground">CLP</div>
               </div>
             </div>
-
-            <div className="p-5 space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    Plan de Acción
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Tu guía paso a paso para prepararte
-                  </p>
+            <div className="grid gap-1.5">
+              {planFeatures.base.map((feature, i) => (
+                <div key={i} className={cn("flex items-center gap-2 text-sm", feature.highlight && "font-medium text-primary")}>
+                  {feature.included ? (
+                    <CheckCircle2 className={cn("w-4 h-4 flex-shrink-0", feature.highlight ? "text-primary" : "text-emerald-500")} />
+                  ) : (
+                    <X className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
+                  )}
+                  <span className={cn(!feature.included && "text-muted-foreground/60")}>{feature.text}</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-xl font-bold text-primary">$14.900</div>
-                  <div className="text-xs text-muted-foreground">CLP</div>
-                </div>
-              </div>
-
-              <div className="grid gap-1.5">
-                {planFeatures.base.map((feature, i) => (
-                  <div key={i} className={cn(
-                    "flex items-center gap-2 text-sm",
-                    feature.highlight && "font-medium text-primary"
-                  )}>
-                    {feature.included ? (
-                      <CheckCircle2 className={cn(
-                        "w-4 h-4 flex-shrink-0",
-                        feature.highlight ? "text-primary" : "text-emerald-500"
-                      )} />
-                    ) : (
-                      <X className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
-                    )}
-                    <span className={cn(
-                      !feature.included && "text-muted-foreground/60"
-                    )}>{feature.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Button 
-                  variant="outline"
-                  className="w-full gap-2 text-xs"
-                  onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'base' ? null : 'base')}
-                >
-                  🔊 {selectedPlanAudio === 'base' ? 'Pausar' : 'Escuchar sobre este plan'}
-                </Button>
-                <Button 
-                  className="w-full gap-2"
-                  size="lg"
-                  onClick={() => handleInitiatePurchase('plan-accion')}
-                >
-                  Obtener Plan de Acción
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Audio player oculto para base */}
-              {selectedPlanAudio === 'base' && (
-                <audio 
-                  src={getPlanAudio('base')} 
-                  autoPlay 
-                  onEnded={() => setSelectedPlanAudio(null)}
-                />
-              )}
+              ))}
             </div>
-          </Card>
-
-          {/* Plan Gratuito */}
-          <Card className="border border-border/50 bg-muted/5">
-            <div className="p-5 space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    Informe IRP Gratuito
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Resumen básico de tu evaluación
-                  </p>
-                </div>
-                <div className="text-lg font-semibold text-emerald-600">GRATIS</div>
-              </div>
-
-              <div className="grid gap-1.5">
-                {planFeatures.free.map((feature, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    {feature.included ? (
-                      <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-500" />
-                    ) : (
-                      <X className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
-                    )}
-                    <span className={cn(
-                      !feature.included && "text-muted-foreground/50"
-                    )}>{feature.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Button 
-                  variant="ghost"
-                  className="w-full gap-2 text-xs"
-                  onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'free' ? null : 'free')}
-                >
-                  🔊 {selectedPlanAudio === 'free' ? 'Pausar' : 'Escuchar sobre este plan'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full gap-2"
-                  onClick={onContinueFree}
-                >
-                  Solo quiero mi IRP gratis
-                  <Download className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Audio player oculto para free */}
-              {selectedPlanAudio === 'free' && (
-                <audio 
-                  src={getPlanAudio('free')} 
-                  autoPlay 
-                  onEnded={() => setSelectedPlanAudio(null)}
-                />
-              )}
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full gap-2 text-xs"
+                onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'base' ? null : 'base')}>
+                🔊 {selectedPlanAudio === 'base' ? 'Pausar' : 'Escuchar sobre este plan'}
+              </Button>
+              <Button className="w-full gap-2" size="lg" onClick={() => handleInitiatePurchase('plan-accion')}>
+                Obtener Plan de Acción<ArrowRight className="w-4 h-4" />
+              </Button>
             </div>
-          </Card>
-        </div>
-      )}
+            {selectedPlanAudio === 'base' && (
+              <audio src={getPlanAudio('base')} autoPlay onEnded={() => setSelectedPlanAudio(null)} />
+            )}
+          </div>
+        </Card>
+
+        {/* Plan Gratuito */}
+        <Card className="border border-border/50 bg-muted/5">
+          <div className="p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />Informe IRP Gratuito
+                </h3>
+                <p className="text-xs text-muted-foreground">Resumen básico de tu evaluación</p>
+              </div>
+              <div className="text-lg font-semibold text-emerald-600">GRATIS</div>
+            </div>
+            <div className="grid gap-1.5">
+              {planFeatures.free.map((feature, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  {feature.included ? (
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-500" />
+                  ) : (
+                    <X className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
+                  )}
+                  <span className={cn(!feature.included && "text-muted-foreground/50")}>{feature.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Button variant="ghost" className="w-full gap-2 text-xs"
+                onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'free' ? null : 'free')}>
+                🔊 {selectedPlanAudio === 'free' ? 'Pausar' : 'Escuchar sobre este plan'}
+              </Button>
+              <Button variant="outline" className="w-full gap-2" onClick={onContinueFree}>
+                Solo quiero mi IRP gratis<Download className="w-4 h-4" />
+              </Button>
+            </div>
+            {selectedPlanAudio === 'free' && (
+              <audio src={getPlanAudio('free')} autoPlay onEnded={() => setSelectedPlanAudio(null)} />
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* Nota de seguridad */}
       <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
         <Lock className="w-3.5 h-3.5" />
-        <span>Pago seguro con MercadoPago • Garantía de satisfacción</span>
+        <span>Pago seguro con Flow • Garantía de satisfacción</span>
       </div>
     </div>
   );

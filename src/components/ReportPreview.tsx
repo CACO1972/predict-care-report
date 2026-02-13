@@ -932,15 +932,10 @@ const ReportPreview = ({ evaluation, purchaseLevel = 'free' }: ReportPreviewProp
                     Obtén tu checklist preoperatorio, cronograma detallado, IRP completo y guía paso a paso para prepararte para tu tratamiento.
                   </p>
                 </div>
-                <a 
-                  href="https://mpago.la/2eWC5q6"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:brightness-110 transition-all"
-                >
+                <span className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold opacity-50 cursor-not-allowed">
                   Obtener Plan de Acción
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </span>
               </div>
             </div>
           </div>
