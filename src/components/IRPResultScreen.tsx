@@ -19,6 +19,7 @@ interface IRPResultScreenProps {
   patientEmail?: string;
   onContinueFree: () => void;
   onPurchasePlan: (level: PurchaseLevel) => void;
+  onSaveStateForPayment?: () => void;
 }
 
 // Test mode bypass - use ?testMode=premium or ?testMode=plan-accion in URL
@@ -37,7 +38,8 @@ const IRPResultScreen = ({
   patientName,
   patientEmail,
   onContinueFree,
-  onPurchasePlan 
+  onPurchasePlan,
+  onSaveStateForPayment,
 }: IRPResultScreenProps) => {
   const [isHoveringPremium, setIsHoveringPremium] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -47,26 +49,7 @@ const IRPResultScreen = ({
   // Check for test mode
   const testMode = getTestMode();
 
-  // Check if returning from Flow payment
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('implantx_purchase_verified');
-      if (saved) {
-        const { level, timestamp } = JSON.parse(saved);
-        // Only use if less than 30 minutes old
-        if (Date.now() - timestamp < 1800000) {
-          toast({
-            title: "¡Pago verificado!",
-            description: `Tu ${level === 'premium' ? 'Informe Premium' : 'Plan de Acción'} está listo`,
-          });
-          localStorage.removeItem('implantx_purchase_verified');
-          onPurchasePlan(level);
-        } else {
-          localStorage.removeItem('implantx_purchase_verified');
-        }
-      }
-    } catch {}
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // No longer needed - state restoration is handled by useQuestionnaireFlow
   
   // Handle test mode bypass
   const handleTestBypass = (level: PurchaseLevel) => {
@@ -102,7 +85,10 @@ const IRPResultScreen = ({
         throw new Error(data?.error || error?.message || 'Error al crear orden de pago');
       }
 
-      // Save state for when user returns from Flow
+      // Save questionnaire state before redirect
+      if (onSaveStateForPayment) {
+        onSaveStateForPayment();
+      }
       try {
         localStorage.setItem('implantx_flow_payment', JSON.stringify({
           level,

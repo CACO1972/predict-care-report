@@ -14,13 +14,15 @@ interface UpsellPremiumScreenProps {
   patientEmail?: string;
   onUpgrade: () => void;
   onSkip: () => void;
+  onSaveStateForPayment?: () => void;
 }
 
 const UpsellPremiumScreen = ({ 
   patientName,
   patientEmail,
   onUpgrade,
-  onSkip 
+  onSkip,
+  onSaveStateForPayment,
 }: UpsellPremiumScreenProps) => {
   const [isHovering, setIsHovering] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,6 +50,7 @@ const UpsellPremiumScreen = ({
         throw new Error(data?.error || 'Error al crear orden');
       }
 
+      if (onSaveStateForPayment) onSaveStateForPayment();
       localStorage.setItem('implantx_flow_payment', JSON.stringify({
         level: 'premium',
         email: patientEmail,
