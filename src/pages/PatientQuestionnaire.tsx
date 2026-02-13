@@ -215,6 +215,7 @@ const PatientQuestionnaire = () => {
           <IRPResultScreen
             irpResult={flow.irpResult}
             patientName={flow.userProfile.name || 'Paciente'}
+            patientEmail={flow.leadData?.email}
             onContinueFree={flow.handleContinueFree}
             onPurchasePlan={flow.handlePurchasePlan}
           />
@@ -224,6 +225,7 @@ const PatientQuestionnaire = () => {
         return (
           <UpsellPremiumScreen
             patientName={flow.userProfile.name || 'Paciente'}
+            patientEmail={flow.leadData?.email}
             onUpgrade={flow.handleUpgradeToPremium}
             onSkip={flow.handleSkipUpsell}
           />

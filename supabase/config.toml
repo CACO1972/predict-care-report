@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.flow-webhook]
 verify_jwt = false
 
+[functions.create-flow-order]
+verify_jwt = false
+
 [functions.dentalink-availability]
 verify_jwt = false
 
