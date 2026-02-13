@@ -1,6 +1,12 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
+
+const RIO_VIDEOS = [
+  '/video/rio-avatar-1.mp4',
+  '/video/rio-avatar-2.mp4',
+  '/video/rio-avatar-3.mp4',
+];
 
 interface RioVideoAvatarProps {
   autoPlay?: boolean;
@@ -16,6 +22,7 @@ const RioVideoAvatar = ({
   className 
 }: RioVideoAvatarProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoSrc = useMemo(() => RIO_VIDEOS[Math.floor(Math.random() * RIO_VIDEOS.length)], []);
 
   useEffect(() => {
     if (videoRef.current && autoPlay) {
@@ -34,7 +41,7 @@ const RioVideoAvatar = ({
       <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
         <video
           ref={videoRef}
-          src="/rio-avatar-new.mp4"
+          src={videoSrc}
           poster={rioThumbnail}
           autoPlay={autoPlay}
           muted={muted}

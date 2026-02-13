@@ -1,7 +1,13 @@
-import { RefObject, useEffect, useRef } from "react";
+import { RefObject, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
+
+const RIO_VIDEOS = [
+  '/video/rio-avatar-1.mp4',
+  '/video/rio-avatar-2.mp4',
+  '/video/rio-avatar-3.mp4',
+];
 
 interface WelcomeStepProps {
   isMuted: boolean;
@@ -14,6 +20,7 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const comenzamosAudioRef = useRef<HTMLAudioElement | null>(null);
   const isMutedRef = useRef(isMuted);
+  const videoSrc = useMemo(() => RIO_VIDEOS[Math.floor(Math.random() * RIO_VIDEOS.length)], []);
 
   // Keep muted ref in sync
   useEffect(() => {
@@ -104,7 +111,7 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
           <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-xl shadow-primary/10 bg-background aspect-[9/16]">
             <video
               ref={welcomeVideoRef}
-              src="/rio-avatar-new.mp4"
+              src={videoSrc}
               poster={rioThumbnail}
               autoPlay
               playsInline
