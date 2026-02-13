@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef, useMemo } from "react";
+import { RefObject, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
@@ -20,7 +20,22 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const comenzamosAudioRef = useRef<HTMLAudioElement | null>(null);
   const isMutedRef = useRef(isMuted);
-  const videoSrc = useMemo(() => RIO_VIDEOS[Math.floor(Math.random() * RIO_VIDEOS.length)], []);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+
+  const handleVideoEnded = () => {
+    if (currentVideoIndex < RIO_VIDEOS.length - 1) {
+      setCurrentVideoIndex(prev => prev + 1);
+    }
+    // Last video: stays on last frame (no loop)
+  };
+
+  // Auto-play when video source changes
+  useEffect(() => {
+    if (welcomeVideoRef.current) {
+      welcomeVideoRef.current.load();
+      welcomeVideoRef.current.play().catch(() => {});
+    }
+  }, [currentVideoIndex]);
 
   // Keep muted ref in sync
   useEffect(() => {
@@ -111,13 +126,13 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
           <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-xl shadow-primary/10 bg-background aspect-[9/16]">
             <video
               ref={welcomeVideoRef}
-              src={videoSrc}
+              src={RIO_VIDEOS[currentVideoIndex]}
               poster={rioThumbnail}
               autoPlay
               playsInline
               preload="metadata"
               muted
-              loop
+              onEnded={handleVideoEnded}
               className="absolute inset-0 w-full h-full object-cover"
             />
             
