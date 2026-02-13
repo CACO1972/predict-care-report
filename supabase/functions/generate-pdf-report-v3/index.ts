@@ -736,7 +736,7 @@ function drawExecutiveSummaryPage(b: PDFBuilderV3, data: ReportDataV3, showProba
   b.space(10);
   const alertBgColor = data.classification === 'DESFAVORABLE' ? C.PINK_LIGHT : C.CREAM_BG;
   b.drawInfoBox(
-    '⚠️ ALERTA CRITICA',
+    '[!] ALERTA CRITICA',
     [
       'Su perfil de riesgo requiere optimizacion ANTES de proceder con cirugia.',
       'La preparacion adecuada puede reducir el riesgo hasta en un 60-70%.',
@@ -771,30 +771,30 @@ function drawRiskFactorPage(b: PDFBuilderV3, factor: RiskFactorV3, index: number
   b.y -= titleBoxH + 12;
   
   // SU SITUACIÓN
-  b.drawSubsectionTitle('📍 SU SITUACION');
+  b.drawSubsectionTitle('> SU SITUACION');
   b.drawText(factor.yourSituation, { size: 10, color: C.TEXT });
   b.drawGoldDivider();
   
   // ¿QUÉ SIGNIFICA PARA USTED?
-  b.drawSubsectionTitle('📊 ¿QUE SIGNIFICA PARA USTED?');
+  b.drawSubsectionTitle('>> QUE SIGNIFICA PARA USTED?');
   b.drawText(factor.realWorldComparison, { size: 9, color: C.TEXT, lineHeight: 13 });
   b.drawGoldDivider();
   
   // ¿POR QUÉ AFECTA LOS IMPLANTES? - Biological Mechanisms
-  b.drawSubsectionTitle('🔬 ¿POR QUE AFECTA LOS IMPLANTES?');
+  b.drawSubsectionTitle('>> POR QUE AFECTA LOS IMPLANTES?');
   for (const mech of factor.biologicalMechanisms.slice(0, 3)) {
     b.drawInfoBox(mech.title, mech.points, C.BLUE_LIGHT, C.BLUE_ACCENT);
   }
   
   // ACCIÓN REQUERIDA
-  b.drawSubsectionTitle('✅ ACCION REQUERIDA');
+  b.drawSubsectionTitle('[+] ACCION REQUERIDA');
   for (const action of factor.requiredActions) {
     b.drawBulletPoint(action, { size: 9 });
   }
   b.space(6);
   
   // BENEFICIO SI SIGUE EL PROTOCOLO
-  b.drawSubsectionTitle('🎯 BENEFICIO SI SIGUE EL PROTOCOLO');
+  b.drawSubsectionTitle('>> BENEFICIO SI SIGUE EL PROTOCOLO');
   b.drawBulletPoint(`Reduccion de riesgo: ${factor.adherenceBenefit.riskReduction}`, { size: 9, color: C.GREEN_OK });
   b.drawBulletPoint(`Aumento de exito: ${factor.adherenceBenefit.successIncrease}`, { size: 9, color: C.GREEN_OK });
   b.drawBulletPoint(`Menos complicaciones: ${factor.adherenceBenefit.complicationsReduction}`, { size: 9, color: C.GREEN_OK });
@@ -802,7 +802,7 @@ function drawRiskFactorPage(b: PDFBuilderV3, factor: RiskFactorV3, index: number
   
   // RECURSOS DE APOYO
   if (factor.supportResources && factor.supportResources.length > 0) {
-    b.drawSubsectionTitle('🆘 RECURSOS DE APOYO');
+    b.drawSubsectionTitle('>> RECURSOS DE APOYO');
     for (const res of factor.supportResources.slice(0, 4)) {
       b.drawBulletPoint(res, { size: 8, color: C.BLUE_ACCENT });
     }
@@ -813,7 +813,7 @@ function drawRiskFactorPage(b: PDFBuilderV3, factor: RiskFactorV3, index: number
   b.drawGoldDivider();
   const evidenceLabel = factor.evidenceLevel === 'A' ? 'Nivel A (Maxima evidencia)' :
                         factor.evidenceLevel === 'B' ? 'Nivel B (Buena evidencia)' : 'Nivel C (Evidencia moderada)';
-  b.drawText(`📚 EVIDENCIA CIENTIFICA: ${evidenceLabel}`, { size: 8, font: b.fontBold, color: C.GOLD_DARK });
+  b.drawText(`[REF] EVIDENCIA CIENTIFICA: ${evidenceLabel}`, { size: 8, font: b.fontBold, color: C.GOLD_DARK });
   b.drawText(factor.scientificReference, { size: 7, color: C.MED_GRAY, font: b.fontItalic });
 }
 
@@ -822,7 +822,7 @@ function drawTimelinePage(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('PROTOCOLO DE PREPARACION');
   
-  b.drawSectionTitle('📅 Protocolo de Preparacion Pre-operatoria');
+  b.drawSectionTitle('Protocolo de Preparacion Pre-operatoria');
   b.drawText('Periodo: 4-6 semanas antes de la cirugia', { size: 10, font: b.fontItalic, color: C.GOLD_DARK });
   b.space(4);
   b.drawText('Este protocolo personalizado optimiza su organismo para maximizar las probabilidades de exito. Cada accion tiene impacto directo y cuantificable en el resultado final.', {
@@ -831,7 +831,7 @@ function drawTimelinePage(b: PDFBuilderV3, data: ReportDataV3) {
   b.drawGoldDivider();
   
   for (const week of data.preparationTimeline) {
-    b.drawSubsectionTitle(`🗓️ ${week.weekLabel}`);
+    b.drawSubsectionTitle(`>> ${week.weekLabel}`);
     for (const action of week.actions) {
       const badgeW = b.drawPriorityBadge(action.category, M_LEFT + 5, b.y);
       b.drawText(action.action, {
@@ -848,10 +848,10 @@ function drawPostOpPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('PROTOCOLO POST-OPERATORIO');
   
-  b.drawSectionTitle('🏥 Protocolo Post-Operatorio');
+  b.drawSectionTitle('Protocolo Post-Operatorio');
   
   for (const phase of data.postOpProtocol) {
-    b.drawSubsectionTitle(`⏰ ${phase.period}${phase.title ? ` - ${phase.title}` : ''}`);
+    b.drawSubsectionTitle(`>> ${phase.period}${phase.title ? ` - ${phase.title}` : ''}`);
     for (const action of phase.actions) {
       b.drawBulletPoint(action, { size: 9 });
     }
@@ -861,7 +861,7 @@ function drawPostOpPage(b: PDFBuilderV3, data: ReportDataV3) {
   // Alert box
   b.space(10);
   b.drawInfoBox(
-    '⚠️ SENALES DE ALARMA - CONTACTAR INMEDIATAMENTE',
+    '[!] SENALES DE ALARMA - CONTACTAR INMEDIATAMENTE',
     [
       'Sangrado abundante NO cede despues de 2 horas',
       'Fiebre >38.5°C despues de 48 horas',
@@ -869,7 +869,7 @@ function drawPostOpPage(b: PDFBuilderV3, data: ReportDataV3) {
       'Inflamacion AUMENTA despues del dia 4',
       'Pus o secrecion con mal olor',
       'Movilidad del implante',
-      '📞 Urgencias 24/7: +56 9 7415 7966',
+      'Urgencias 24/7: +56 9 7415 7966',
     ],
     C.PINK_LIGHT,
     C.RED_ALERT
@@ -884,10 +884,10 @@ function drawSynergiesPages(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('ANALISIS DE SINERGIAS');
   
-  b.drawSectionTitle('🔗 Analisis de Sinergias de Riesgo');
+  b.drawSectionTitle('Analisis de Sinergias de Riesgo');
   
   for (const synergy of data.factorSynergies.slice(0, 2)) {
-    b.drawSubsectionTitle(`SINERGIA: ${synergy.factorsCombined.join(' × ')}`);
+    b.drawSubsectionTitle(`SINERGIA: ${synergy.factorsCombined.join(' x ')}`);
     
     // Show multiplication effect
     b.drawText('TU PERFIL:', { size: 9, font: b.fontBold, color: C.TEXT });
@@ -897,11 +897,11 @@ function drawSynergiesPages(b: PDFBuilderV3, data: ReportDataV3) {
     }
     b.space(4);
     
-    b.drawText(`❌ SUMA SIMPLE (incorrecto): Suma individual`, { size: 8, color: C.MED_GRAY });
-    b.drawText(`✓ EFECTO MULTIPLICATIVO (real): ${synergy.actualMultiplier.toFixed(2)}x`, { size: 9, font: b.fontBold, color: C.RED_ALERT });
+    b.drawText(`[X] SUMA SIMPLE (incorrecto): Suma individual`, { size: 8, color: C.MED_GRAY });
+    b.drawText(`[OK] EFECTO MULTIPLICATIVO (real): ${synergy.actualMultiplier.toFixed(2)}x`, { size: 9, font: b.fontBold, color: C.RED_ALERT });
     b.space(6);
     
-    b.drawText('¿POR QUE SE MULTIPLICA EN LUGAR DE SUMAR?', { size: 9, font: b.fontBold, color: C.GOLD_DARK });
+    b.drawText('POR QUE SE MULTIPLICA EN LUGAR DE SUMAR?', { size: 9, font: b.fontBold, color: C.GOLD_DARK });
     b.space(4);
     
     for (const mech of synergy.biologicalSynergies.slice(0, 3)) {
@@ -918,7 +918,7 @@ function drawSynergiesPages(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('ESTRATEGIA DE INTERVENCION');
   
-  b.drawSectionTitle('🎯 Estrategia de Intervencion Priorizada');
+  b.drawSectionTitle('Estrategia de Intervencion Priorizada');
   
   for (const synergy of data.factorSynergies.slice(0, 1)) {
     for (const intervention of synergy.prioritizedInterventions) {
@@ -931,7 +931,7 @@ function drawSynergiesPages(b: PDFBuilderV3, data: ReportDataV3) {
     // Final optimization result
     b.drawGoldDivider();
     b.drawSectionTitle('Resultado Final de Optimizacion');
-    b.drawText(`Actual: ${synergy.finalRiskReduction.currentRisk} → Optimizado: ${synergy.finalRiskReduction.optimizedRisk}`, {
+    b.drawText(`Actual: ${synergy.finalRiskReduction.currentRisk} >> Optimizado: ${synergy.finalRiskReduction.optimizedRisk}`, {
       size: 11, font: b.fontBold, color: C.GOLD_DARK,
     });
     b.drawText(`REDUCCION TOTAL: ${synergy.finalRiskReduction.totalReduction}`, {
@@ -947,7 +947,7 @@ function drawAnatomicalSectorPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('PLANIFICACION ANATOMICA');
   
-  b.drawSectionTitle('🦷 Planificacion por Sector Anatomico');
+  b.drawSectionTitle('Planificacion por Sector Anatomico');
   
   for (const sector of data.anatomicalSectors.slice(0, 2)) {
     b.drawSubsectionTitle(`SECTOR: ${sector.sectorName} (${sector.teeth})`);
@@ -961,7 +961,7 @@ function drawAnatomicalSectorPage(b: PDFBuilderV3, data: ReportDataV3) {
     // Anatomical challenges
     b.drawText('DESAFIOS ANATOMICOS:', { size: 8, font: b.fontBold, color: C.GOLD_DARK });
     for (const challenge of sector.anatomicalChallenges.slice(0, 3)) {
-      b.drawBulletPoint(`${challenge.challenge} → ${challenge.impact}`, { size: 8 });
+      b.drawBulletPoint(`${challenge.challenge} - ${challenge.impact}`, { size: 8 });
     }
     b.space(6);
     
@@ -999,7 +999,7 @@ function drawAdherenceScenariosPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('ESCENARIOS DE ADHERENCIA');
   
-  b.drawSectionTitle('📊 Comparacion de Escenarios de Adherencia');
+  b.drawSectionTitle('Comparacion de Escenarios de Adherencia');
   
   for (const scenario of data.adherenceScenarios) {
     const bgColor = scenario.adherenceLevel === '100%' ? C.BLUE_LIGHT :
@@ -1031,7 +1031,7 @@ function drawAdherenceScenariosPage(b: PDFBuilderV3, data: ReportDataV3) {
     
     if (scenario.specialWarning) {
       b.space(4);
-      b.drawText(`⚠️ ${scenario.specialWarning}`, { size: 8, font: b.fontBold, color: C.RED_ALERT });
+      b.drawText(`[!] ${scenario.specialWarning}`, { size: 8, font: b.fontBold, color: C.RED_ALERT });
     }
     
     b.drawGoldDivider();
@@ -1055,7 +1055,7 @@ function drawWhatIfSimulatorPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.drawHeader('SIMULADOR WHAT-IF');
   
   // Header section
-  b.drawSectionTitle('🔮 Simulador What-If');
+  b.drawSectionTitle('Simulador What-If');
   b.drawText('Descubre como mejoraria tu resultado optimizando cada factor de riesgo', {
     size: 10, color: C.MED_GRAY, font: b.fontItalic,
   });
@@ -1086,7 +1086,8 @@ function drawWhatIfSimulatorPage(b: PDFBuilderV3, data: ReportDataV3) {
     const boxTop = b.y;
     
     // Header with icon and name
-    b.page.drawText(`${factor.icon} ${factor.name}`, {
+    // Strip emoji icons - use name only (icons contain Unicode that pdf-lib can't encode)
+    b.page.drawText(factor.name, {
       x: M_LEFT + 12, y: boxTop - 14, size: 11, font: b.fontBold, color: C.DARK_BG
     });
     
@@ -1108,7 +1109,7 @@ function drawWhatIfSimulatorPage(b: PDFBuilderV3, data: ReportDataV3) {
     b.page.drawText(`ACTUAL: ${factor.currentRR}x`, {
       x: M_LEFT + 12, y: boxTop - 44, size: 9, font: b.fontBold, color: C.RED_ALERT
     });
-    b.page.drawText('→', {
+    b.page.drawText('>>', {
       x: M_LEFT + 90, y: boxTop - 44, size: 10, font: b.fontBold, color: C.GOLD
     });
     b.page.drawText(`OPTIMIZADO: ${factor.optimizedRR}x`, {
@@ -1121,7 +1122,7 @@ function drawWhatIfSimulatorPage(b: PDFBuilderV3, data: ReportDataV3) {
     });
     
     // Action required
-    b.page.drawText(`✓ ${factor.actionRequired}`, {
+    b.page.drawText(`> ${factor.actionRequired}`, {
       x: M_LEFT + 12, y: boxTop - 60, size: 8, font: b.fontRegular, color: C.BLUE_ACCENT
     });
     
@@ -1144,8 +1145,8 @@ function drawWhatIfSimulatorPage(b: PDFBuilderV3, data: ReportDataV3) {
   
   const resTop = b.y;
   
-  b.page.drawText('📊 RESULTADO DE TU SIMULACION', {
-    x: M_LEFT + (CONTENT_W - b.fontBold.widthOfTextAtSize('RESULTADO DE TU SIMULACION', 12)) / 2 + 10,
+  b.page.drawText('RESULTADO DE TU SIMULACION', {
+    x: M_LEFT + (CONTENT_W - b.fontBold.widthOfTextAtSize('RESULTADO DE TU SIMULACION', 12)) / 2,
     y: resTop - 18, size: 12, font: b.fontBold, color: C.GOLD
   });
   
@@ -1218,11 +1219,11 @@ function generateDefaultWhatIfData(data: ReportDataV3): WhatIfData {
     return {
       id: `factor-${idx}`,
       name: rf.factorName.toUpperCase(),
-      icon: idx === 0 ? '🚬' : idx === 1 ? '💉' : idx === 2 ? '🦷' : '⚠️',
+      icon: idx === 0 ? '[1]' : idx === 1 ? '[2]' : idx === 2 ? '[3]' : '[4]',
       currentState: rf.yourSituation,
       currentRR: rf.relativeRisk,
       optimizedRR: Math.round(optimizedRR * 10) / 10,
-      improvement: `RR ${rf.relativeRisk.toFixed(1)}x → ${optimizedRR.toFixed(1)}x (-${reductionPct}% de riesgo)`,
+      improvement: `RR ${rf.relativeRisk.toFixed(1)}x >> ${optimizedRR.toFixed(1)}x (-${reductionPct}% de riesgo)`,
       priority: priority as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW',
       actionRequired: rf.requiredActions[0] || 'Consultar con especialista'
     };
@@ -1250,7 +1251,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('ALTERNATIVAS DE TRATAMIENTO');
   
-  b.drawSectionTitle('🔀 Alternativas de Tratamiento');
+  b.drawSectionTitle('Alternativas de Tratamiento');
   b.drawText(`Compara ${altData.options.length} opciones viables para tu caso. Analiza pros, contras, costos y resultados esperados.`, {
     size: 9, color: C.MED_GRAY, font: b.fontItalic
   });
@@ -1276,7 +1277,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     
     // Recommended badge
     if (isRecommended) {
-      const badgeText = '🏆 RECOMENDADO';
+      const badgeText = '[*] RECOMENDADO';
       const badgeW = b.fontBold.widthOfTextAtSize(badgeText, 9) + 16;
       b.page.drawRectangle({
         x: M_LEFT + (CONTENT_W - badgeW) / 2, y: boxTop + 2, width: badgeW, height: 18, color: C.GOLD
@@ -1300,7 +1301,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     b.page.drawRectangle({
       x: M_LEFT + 8, y: boxTop - 95, width: colW, height: 55, color: rgb(0.95, 1, 0.95)
     });
-    b.page.drawText('✓ PROS', {
+    b.page.drawText('[+] PROS', {
       x: M_LEFT + 12, y: boxTop - 48, size: 8, font: b.fontBold, color: C.GREEN_OK
     });
     let proY = boxTop - 60;
@@ -1316,7 +1317,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     b.page.drawRectangle({
       x: M_LEFT + 18 + colW, y: boxTop - 95, width: colW, height: 55, color: rgb(1, 0.95, 0.95)
     });
-    b.page.drawText('✗ CONTRAS', {
+    b.page.drawText('[-] CONTRAS', {
       x: M_LEFT + 22 + colW, y: boxTop - 48, size: 8, font: b.fontBold, color: C.RED_ALERT
     });
     let conY = boxTop - 60;
@@ -1329,18 +1330,18 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     }
     
     // Cost row
-    b.page.drawText(`💰 Inicial: $${(option.initialCost / 1000000).toFixed(1)}M`, {
+    b.page.drawText(`Inicial: $${(option.initialCost / 1000000).toFixed(1)}M`, {
       x: M_LEFT + 12, y: boxTop - 110, size: 9, font: b.fontBold, color: C.BLUE_ACCENT
     });
     b.page.drawText(`Anual: $${(option.maintenanceCost / 1000).toFixed(0)}K`, {
       x: M_LEFT + 130, y: boxTop - 110, size: 8, font: b.fontRegular, color: C.TEXT
     });
-    b.page.drawText(`Total 25 años: $${(option.totalCost25Years / 1000000).toFixed(1)}M`, {
+    b.page.drawText(`Total 25 anos: $${(option.totalCost25Years / 1000000).toFixed(1)}M`, {
       x: M_LEFT + 230, y: boxTop - 110, size: 9, font: b.fontBold, color: C.GOLD
     });
     
     // Stats row
-    b.page.drawText(`Éxito: ${option.successRate}`, {
+    b.page.drawText(`Exito: ${option.successRate}`, {
       x: M_LEFT + 12, y: boxTop - 125, size: 8, font: b.fontRegular, color: C.TEXT
     });
     b.page.drawText(`Durabilidad: ${option.lifespan}`, {
@@ -1351,7 +1352,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     });
     
     // Best for
-    b.page.drawText(`🎯 Mejor para: ${option.bestFor.substring(0, 60)}${option.bestFor.length > 60 ? '...' : ''}`, {
+    b.page.drawText(`>> Mejor para: ${option.bestFor.substring(0, 60)}${option.bestFor.length > 60 ? '...' : ''}`, {
       x: M_LEFT + 12, y: boxTop - 142, size: 7, font: b.fontItalic, color: C.GOLD_DARK
     });
     
@@ -1369,26 +1370,26 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
       b.drawSubsectionTitle(`OPCION C: ${opt3.name}`);
       b.drawText(opt3.description, { size: 8, color: C.MED_GRAY });
       b.space(4);
-      b.drawText(`💰 Total 25 años: $${(opt3.totalCost25Years / 1000000).toFixed(1)}M | Éxito: ${opt3.successRate} | Durabilidad: ${opt3.lifespan}`, {
+      b.drawText(`Total 25 anos: $${(opt3.totalCost25Years / 1000000).toFixed(1)}M | Exito: ${opt3.successRate} | Durabilidad: ${opt3.lifespan}`, {
         size: 9, color: C.TEXT
       });
       if (opt3.warnings && opt3.warnings.length > 0) {
         b.space(4);
-        b.drawText(`⚠️ ${opt3.warnings[0]}`, { size: 8, color: C.YELLOW_WARN, font: b.fontBold });
+        b.drawText(`[!] ${opt3.warnings[0]}`, { size: 8, color: C.YELLOW_WARN, font: b.fontBold });
       }
       b.drawGoldDivider();
     }
   }
   
   // Comparison table
-  b.drawSectionTitle('📊 Tabla Comparativa');
+  b.drawSectionTitle('Tabla Comparativa');
   
   const headers = ['Criterio', ...altData.options.slice(0, 3).map((_, i) => `Opcion ${String.fromCharCode(65 + i)}`)];
   const rows = [
     ['Durabilidad', ...altData.options.slice(0, 3).map(o => o.lifespan)],
-    ['Éxito', ...altData.options.slice(0, 3).map(o => o.successRate)],
-    ['Satisfaccion', ...altData.options.slice(0, 3).map(o => o.satisfaction)],
-    ['Total 25 años', ...altData.options.slice(0, 3).map(o => `$${(o.totalCost25Years / 1000000).toFixed(1)}M`)],
+    ['Exito', ...altData.options.slice(0, 3).map(o => o.successRate)],
+    ['Satisfaccion', ...altData.options.slice(0, 3).map(o => o.satisfaction || '-')],
+    ['Total 25 anos', ...altData.options.slice(0, 3).map(o => `$${(o.totalCost25Years / 1000000).toFixed(1)}M`)],
   ];
   
   const numCols = headers.length;
@@ -1408,7 +1409,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     });
     
     const recTop = b.y;
-    b.page.drawText('🏆 RECOMENDACION PARA SU CASO', {
+    b.page.drawText('[*] RECOMENDACION PARA SU CASO', {
       x: M_LEFT + 15, y: recTop - 20, size: 12, font: b.fontBold, color: C.GOLD
     });
     b.page.drawText(recommended.name, {
@@ -1417,7 +1418,7 @@ function drawTreatmentAlternativesPages(b: PDFBuilderV3, data: ReportDataV3) {
     b.page.drawText(recommended.bestFor.substring(0, 80), {
       x: M_LEFT + 15, y: recTop - 55, size: 8, font: b.fontRegular, color: C.GOLD_LIGHT
     });
-    b.page.drawText('⚠️ Decision final en consulta con su cirujano', {
+    b.page.drawText('* Decision final en consulta con su cirujano', {
       x: M_LEFT + 15, y: recTop - 68, size: 7, font: b.fontItalic, color: C.MED_GRAY
     });
     
@@ -1433,11 +1434,11 @@ function generateDefaultAlternatives(): TreatmentAlternativesData {
         id: 'implante',
         name: 'IMPLANTE DENTAL',
         description: 'Raiz artificial de titanio con corona de porcelana',
-        pros: ['Preserva hueso alveolar', 'No dania dientes adyacentes', 'Sensacion natural al masticar', 'Durabilidad excepcional'],
+        pros: ['Preserva hueso alveolar', 'No dana dientes adyacentes', 'Sensacion natural al masticar', 'Durabilidad excepcional'],
         cons: ['Mayor inversion inicial', 'Requiere cirugia', 'Tiempo de oseointegracion 3-6 meses'],
         initialCost: 2500000,
         maintenanceCost: 50000,
-        lifespan: '25+ años',
+        lifespan: '25+ anos',
         totalCost25Years: 3750000,
         successRate: '95-98%',
         satisfaction: '96%',
@@ -1452,13 +1453,13 @@ function generateDefaultAlternatives(): TreatmentAlternativesData {
         cons: ['Desgasta dientes sanos adyacentes', 'No previene perdida osea', 'Vida util limitada'],
         initialCost: 1200000,
         maintenanceCost: 80000,
-        lifespan: '10-15 años',
+        lifespan: '10-15 anos',
         totalCost25Years: 4200000,
         successRate: '85-90%',
         satisfaction: '78%',
         timeline: '2-4 semanas',
         bestFor: 'Pacientes que prefieren evitar cirugia o tienen contraindicaciones',
-        warnings: ['Requiere desgastar dientes sanos', 'Puede necesitar reemplazo cada 10-15 años']
+        warnings: ['Requiere desgastar dientes sanos', 'Puede necesitar reemplazo cada 10-15 anos']
       },
       {
         id: 'removible',
@@ -1468,13 +1469,13 @@ function generateDefaultAlternatives(): TreatmentAlternativesData {
         cons: ['Incomodidad al comer', 'Se mueve', 'Acelera perdida osea', 'Requiere ajustes frecuentes'],
         initialCost: 400000,
         maintenanceCost: 120000,
-        lifespan: '5-8 años',
+        lifespan: '5-8 anos',
         totalCost25Years: 4400000,
         successRate: '70-80%',
         satisfaction: '52%',
         timeline: '1-2 semanas',
         bestFor: 'Solucion temporal o pacientes con limitaciones economicas',
-        warnings: ['Menor calidad de vida', 'Acelera reabsorcion osea', 'Puede dañar dientes pilares']
+        warnings: ['Menor calidad de vida', 'Acelera reabsorcion osea', 'Puede danar dientes pilares']
       }
     ],
     recommendedId: 'implante',
@@ -1487,10 +1488,10 @@ function drawNextStepsPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.newPage();
   b.drawHeader('PROXIMOS PASOS');
   
-  b.drawSectionTitle('➡️ Proximos Pasos');
+  b.drawSectionTitle('Proximos Pasos');
   
   // Step 1
-  b.drawSubsectionTitle('1️⃣ VIDEOCONFERENCIA CON DR. MONTOYA');
+  b.drawSubsectionTitle('1. VIDEOCONFERENCIA CON DR. MONTOYA');
   b.drawText('Revision personalizada de su reporte (INCLUIDA)', { size: 9, color: C.TEXT });
   b.drawText('Duracion: 30-45 minutos', { size: 9, color: C.TEXT });
   b.space(4);
@@ -1499,7 +1500,7 @@ function drawNextStepsPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.drawGoldDivider();
   
   // Step 2
-  b.drawSubsectionTitle('2️⃣ EXAMENES COMPLEMENTARIOS');
+  b.drawSubsectionTitle('2. EXAMENES COMPLEMENTARIOS');
   b.drawBulletPoint('Radiografia panoramica digital', { size: 9 });
   b.drawBulletPoint('CBCT (tomografia 3D) si complejidad anatomica', { size: 9 });
   b.drawBulletPoint('Fotografias clinicas intraorales', { size: 9 });
@@ -1508,7 +1509,7 @@ function drawNextStepsPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.drawGoldDivider();
   
   // Step 3
-  b.drawSubsectionTitle('3️⃣ BENEFICIO ECONOMICO');
+  b.drawSubsectionTitle('3. BENEFICIO ECONOMICO');
   const price = data.plan === 'COMPLETE' ? '$29.990' : '$14.900';
   b.drawText(`El pago de ${price} de este reporte se ABONA`, { size: 10, font: b.fontBold, color: C.GREEN_OK });
   b.drawText('INTEGRAMENTE al tratamiento final.', { size: 10, font: b.fontBold, color: C.GREEN_OK });
@@ -1520,7 +1521,7 @@ function drawNextStepsPage(b: PDFBuilderV3, data: ReportDataV3) {
   b.drawGoldDivider();
   
   // Step 4
-  b.drawSubsectionTitle('4️⃣ COORDINACION DE AGENDA');
+  b.drawSubsectionTitle('4. COORDINACION DE AGENDA');
   b.drawText('Una vez confirmado el plan de tratamiento:', { size: 9, color: C.TEXT });
   b.drawBulletPoint('Programacion quirurgica personalizada', { size: 9 });
   b.drawBulletPoint('Coordinacion con laboratorio', { size: 9 });
@@ -1562,15 +1563,15 @@ async function generateFreeReportV3(data: ReportDataV3): Promise<Uint8Array> {
   b.drawHeader('EVALUACION INICIAL');
   
   b.drawSectionTitle('Contenido de Esta Evaluacion');
-  b.drawText('✓ Clasificacion de riesgo global', { size: 10, color: C.GREEN_OK });
-  b.drawText('✓ Top 3 factores de riesgo identificados', { size: 10, color: C.GREEN_OK });
-  b.drawText('✓ Multiplicador de riesgo combinado', { size: 10, color: C.GREEN_OK });
+  b.drawText('[+] Clasificacion de riesgo global', { size: 10, color: C.GREEN_OK });
+  b.drawText('[+] Top 3 factores de riesgo identificados', { size: 10, color: C.GREEN_OK });
+  b.drawText('[+] Multiplicador de riesgo combinado', { size: 10, color: C.GREEN_OK });
   b.space(10);
   
-  b.drawText('✗ Probabilidad de exito exacta', { size: 10, color: C.MED_GRAY });
-  b.drawText('✗ Detalle de factores con RR y mecanismos biologicos', { size: 10, color: C.MED_GRAY });
-  b.drawText('✗ Timeline de preparacion 4-6 semanas', { size: 10, color: C.MED_GRAY });
-  b.drawText('✗ Protocolo post-operatorio completo', { size: 10, color: C.MED_GRAY });
+  b.drawText('[-] Probabilidad de exito exacta', { size: 10, color: C.MED_GRAY });
+  b.drawText('[-] Detalle de factores con RR y mecanismos biologicos', { size: 10, color: C.MED_GRAY });
+  b.drawText('[-] Timeline de preparacion 4-6 semanas', { size: 10, color: C.MED_GRAY });
+  b.drawText('[-] Protocolo post-operatorio completo', { size: 10, color: C.MED_GRAY });
   b.space(15);
   
   b.drawUpsellBox('BASE', '$14.900 CLP');
