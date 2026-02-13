@@ -4,24 +4,22 @@ import { Card } from "@/components/ui/card";
 import { 
   Activity, ArrowRight, CheckCircle2, FileText, Lock, 
   Sparkles, TrendingUp, Shield, Zap, Crown, Download,
-  X, Car, Plane, Clock, DollarSign, Bug
+  X, Car, Plane, Clock, DollarSign, Bug, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IRPResult, getIRPColorClass } from "@/utils/irpCalculation";
 import { PurchaseLevel } from "@/types/questionnaire";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import RioAvatar from "./RioAvatar";
 
 interface IRPResultScreenProps {
   irpResult: IRPResult;
   patientName: string;
+  patientEmail?: string;
   onContinueFree: () => void;
   onPurchasePlan: (level: PurchaseLevel) => void;
 }
-
-// Payment link placeholders - replace with actual Flow links
-const FLOW_PLAN_ACCION = ""; // TODO: Add Flow link for Plan de Acción ($14.900)
-const FLOW_PREMIUM = ""; // TODO: Add Flow link for Premium ($29.990)
 
 // Test mode bypass - use ?testMode=premium or ?testMode=plan-accion in URL
 const getTestMode = (): PurchaseLevel | null => {
@@ -37,10 +35,12 @@ const getTestMode = (): PurchaseLevel | null => {
 const IRPResultScreen = ({ 
   irpResult, 
   patientName,
+  patientEmail,
   onContinueFree,
   onPurchasePlan 
 }: IRPResultScreenProps) => {
   const [isHoveringPremium, setIsHoveringPremium] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const colorClasses = getIRPColorClass(irpResult.level);
   const { toast } = useToast();
   
@@ -77,28 +77,51 @@ const IRPResultScreen = ({
     onPurchasePlan(level);
   };
 
-  const handleInitiatePurchase = (level: 'plan-accion' | 'premium') => {
-    const url = level === 'premium' ? FLOW_PREMIUM : FLOW_PLAN_ACCION;
-    
-    if (!url) {
+  const handleInitiatePurchase = async (level: 'plan-accion' | 'premium') => {
+    const email = patientEmail || '';
+    if (!email) {
       toast({
-        title: "Link de pago no configurado",
-        description: "Por favor contacta al administrador",
+        title: "Email requerido",
+        description: "No se encontró tu email. Por favor reinicia la evaluación.",
         variant: "destructive",
       });
       return;
     }
 
-    // Save state for when user returns from Flow
-    try {
-      localStorage.setItem('implantx_flow_payment', JSON.stringify({
-        level,
-        timestamp: Date.now(),
-      }));
-    } catch {}
+    setIsProcessingPayment(true);
 
-    // Redirect to Flow payment
-    window.location.href = url;
+    try {
+      const amount = level === 'premium' ? 29990 : 14900;
+      const subject = level === 'premium' ? 'ImplantX Informe Premium' : 'ImplantX Plan de Acción';
+
+      const { data, error } = await supabase.functions.invoke('create-flow-order', {
+        body: { email, amount, subject, purchaseLevel: level },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Error al crear orden de pago');
+      }
+
+      // Save state for when user returns from Flow
+      try {
+        localStorage.setItem('implantx_flow_payment', JSON.stringify({
+          level,
+          email,
+          timestamp: Date.now(),
+        }));
+      } catch {}
+
+      // Redirect to Flow payment page
+      window.location.href = data.data.paymentUrl;
+    } catch (err: any) {
+      console.error('Payment initiation error:', err);
+      toast({
+        title: "Error al iniciar pago",
+        description: err.message || "Por favor intenta nuevamente",
+        variant: "destructive",
+      });
+      setIsProcessingPayment(false);
+    }
   };
 
   // Características de cada plan
@@ -309,8 +332,9 @@ const IRPResultScreen = ({
                 🔊 {selectedPlanAudio === 'premium' ? 'Pausar' : 'Escuchar sobre este plan'}
               </Button>
               <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
-                size="lg" onClick={() => handleInitiatePurchase('premium')}>
-                Obtener Informe Premium<ArrowRight className="w-4 h-4" />
+                size="lg" onClick={() => handleInitiatePurchase('premium')} disabled={isProcessingPayment}>
+                {isProcessingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isProcessingPayment ? 'Procesando...' : 'Obtener Informe Premium'}{!isProcessingPayment && <ArrowRight className="w-4 h-4" />}
               </Button>
             </div>
             {selectedPlanAudio === 'premium' && (
@@ -354,8 +378,9 @@ const IRPResultScreen = ({
                 onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'base' ? null : 'base')}>
                 🔊 {selectedPlanAudio === 'base' ? 'Pausar' : 'Escuchar sobre este plan'}
               </Button>
-              <Button className="w-full gap-2" size="lg" onClick={() => handleInitiatePurchase('plan-accion')}>
-                Obtener Plan de Acción<ArrowRight className="w-4 h-4" />
+              <Button className="w-full gap-2" size="lg" onClick={() => handleInitiatePurchase('plan-accion')} disabled={isProcessingPayment}>
+                {isProcessingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isProcessingPayment ? 'Procesando...' : 'Obtener Plan de Acción'}{!isProcessingPayment && <ArrowRight className="w-4 h-4" />}
               </Button>
             </div>
             {selectedPlanAudio === 'base' && (

@@ -3,38 +3,63 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
   ArrowRight, CheckCircle2, Crown, Sparkles, 
-  Camera, FileText, TrendingUp, Shield, Gift, X
+  Camera, FileText, TrendingUp, Shield, Gift, X, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// TODO: Replace with actual Flow link for Premium ($29.990)
-const FLOW_PREMIUM = "";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface UpsellPremiumScreenProps {
   patientName: string;
+  patientEmail?: string;
   onUpgrade: () => void;
   onSkip: () => void;
 }
 
 const UpsellPremiumScreen = ({ 
   patientName,
+  patientEmail,
   onUpgrade,
   onSkip 
 }: UpsellPremiumScreenProps) => {
   const [isHovering, setIsHovering] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
 
-  const handleUpgrade = () => {
-    if (FLOW_PREMIUM) {
-      // Save state for return
-      try {
-        localStorage.setItem('implantx_flow_payment', JSON.stringify({
-          level: 'premium',
-          timestamp: Date.now(),
-        }));
-      } catch {}
-      window.location.href = FLOW_PREMIUM;
+  const handleUpgrade = async () => {
+    if (!patientEmail) {
+      toast({ title: "Email requerido", variant: "destructive" });
+      onUpgrade();
+      return;
     }
-    onUpgrade();
+
+    setIsProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-flow-order', {
+        body: {
+          email: patientEmail,
+          amount: 29990,
+          subject: 'ImplantX Informe Premium (Upgrade)',
+          purchaseLevel: 'premium',
+        },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'Error al crear orden');
+      }
+
+      localStorage.setItem('implantx_flow_payment', JSON.stringify({
+        level: 'premium',
+        email: patientEmail,
+        timestamp: Date.now(),
+      }));
+
+      window.location.href = data.data.paymentUrl;
+    } catch (err: any) {
+      console.error('Upgrade error:', err);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+      setIsProcessing(false);
+    }
   };
 
   const premiumFeatures = [
@@ -125,8 +150,10 @@ const UpsellPremiumScreen = ({
             </div>
           </div>
 
-          <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg h-14" onClick={handleUpgrade}>
-            <Sparkles className="w-5 h-5" />Obtener Informe Premium<ArrowRight className="w-5 h-5" />
+          <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg h-14" onClick={handleUpgrade} disabled={isProcessing}>
+            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+            {isProcessing ? 'Procesando...' : 'Obtener Informe Premium'}
+            {!isProcessing && <ArrowRight className="w-5 h-5" />}
           </Button>
 
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
