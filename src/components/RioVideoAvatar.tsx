@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 
@@ -22,7 +22,24 @@ const RioVideoAvatar = ({
   className 
 }: RioVideoAvatarProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const videoSrc = useMemo(() => RIO_VIDEOS[Math.floor(Math.random() * RIO_VIDEOS.length)], []);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+
+  const handleVideoEnded = () => {
+    if (currentVideoIndex < RIO_VIDEOS.length - 1) {
+      setCurrentVideoIndex(prev => prev + 1);
+    } else if (loop) {
+      setCurrentVideoIndex(0);
+    }
+  };
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+      if (autoPlay) {
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  }, [currentVideoIndex, autoPlay]);
 
   useEffect(() => {
     if (videoRef.current && autoPlay) {
@@ -41,13 +58,13 @@ const RioVideoAvatar = ({
       <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20">
         <video
           ref={videoRef}
-          src={videoSrc}
+          src={RIO_VIDEOS[currentVideoIndex]}
           poster={rioThumbnail}
           autoPlay={autoPlay}
           muted={muted}
-          loop={loop}
           playsInline
           preload="metadata"
+          onEnded={handleVideoEnded}
           className="w-full h-[120%] object-cover object-[center_25%]"
         />
       </div>
