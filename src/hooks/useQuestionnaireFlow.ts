@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, DensityProAnswers, ImplantXAnswers, QuestionnaireStep, PurchaseLevel } from "@/types/questionnaire";
 import { calculateRiskAssessment, EnhancedAssessmentResult } from "@/utils/riskCalculation";
@@ -109,30 +109,84 @@ export interface QuestionnaireState {
   feedbackAudioUrl: string | undefined;
 }
 
+// Helper to restore state from localStorage after payment redirect
+const getRestoredState = (): { userProfile: Partial<UserProfile>; densityAnswers: Partial<DensityProAnswers>; implantAnswers: Partial<ImplantXAnswers>; irpResult: IRPResult | null; leadData: { email: string; phone: string } | null; purchaseLevel: PurchaseLevel } | null => {
+  try {
+    const verified = localStorage.getItem('implantx_purchase_verified');
+    const savedState = localStorage.getItem('implantx_questionnaire_state');
+    if (verified && savedState) {
+      const { level } = JSON.parse(verified);
+      const state = JSON.parse(savedState);
+      localStorage.removeItem('implantx_purchase_verified');
+      localStorage.removeItem('implantx_questionnaire_state');
+      return { ...state, purchaseLevel: level as PurchaseLevel };
+    }
+  } catch {}
+  return null;
+};
+
 export const useQuestionnaireFlow = () => {
-  const [step, setStep] = useState<QuestionnaireStep>('welcome');
-  const [userProfile, setUserProfile] = useState<Partial<UserProfile>>({});
-  const [densityAnswers, setDensityAnswers] = useState<Partial<DensityProAnswers>>({});
-  const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>({});
+  // Use lazy initializer to check for restored state only once
+  const [restoredState] = useState(() => getRestoredState());
+  
+  const [step, setStep] = useState<QuestionnaireStep>(() => restoredState ? 'irp-result' : 'welcome');
+  const [userProfile, setUserProfile] = useState<Partial<UserProfile>>(() => restoredState?.userProfile || {});
+  const [densityAnswers, setDensityAnswers] = useState<Partial<DensityProAnswers>>(() => restoredState?.densityAnswers || {});
+  const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>(() => restoredState?.implantAnswers || {});
   const [assessmentResult, setAssessmentResult] = useState<EnhancedAssessmentResult | null>(null);
-  const [irpResult, setIrpResult] = useState<IRPResult | null>(null);
-  const [purchaseLevel, setPurchaseLevel] = useState<PurchaseLevel>('free');
+  const [irpResult, setIrpResult] = useState<IRPResult | null>(() => restoredState?.irpResult || null);
+  const [purchaseLevel, setPurchaseLevel] = useState<PurchaseLevel>(() => restoredState?.purchaseLevel || 'free');
   const [showRioResponse, setShowRioResponse] = useState(false);
   const [pendingNextStep, setPendingNextStep] = useState<(() => void) | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
   const [showLeadCapture, setShowLeadCapture] = useState(false);
-  const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(null);
+  const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(() => restoredState?.leadData || null);
   const [isMuted, setIsMuted] = useState(true);
   const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | undefined>(undefined);
   
   const welcomeVideoRef = useRef<HTMLVideoElement>(null);
 
+  // If we restored from payment, trigger the purchase plan handler after mount
+  const [needsPostPaymentAction, setNeedsPostPaymentAction] = useState(!!restoredState);
+
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
   const { getExpressionFromFeedback } = useRioExpression();
 
   const requiresDensityPro = userProfile.gender === 'female' && (userProfile.age || 0) >= 50;
+
+  // After restoring from payment, auto-trigger the purchase plan flow
+  useEffect(() => {
+    if (needsPostPaymentAction && restoredState) {
+      setNeedsPostPaymentAction(false);
+      // The step is already set to 'irp-result' and purchaseLevel is set
+      // The IRPResultScreen will show, and handlePurchasePlan will be called 
+      // automatically via the restored purchase verification
+      setTimeout(() => {
+        const level = restoredState.purchaseLevel as PurchaseLevel;
+        if (level === 'plan-accion') {
+          setStep('upsell-premium');
+        } else if (level === 'premium') {
+          triggerConfetti();
+          setStep('implant-history');
+        }
+      }, 500);
+    }
+  }, [needsPostPaymentAction]);
+
+  // Save questionnaire state to localStorage (called before payment redirect)
+  const saveStateForPayment = useCallback(() => {
+    try {
+      localStorage.setItem('implantx_questionnaire_state', JSON.stringify({
+        userProfile,
+        densityAnswers,
+        implantAnswers,
+        irpResult,
+        leadData,
+      }));
+    } catch {}
+  }, [userProfile, densityAnswers, implantAnswers, irpResult, leadData]);
 
   // Get previous step for back navigation
   const getPreviousStep = useCallback((): QuestionnaireStep | null => {
@@ -532,5 +586,6 @@ export const useQuestionnaireFlow = () => {
     handleUpgradeToPremium,
     handleSkipUpsell,
     handleLeadSubmit,
+    saveStateForPayment,
   };
 };

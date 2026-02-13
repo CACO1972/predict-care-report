@@ -218,6 +218,7 @@ const PatientQuestionnaire = () => {
             patientEmail={flow.leadData?.email}
             onContinueFree={flow.handleContinueFree}
             onPurchasePlan={flow.handlePurchasePlan}
+            onSaveStateForPayment={flow.saveStateForPayment}
           />
         ) : null;
 
@@ -228,6 +229,7 @@ const PatientQuestionnaire = () => {
             patientEmail={flow.leadData?.email}
             onUpgrade={flow.handleUpgradeToPremium}
             onSkip={flow.handleSkipUpsell}
+            onSaveStateForPayment={flow.saveStateForPayment}
           />
         );
 
