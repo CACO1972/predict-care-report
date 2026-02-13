@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
   ArrowRight, CheckCircle2, Crown, Sparkles, 
-  Camera, FileText, TrendingUp, Shield, Gift, X, Loader2
+  Camera, FileText, TrendingUp, Shield, Gift, X, Loader2, Bug, Zap
 } from "lucide-react";
+import { PurchaseLevel } from "@/types/questionnaire";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,17 @@ interface UpsellPremiumScreenProps {
   onSaveStateForPayment?: () => void;
 }
 
+// Test mode bypass
+const getTestMode = (): PurchaseLevel | null => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const testMode = params.get('testMode');
+    if (testMode === 'premium') return 'premium';
+    if (testMode === 'plan-accion') return 'plan-accion';
+  }
+  return null;
+};
+
 const UpsellPremiumScreen = ({ 
   patientName,
   patientEmail,
@@ -27,6 +39,7 @@ const UpsellPremiumScreen = ({
   const [isHovering, setIsHovering] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const testMode = getTestMode();
 
   const handleUpgrade = async () => {
     if (!patientEmail) {
@@ -89,6 +102,31 @@ const UpsellPremiumScreen = ({
         <h2 className="text-2xl font-bold text-foreground">{patientName}, tienes una oportunidad única</h2>
         <p className="text-muted-foreground max-w-md mx-auto">Aprovecha este momento para llevar tu evaluación al siguiente nivel</p>
       </div>
+
+      {/* TEST MODE BYPASS */}
+      {testMode && (
+        <Card className="border-2 border-orange-500 bg-orange-500/10 p-4 space-y-3 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <Bug className="w-5 h-5 text-orange-500" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-foreground">🧪 Modo Test Activo</p>
+              <p className="text-xs text-muted-foreground">
+                Bypass de pagos habilitado. Haz clic para continuar sin pagar.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={onSkip} variant="outline" className="gap-2 border-orange-500/50 hover:bg-orange-500/10">
+              <Zap className="w-4 h-4" />Test Plan Acción
+            </Button>
+            <Button onClick={() => { onUpgrade(); }} className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-white">
+              <Crown className="w-4 h-4" />Test Premium
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card 
         className={cn(
