@@ -12,8 +12,6 @@ verify_jwt = false
 [functions.rio-feedback]
 verify_jwt = false
 
-[functions.rio-tts]
-verify_jwt = false
 
 [functions.send-report-email]
 verify_jwt = false

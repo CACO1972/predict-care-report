@@ -365,7 +365,6 @@ export const useQuestionnaireFlow = () => {
     }
     
     if (step === 'demographics') {
-      // Use the passed gender parameter for immediate decision
       const genderToCheck = selectedGender || userProfile.gender;
       const shouldDoDensity = genderToCheck === 'female' && (userProfile.age || 0) >= 50;
       
@@ -377,63 +376,19 @@ export const useQuestionnaireFlow = () => {
       return;
     }
 
-    if (step === 'density-intro') setStep('density-q1');
-    else if (step === 'density-q1') setStep('density-q2');
-    else if (step === 'density-q2') setStep('density-q3');
-    else if (step === 'density-q3') setStep('density-q4');
-    else if (step === 'density-q4') setStep('density-q5');
-    else if (step === 'density-q5') {
-      setStep('density-complete');
-      setTimeout(() => triggerConfetti(), 300);
+    if (step === 'density-intro') {
+      setStep('density-q1');
+      return;
     }
-    else if (step === 'density-complete') setStep('smoking');
-    else if (step === 'smoking') setStep('bruxism');
-    else if (step === 'bruxism') {
-      if (implantAnswers.bruxism === 'yes') {
-        setStep('bruxism-guard');
-      } else {
-        setImplantAnswers({ ...implantAnswers, bruxismGuard: 'not-applicable' });
-        setStep('diabetes');
-      }
+    if (step === 'density-complete') {
+      setStep('smoking');
+      return;
     }
-    else if (step === 'bruxism-guard') setStep('diabetes');
-    else if (step === 'diabetes') setStep('gum-health');
-    else if (step === 'gum-health') setStep('irp-processing');
-    else if (step === 'irp-result') setStep('implant-history');
-    else if (step === 'implant-history') setStep('tooth-loss');
-    else if (step === 'tooth-loss') setStep('tooth-loss-time');
-    else if (step === 'tooth-loss-time') setStep('teeth-count');
-    else if (step === 'teeth-count') {
-      if (purchaseLevel === 'premium') {
-        setStep('odontogram');
-      } else {
-        setStep('processing');
-        triggerConfetti();
-        setTimeout(() => {
-          const result = calculateRiskAssessment(
-            requiresDensityPro ? densityAnswers as DensityProAnswers : null,
-            implantAnswers as ImplantXAnswers,
-            userProfile.age
-          );
-          setAssessmentResult(result);
-          setShowLeadCapture(true);
-        }, 3000);
-      }
-    }
-    else if (step === 'odontogram') {
-      setStep('processing');
-      triggerConfetti();
-      setTimeout(() => {
-        const result = calculateRiskAssessment(
-          requiresDensityPro ? densityAnswers as DensityProAnswers : null,
-          implantAnswers as ImplantXAnswers,
-          userProfile.age
-        );
-        setAssessmentResult(result);
-        setShowLeadCapture(true);
-      }, 3000);
-    }
-  }, [step, requiresDensityPro, implantAnswers, densityAnswers, userProfile.age, clearFeedback]);
+
+    // Delegate all other transitions to getNextStepFunction (single source of truth)
+    const transitionFn = getNextStepFunction(step);
+    transitionFn();
+  }, [step, userProfile.gender, userProfile.age, clearFeedback, getNextStepFunction]);
 
   const handleIRPComplete = useCallback(() => {
     const result = calculateIRP({

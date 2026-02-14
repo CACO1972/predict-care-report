@@ -42,7 +42,7 @@ const IRPResultScreen = ({
   onSaveStateForPayment,
 }: IRPResultScreenProps) => {
   const [isHoveringPremium, setIsHoveringPremium] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
   const colorClasses = getIRPColorClass(irpResult.level);
   const { toast } = useToast();
   
@@ -66,8 +66,6 @@ const IRPResultScreen = ({
     const email = patientEmail || 'cliente@implantx.cl';
 
     setProcessingLevel(level);
-    setIsProcessingPayment(true);
-
     try {
       const amount = level === 'premium' ? 29990 : 14900;
       const subject = level === 'premium' ? 'ImplantX Informe Premium' : 'ImplantX Plan de Acción';
@@ -102,7 +100,6 @@ const IRPResultScreen = ({
         description: err.message || "Por favor intenta nuevamente",
         variant: "destructive",
       });
-      setIsProcessingPayment(false);
       setProcessingLevel(null);
     }
   };
