@@ -60,9 +60,12 @@ const IRPResultScreen = ({
     onPurchasePlan(level);
   };
 
-  const handleInitiatePurchase = async (level: 'plan-accion' | 'premium') => {
-    const email = patientEmail || '';
+  const [processingLevel, setProcessingLevel] = useState<string | null>(null);
 
+  const handleInitiatePurchase = async (level: 'plan-accion' | 'premium') => {
+    const email = patientEmail || 'cliente@implantx.cl';
+
+    setProcessingLevel(level);
     setIsProcessingPayment(true);
 
     try {
@@ -70,7 +73,7 @@ const IRPResultScreen = ({
       const subject = level === 'premium' ? 'ImplantX Informe Premium' : 'ImplantX Plan de Acción';
 
       const { data, error } = await supabase.functions.invoke('create-flow-order', {
-        body: { email: email || 'pending@implantx.cl', amount, subject, purchaseLevel: level },
+        body: { email, amount, subject, purchaseLevel: level },
       });
 
       if (error || !data?.success) {
@@ -99,6 +102,7 @@ const IRPResultScreen = ({
         variant: "destructive",
       });
       setIsProcessingPayment(false);
+      setProcessingLevel(null);
     }
   };
 
@@ -310,9 +314,9 @@ const IRPResultScreen = ({
                 🔊 {selectedPlanAudio === 'premium' ? 'Pausar' : 'Escuchar sobre este plan'}
               </Button>
               <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg"
-                size="lg" onClick={() => handleInitiatePurchase('premium')} disabled={isProcessingPayment}>
-                {isProcessingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {isProcessingPayment ? 'Procesando...' : 'Obtener Informe Premium'}{!isProcessingPayment && <ArrowRight className="w-4 h-4" />}
+                size="lg" onClick={() => handleInitiatePurchase('premium')} disabled={!!processingLevel}>
+                {processingLevel === 'premium' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {processingLevel === 'premium' ? 'Procesando...' : 'Obtener Informe Premium'}{processingLevel !== 'premium' && <ArrowRight className="w-4 h-4" />}
               </Button>
             </div>
             {selectedPlanAudio === 'premium' && (
@@ -356,9 +360,9 @@ const IRPResultScreen = ({
                 onClick={() => setSelectedPlanAudio(selectedPlanAudio === 'base' ? null : 'base')}>
                 🔊 {selectedPlanAudio === 'base' ? 'Pausar' : 'Escuchar sobre este plan'}
               </Button>
-              <Button className="w-full gap-2" size="lg" onClick={() => handleInitiatePurchase('plan-accion')} disabled={isProcessingPayment}>
-                {isProcessingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {isProcessingPayment ? 'Procesando...' : 'Obtener Plan de Acción'}{!isProcessingPayment && <ArrowRight className="w-4 h-4" />}
+              <Button className="w-full gap-2" size="lg" onClick={() => handleInitiatePurchase('plan-accion')} disabled={!!processingLevel}>
+                {processingLevel === 'plan-accion' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {processingLevel === 'plan-accion' ? 'Procesando...' : 'Obtener Plan de Acción'}{processingLevel !== 'plan-accion' && <ArrowRight className="w-4 h-4" />}
               </Button>
             </div>
             {selectedPlanAudio === 'base' && (
