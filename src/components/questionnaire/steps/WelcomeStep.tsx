@@ -1,8 +1,7 @@
-import { RefObject, useEffect, useState, useRef } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, Award, Volume2, VolumeX } from "lucide-react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
-import { useRioTTS } from "@/hooks/useRioTTS";
 
 const RIO_VIDEOS = [
   '/video/rio-avatar-1.mp4',
@@ -19,8 +18,6 @@ interface WelcomeStepProps {
 
 const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: WelcomeStepProps) => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const { speak, stop: stopTTS, isPlaying: isTTSPlaying } = useRioTTS();
-  const hasSpokenRef = useRef(false);
 
   const handleVideoEnded = () => {
     if (currentVideoIndex < RIO_VIDEOS.length - 1) {
@@ -36,14 +33,10 @@ const WelcomeStep = ({ isMuted, setIsMuted, welcomeVideoRef, onContinue }: Welco
     }
   }, [currentVideoIndex]);
 
-  // Play TTS with correct voice when user unmutes
+  // Sync muted state to video element
   useEffect(() => {
-    if (!isMuted && !hasSpokenRef.current) {
-      hasSpokenRef.current = true;
-      speak("¡Hola! Soy Río, tu asistente dental con inteligencia artificial. Estoy aquí para ayudarte a evaluar si eres candidato a implantes dentales. El proceso es rápido, privado y completamente gratuito. ¡Comencemos!");
-    } else if (isMuted) {
-      stopTTS();
-      hasSpokenRef.current = false;
+    if (welcomeVideoRef.current) {
+      welcomeVideoRef.current.muted = isMuted;
     }
   }, [isMuted]);
 
