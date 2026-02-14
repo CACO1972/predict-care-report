@@ -1,12 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Restrict CORS to production domain
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://implantx.lovable.app';
+// Dynamic CORS based on request origin
+const ALLOWED_ORIGINS = [
+  'https://implantx.lovable.app',
+  'https://implantx.cl',
+  'https://www.implantx.cl',
+];
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+function getCorsHeaders(req?: Request) {
+  const origin = req?.headers?.get('origin') || '';
+  
+  // Allow exact matches
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    return {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    };
+  }
+  
+  // Allow Lovable preview/dev domains
+  if (/^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/.test(origin) ||
+      /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/.test(origin)) {
+    return {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    };
+  }
+  
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 // Security constants
 const MAX_TEXT_LENGTH = 2000;
@@ -46,6 +71,8 @@ function validateAndSanitizeText(text: unknown): { valid: boolean; sanitized: st
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
