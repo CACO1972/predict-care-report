@@ -41,7 +41,7 @@ export const BruxismStep = ({ implantAnswers, setImplantAnswers, userName, onAns
     <RioAvatar 
       message={`Algunas personas aprietan los dientes, a menudo sin darse cuenta. Es más común de lo que piensas, ${userName}.`}
       userName={userName}
-      customAudioUrl="/audio/rio-brux-pregunta.mp3"
+      
     />
     <QuestionCard
       question={`¿Aprietas o rechinas los dientes, ${userName}?`}
