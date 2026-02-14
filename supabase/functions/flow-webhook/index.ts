@@ -141,7 +141,6 @@ Deno.serve(async (req) => {
       const { error: insertError } = await supabase
         .from('payments')
         .insert({
-          mercadopago_id: flowOrder, // legacy column, still required
           flow_order: flowOrder,
           flow_token: token,
           status,
