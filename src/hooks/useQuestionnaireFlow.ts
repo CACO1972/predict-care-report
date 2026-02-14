@@ -320,7 +320,24 @@ export const useQuestionnaireFlow = () => {
       'implant-history': () => setStep('tooth-loss'),
       'tooth-loss': () => setStep('tooth-loss-time'),
       'tooth-loss-time': () => setStep('teeth-count'),
-      'teeth-count': () => setStep('odontogram'),
+      'teeth-count': () => {
+        if (purchaseLevel === 'premium') {
+          setStep('odontogram');
+        } else {
+          // Plan de Acción skips odontogram/image upload — go straight to processing
+          setStep('processing');
+          triggerConfetti();
+          setTimeout(() => {
+            const result = calculateRiskAssessment(
+              requiresDensityPro ? densityAnswers as DensityProAnswers : null,
+              implantAnswers as ImplantXAnswers,
+              userProfile.age
+            );
+            setAssessmentResult(result);
+            setShowLeadCapture(true);
+          }, 3000);
+        }
+      },
       'odontogram': () => {
         setStep('processing');
         triggerConfetti();
@@ -336,7 +353,7 @@ export const useQuestionnaireFlow = () => {
       },
     };
     return transitions[currentStep] || (() => {});
-  }, [implantAnswers, requiresDensityPro, densityAnswers, userProfile.age]);
+  }, [implantAnswers, requiresDensityPro, densityAnswers, userProfile.age, purchaseLevel]);
 
   const handleNext = useCallback((selectedGender?: 'male' | 'female' | 'other') => {
     setShowRioResponse(false);
@@ -386,7 +403,23 @@ export const useQuestionnaireFlow = () => {
     else if (step === 'implant-history') setStep('tooth-loss');
     else if (step === 'tooth-loss') setStep('tooth-loss-time');
     else if (step === 'tooth-loss-time') setStep('teeth-count');
-    else if (step === 'teeth-count') setStep('odontogram');
+    else if (step === 'teeth-count') {
+      if (purchaseLevel === 'premium') {
+        setStep('odontogram');
+      } else {
+        setStep('processing');
+        triggerConfetti();
+        setTimeout(() => {
+          const result = calculateRiskAssessment(
+            requiresDensityPro ? densityAnswers as DensityProAnswers : null,
+            implantAnswers as ImplantXAnswers,
+            userProfile.age
+          );
+          setAssessmentResult(result);
+          setShowLeadCapture(true);
+        }, 3000);
+      }
+    }
     else if (step === 'odontogram') {
       setStep('processing');
       triggerConfetti();
