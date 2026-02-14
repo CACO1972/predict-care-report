@@ -12,16 +12,15 @@ const PagoExitoso = () => {
   const [purchaseLevel, setPurchaseLevel] = useState<string | null>(null);
 
   useEffect(() => {
-    // Flow redirects with ?token=xxx or we check by status param
-    const flowStatus = searchParams.get('status');
-    
-    // Try to get email from localStorage (saved before redirect)
+    // Try to get saved flow token from localStorage
+    let savedToken: string | null = null;
     let savedEmail: string | null = null;
     try {
       const saved = localStorage.getItem('implantx_flow_payment');
       if (saved) {
         const parsed = JSON.parse(saved);
-        savedEmail = parsed.email;
+        savedToken = parsed.flowToken || null;
+        savedEmail = parsed.email || null;
       }
     } catch {}
 
@@ -29,42 +28,37 @@ const PagoExitoso = () => {
       // Give Flow webhook time to process
       await new Promise(r => setTimeout(r, 3000));
 
-      if (!savedEmail) {
-        // No email saved, can't verify - show generic success
-        if (flowStatus === '1' || flowStatus === '2') {
-          setStatus('success');
-        } else {
-          setStatus('pending');
-        }
+      if (!savedToken && !savedEmail) {
+        // No identifiers saved — show generic pending
+        setStatus('pending');
         return;
       }
 
-      // Poll for payment verification
+      // Poll via edge function (uses service_role internally)
       let attempts = 0;
       const maxAttempts = 10;
 
       const poll = async () => {
         attempts++;
-        const { data: payments } = await supabase
-          .from('payments')
-          .select('status, purchase_level')
-          .eq('payer_email', savedEmail!.toLowerCase())
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false })
-          .limit(1);
+        try {
+          const { data, error } = await supabase.functions.invoke('verify-payment-status', {
+            body: savedToken ? { token: savedToken } : { email: savedEmail },
+          });
 
-        if (payments && payments.length > 0) {
-          setPurchaseLevel(payments[0].purchase_level);
-          setStatus('success');
-          // Save purchase level for questionnaire to pick up
-          try {
-            localStorage.setItem('implantx_purchase_verified', JSON.stringify({
-              level: payments[0].purchase_level,
-              timestamp: Date.now(),
-            }));
-            localStorage.removeItem('implantx_flow_payment');
-          } catch {}
-          return;
+          if (!error && data?.success && data.data?.found && data.data.status === 'approved') {
+            setPurchaseLevel(data.data.purchaseLevel);
+            setStatus('success');
+            try {
+              localStorage.setItem('implantx_purchase_verified', JSON.stringify({
+                level: data.data.purchaseLevel,
+                timestamp: Date.now(),
+              }));
+              localStorage.removeItem('implantx_flow_payment');
+            } catch {}
+            return;
+          }
+        } catch (err) {
+          console.error('Payment verification error:', err);
         }
 
         if (attempts < maxAttempts) {

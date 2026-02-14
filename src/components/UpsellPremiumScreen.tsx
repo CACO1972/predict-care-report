@@ -63,6 +63,7 @@ const UpsellPremiumScreen = ({
       localStorage.setItem('implantx_flow_payment', JSON.stringify({
         level: 'premium',
         email: patientEmail,
+        flowToken: data.data.token,
         timestamp: Date.now(),
       }));
 
