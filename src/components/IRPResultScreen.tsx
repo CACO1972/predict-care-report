@@ -62,14 +62,6 @@ const IRPResultScreen = ({
 
   const handleInitiatePurchase = async (level: 'plan-accion' | 'premium') => {
     const email = patientEmail || '';
-    if (!email) {
-      toast({
-        title: "Email requerido",
-        description: "No se encontró tu email. Por favor reinicia la evaluación.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setIsProcessingPayment(true);
 
@@ -78,7 +70,7 @@ const IRPResultScreen = ({
       const subject = level === 'premium' ? 'ImplantX Informe Premium' : 'ImplantX Plan de Acción';
 
       const { data, error } = await supabase.functions.invoke('create-flow-order', {
-        body: { email, amount, subject, purchaseLevel: level },
+        body: { email: email || 'pending@implantx.cl', amount, subject, purchaseLevel: level },
       });
 
       if (error || !data?.success) {

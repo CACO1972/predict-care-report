@@ -42,17 +42,13 @@ const UpsellPremiumScreen = ({
   const testMode = getTestMode();
 
   const handleUpgrade = async () => {
-    if (!patientEmail) {
-      toast({ title: "Email requerido", variant: "destructive" });
-      onUpgrade();
-      return;
-    }
+    const emailToUse = patientEmail || '';
 
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-flow-order', {
         body: {
-          email: patientEmail,
+          email: emailToUse || 'pending@implantx.cl',
           amount: 29990,
           subject: 'ImplantX Informe Premium (Upgrade)',
           purchaseLevel: 'premium',
