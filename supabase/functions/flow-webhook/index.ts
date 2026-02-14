@@ -1,10 +1,25 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Dynamic CORS — Flow sends server-to-server POSTs without Origin
+const allowedPatterns = [
+  /^https:\/\/(www\.)?implantx\.cl$/,
+  /^https:\/\/app\.implantx\.cl$/,
+  /^https:\/\/implantx\.lovable\.app$/,
+  /^https:\/\/predict-care-report\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.lovable\.app$/,
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  // Allow server-to-server (no origin) or whitelisted origins
+  const isAllowed = !origin || allowedPatterns.some(p => p.test(origin));
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? (origin || '*') : 'https://implantx.lovable.app',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  };
+}
 
 /**
  * Flow Webhook (urlConfirmation)
@@ -13,6 +28,8 @@ const corsHeaders = {
  * We use the token to query Flow's API for payment status and save to DB.
  */
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

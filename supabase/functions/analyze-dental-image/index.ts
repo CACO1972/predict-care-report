@@ -2,13 +2,24 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-// Restrict CORS to production domain
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://implantx.lovable.app';
+// Dynamic CORS whitelist (consistent with other edge functions)
+const allowedPatterns = [
+  /^https:\/\/(www\.)?implantx\.cl$/,
+  /^https:\/\/app\.implantx\.cl$/,
+  /^https:\/\/implantx\.lovable\.app$/,
+  /^https:\/\/predict-care-report\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.lovable\.app$/,
+];
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const isAllowed = allowedPatterns.some(p => p.test(origin));
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'https://implantx.lovable.app',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  };
+}
 
 // Input validation schema
 const ImageAnalysisSchema = z.object({
@@ -28,12 +39,12 @@ const ImageAnalysisSchema = z.object({
 });
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ success: false, error: 'Método no permitido' }),
@@ -42,7 +53,6 @@ serve(async (req) => {
   }
 
   try {
-    // Parse and validate input
     let body;
     try {
       body = await req.json();
@@ -57,10 +67,7 @@ serve(async (req) => {
     if (!validated.success) {
       console.error('Validation error:', validated.error.errors);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Datos de entrada inválidos'
-        }),
+        JSON.stringify({ success: false, error: 'Datos de entrada inválidos' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -78,7 +85,6 @@ serve(async (req) => {
 
     console.log('Analizando imagen dental para:', patientName || 'paciente anónimo', '| Premium:', isPremium);
 
-    // Different prompts for premium vs freemium
     const systemPrompt = isPremium 
       ? `Eres un experto implantólogo digital de Clínica Miró. Analizas imágenes dentales (fotos y radiografías) para proporcionar información educativa DETALLADA y clínicamente relevante.
 
@@ -158,10 +164,7 @@ Responde en español chileno, de forma amigable y breve (máximo 150 palabras). 
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
             content: [
@@ -228,15 +231,8 @@ Responde en español chileno, de forma amigable y breve (máximo 150 palabras). 
   } catch (error) {
     console.error('Error en analyze-dental-image:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: 'Error interno del servidor',
-        analysis: null
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: 'Error interno del servidor', analysis: null }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
