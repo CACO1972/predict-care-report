@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import RioAvatar from "@/components/RioAvatar";
 import QuestionCard from "@/components/QuestionCard";
 import { UserProfile } from "@/types/questionnaire";
-import { useRioTTS } from "@/hooks/useRioTTS";
+
 const NAME_VIDEOS = [
   "/video/rio-name-1.mp4",
   "/video/rio-name-2.mp4",
@@ -18,29 +18,31 @@ interface NameStepProps {
 
 export const NameStep = ({ userProfile, setUserProfile, onNext }: NameStepProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { speak, isPlaying: isTTSPlaying } = useRioTTS();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAdvancedRef = useRef(false);
-  const hasSpokenRef = useRef(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [videosFinished, setVideosFinished] = useState(false);
 
-  // Play TTS on mount and handle auto-advance after audio ends
+  // Play audio on mount and handle auto-advance after audio ends
   useEffect(() => {
-    if (!hasSpokenRef.current) {
-      hasSpokenRef.current = true;
-      speak("Para empezar, por favor dime tu nombre.").then(() => {
-        // When TTS ends, start 2 second timer for auto-advance
-        autoAdvanceTimerRef.current = setTimeout(() => {
-          if (!hasAdvancedRef.current && userProfile.name && userProfile.name.trim().length > 0) {
-            hasAdvancedRef.current = true;
-            onNext();
-          }
-        }, 2000);
-      });
-    }
+    const audio = new Audio("/audio/rio-nombre.mp3");
+    audioRef.current = audio;
+    audio.play().catch(err => console.log("Audio autoplay blocked:", err));
+
+    // When audio ends, start 2 second timer for auto-advance
+    audio.addEventListener('ended', () => {
+      autoAdvanceTimerRef.current = setTimeout(() => {
+        if (!hasAdvancedRef.current && userProfile.name && userProfile.name.trim().length > 0) {
+          hasAdvancedRef.current = true;
+          onNext();
+        }
+      }, 2000);
+    });
 
     return () => {
+      audio.pause();
+      audio.src = "";
       if (autoAdvanceTimerRef.current) {
         clearTimeout(autoAdvanceTimerRef.current);
       }
