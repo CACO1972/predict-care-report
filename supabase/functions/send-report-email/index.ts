@@ -243,7 +243,7 @@ const generateNotificationEmail = (data: SafePayload): string => {
               <p style="color:#94a3b8;font-size:13px;line-height:1.5;margin:0 0 16px;">
                 Incluye Score IRP, factores con Riesgo Relativo, plan de 4 semanas y recomendaciones personalizadas.
               </p>
-              <a href="https://mpago.la/2eWC5q6" style="display:inline-block;padding:12px 36px;background:linear-gradient(135deg,#00BFA5,#00897B);color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
+              <a href="https://implantx.lovable.app/evaluacion" style="display:inline-block;padding:12px 36px;background:linear-gradient(135deg,#00BFA5,#00897B);color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
                 Obtener por $14.900
               </a>
               <p style="color:#64748b;font-size:10px;margin:10px 0 0;">🔒 Pago seguro • Acceso inmediato</p>
@@ -414,10 +414,10 @@ const generatePdfAttachment = async (data: ReportEmailRequest): Promise<PdfAttac
     } : undefined),
   };
 
-  console.log("📄 Calling generate-pdf-report for binary PDF...");
+  console.log("📄 Calling generate-pdf-report-v3 for binary PDF...");
 
   try {
-    const reportResponse = await fetch(`${SUPABASE_URL}/functions/v1/generate-pdf-report`, {
+    const reportResponse = await fetch(`${SUPABASE_URL}/functions/v1/generate-pdf-report-v3`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -438,14 +438,14 @@ const generatePdfAttachment = async (data: ReportEmailRequest): Promise<PdfAttac
           contentType: 'application/pdf',
         };
       } else {
-        console.warn("⚠️ generate-pdf-report returned success but no PDF:", Object.keys(result));
+        console.warn("⚠️ generate-pdf-report-v3 returned success but no PDF:", Object.keys(result));
       }
     } else {
       const errorText = await reportResponse.text();
-      console.error("❌ generate-pdf-report failed:", reportResponse.status, errorText);
+      console.error("❌ generate-pdf-report-v3 failed:", reportResponse.status, errorText);
     }
   } catch (err) {
-    console.error("❌ Error calling generate-pdf-report:", err);
+    console.error("❌ Error calling generate-pdf-report-v3:", err);
   }
 
   // Fallback: Generate minimal HTML as PDF substitute
@@ -510,7 +510,7 @@ const handler = async (req: Request): Promise<Response> => {
       hasPdfUrl: !!(rawData as any).pdfUrl,
       pdfUrl: (rawData as any).pdfUrl || "NOT PROVIDED",
       reportId: safePayload.reportId,
-      note: "Currently using generate-pdf-report internal call, not external pdfUrl"
+      note: "Using generate-pdf-report-v3 internal call"
     });
 
     if (!safePayload.email || !safePayload.email.includes('@')) {
