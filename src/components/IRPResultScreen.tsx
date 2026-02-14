@@ -88,6 +88,7 @@ const IRPResultScreen = ({
         localStorage.setItem('implantx_flow_payment', JSON.stringify({
           level,
           email,
+          flowToken: data.data.token,
           timestamp: Date.now(),
         }));
       } catch {}

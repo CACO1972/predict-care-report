@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.dentalink-pricing]
 verify_jwt = false
+
+[functions.verify-payment-status]
+verify_jwt = false
