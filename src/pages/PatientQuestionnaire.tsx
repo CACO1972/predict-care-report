@@ -216,22 +216,20 @@ const PatientQuestionnaire = () => {
             irpResult={flow.irpResult}
             patientName={flow.userProfile.name || 'Paciente'}
             patientEmail={flow.leadData?.email}
-            onContinueFree={flow.handleContinueFree}
+            onContinueFree={() => {
+              // Free full flow — go directly to clinical questions (like Premium)
+              triggerConfetti();
+              flow.setStep('implant-history');
+            }}
             onPurchasePlan={flow.handlePurchasePlan}
             onSaveStateForPayment={flow.saveStateForPayment}
           />
         ) : null;
 
       case 'upsell-premium':
-        return (
-          <UpsellPremiumScreen
-            patientName={flow.userProfile.name || 'Paciente'}
-            patientEmail={flow.leadData?.email}
-            onUpgrade={flow.handleUpgradeToPremium}
-            onSkip={flow.handleSkipUpsell}
-            onSaveStateForPayment={flow.saveStateForPayment}
-          />
-        );
+        // No longer needed — skip directly to clinical flow
+        flow.setStep('implant-history');
+        return null;
 
       case 'implant-history':
         return (

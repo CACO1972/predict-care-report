@@ -321,22 +321,8 @@ export const useQuestionnaireFlow = () => {
       'tooth-loss': () => setStep('tooth-loss-time'),
       'tooth-loss-time': () => setStep('teeth-count'),
       'teeth-count': () => {
-        if (purchaseLevel === 'premium') {
-          setStep('odontogram');
-        } else {
-          // Plan de Acción skips odontogram/image upload — go straight to processing
-          setStep('processing');
-          triggerConfetti();
-          setTimeout(() => {
-            const result = calculateRiskAssessment(
-              requiresDensityPro ? densityAnswers as DensityProAnswers : null,
-              implantAnswers as ImplantXAnswers,
-              userProfile.age
-            );
-            setAssessmentResult(result);
-            setShowLeadCapture(true);
-          }, 3000);
-        }
+        // Always go to odontogram (full clinical flow)
+        setStep('odontogram');
       },
       'odontogram': () => {
         setStep('processing');
@@ -397,23 +383,16 @@ export const useQuestionnaireFlow = () => {
       oralHygiene: implantAnswers.oralHygiene || 'twice-plus'
     });
     setIrpResult(result);
+    // Skip plan selection — go directly to full clinical flow (free Premium)
+    setPurchaseLevel('premium');
     setStep('irp-result');
   }, [implantAnswers]);
 
   const handleContinueFree = useCallback(() => {
-    setPurchaseLevel('free');
-    setStep('processing');
+    setPurchaseLevel('premium');
     triggerConfetti();
-    setTimeout(() => {
-      const result = calculateRiskAssessment(
-        requiresDensityPro ? densityAnswers as DensityProAnswers : null,
-        implantAnswers as ImplantXAnswers,
-        userProfile.age
-      );
-      setAssessmentResult(result);
-      setShowLeadCapture(true);
-    }, 3000);
-  }, [requiresDensityPro, densityAnswers, implantAnswers, userProfile.age]);
+    setStep('implant-history');
+  }, []);
 
   const handlePurchasePlan = useCallback((level: PurchaseLevel) => {
     setPurchaseLevel(level);
