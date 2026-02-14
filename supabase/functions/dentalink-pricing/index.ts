@@ -1,19 +1,85 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Restrict CORS to production domain
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://implantx.lovable.app';
+// Dynamic CORS whitelist
+const allowedPatterns = [
+  'https://implantx.cl',
+  'https://www.implantx.cl',
+  'https://app.implantx.cl',
+  'https://implantx.lovable.app',
+];
+const allowedRegex = [
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.lovable\.app$/,
+];
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return false;
+  if (allowedPatterns.includes(origin)) return true;
+  return allowedRegex.some(r => r.test(origin));
+}
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const allowed = isOriginAllowed(origin) ? origin : allowedPatterns[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  };
+}
+
+// Rate limiting: 10 requests per minute per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+function cleanupRateLimit() {
+  if (rateLimitMap.size > 1000) {
+    const now = Date.now();
+    for (const [key, val] of rateLimitMap) {
+      if (now > val.resetAt) rateLimitMap.delete(key);
+    }
+  }
+}
 
 const DENTALINK_BASE_URL = 'https://api.dentalink.healthatom.com/api/v1';
 
 serve(async (req) => {
-  // Handle CORS preflight
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Origin validation
+  const origin = req.headers.get('origin');
+  if (!isOriginAllowed(origin)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Rate limiting
+  cleanupRateLimit();
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('cf-connecting-ip') || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+    });
   }
 
   try {
@@ -34,115 +100,65 @@ serve(async (req) => {
 
     switch (action) {
       case 'getPrestaciones': {
-        // Get all services/treatments catalog
         const url = new URL(`${DENTALINK_BASE_URL}/prestaciones`);
-        if (params.categoriaId) {
-          url.searchParams.set('id_categoria', params.categoriaId);
-        }
-        if (params.tipoId) {
-          url.searchParams.set('id_tipo', params.tipoId);
-        }
+        if (params.categoriaId) url.searchParams.set('id_categoria', params.categoriaId);
+        if (params.tipoId) url.searchParams.set('id_tipo', params.tipoId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Prestaciones fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getAranceles': {
-        // Get pricing for services
         const url = new URL(`${DENTALINK_BASE_URL}/aranceles`);
-        if (params.prestacionId) {
-          url.searchParams.set('id_prestacion', params.prestacionId);
-        }
-        if (params.convenioId) {
-          url.searchParams.set('id_convenio', params.convenioId);
-        }
+        if (params.prestacionId) url.searchParams.set('id_prestacion', params.prestacionId);
+        if (params.convenioId) url.searchParams.set('id_convenio', params.convenioId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Aranceles fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getCategorias': {
-        // Get treatment categories
         const response = await fetch(`${DENTALINK_BASE_URL}/categorias`, { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Categorias fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getTiposPrestaciones': {
-        // Get treatment types
         const response = await fetch(`${DENTALINK_BASE_URL}/tipos_prestaciones`, { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Tipos de prestaciones fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getTratamientos': {
-        // Get treatment plans
         const url = new URL(`${DENTALINK_BASE_URL}/tratamientos`);
-        if (params.pacienteId) {
-          url.searchParams.set('id_paciente', params.pacienteId);
-        }
+        if (params.pacienteId) url.searchParams.set('id_paciente', params.pacienteId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Tratamientos fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getConvenios': {
-        // Get insurance/agreement plans
         const response = await fetch(`${DENTALINK_BASE_URL}/convenios`, { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Convenios fetched:', result.data?.length || 0);
         break;
       }
-
       case 'simulateTreatmentCost': {
-        // Simulate treatment cost based on teeth count and treatment type
         const { teethCount, treatmentType } = params;
-        
-        // Fetch prestaciones to find relevant treatments
         const prestacionesResponse = await fetch(`${DENTALINK_BASE_URL}/prestaciones`, { headers });
-        if (!prestacionesResponse.ok) {
-          throw new Error(`Dentalink API error: ${prestacionesResponse.status}`);
-        }
+        if (!prestacionesResponse.ok) throw new Error(`Dentalink API error: ${prestacionesResponse.status}`);
         const prestaciones = await prestacionesResponse.json();
         
-        // Fetch aranceles for pricing
         const arancelesResponse = await fetch(`${DENTALINK_BASE_URL}/aranceles`, { headers });
-        if (!arancelesResponse.ok) {
-          throw new Error(`Dentalink API error: ${arancelesResponse.status}`);
-        }
+        if (!arancelesResponse.ok) throw new Error(`Dentalink API error: ${arancelesResponse.status}`);
         const aranceles = await arancelesResponse.json();
         
-        // Filter implant-related services
         const implantServices = prestaciones.data?.filter((p: any) => 
           p.nombre?.toLowerCase().includes('implante') ||
           p.nombre?.toLowerCase().includes('corona') ||
           p.nombre?.toLowerCase().includes('pilar')
         ) || [];
         
-        // Calculate cost estimate
         let totalEstimate = 0;
         const breakdown: any[] = [];
         
@@ -166,10 +182,8 @@ serve(async (req) => {
           currency: 'CLP',
           disclaimer: 'Este es un estimado. El costo final puede variar según tu caso clínico específico.',
         };
-        console.log('Treatment cost simulated:', result.estimate);
         break;
       }
-
       default:
         throw new Error(`Unknown action: ${action}`);
     }
@@ -183,10 +197,7 @@ serve(async (req) => {
     console.error('Dentalink pricing error:', errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
