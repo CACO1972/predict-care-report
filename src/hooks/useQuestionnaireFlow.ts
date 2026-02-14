@@ -498,7 +498,8 @@ export const useQuestionnaireFlow = () => {
     // Save assessment to database
     await saveAssessmentToDatabase(data.email, data.phone);
     
-    if (purchaseLevel === 'free' && assessmentResult) {
+    // Auto-send report email for ALL tiers (free, plan-accion, premium)
+    if (assessmentResult) {
       try {
         const reportId = `EV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
         const { error } = await supabase.functions.invoke('send-report-email', {
@@ -508,7 +509,7 @@ export const useQuestionnaireFlow = () => {
             reportId,
             date: new Date().toLocaleDateString('es-ES'),
             successRange: `${assessmentResult.successProbability}%`,
-            purchaseLevel: 'free',
+            purchaseLevel,
             irpScore: irpResult?.score,
             irpLevel: irpResult?.level,
             pronosticoLabel: assessmentResult.pronosticoLabel,
@@ -520,20 +521,25 @@ export const useQuestionnaireFlow = () => {
             recommendations: assessmentResult.recommendations?.slice(0, 2).map(rec => ({
               text: rec.title,
               evidence: rec.description
-            }))
+            })),
+            // Pass additional data for paid tiers
+            densityAnswers: purchaseLevel !== 'free' ? densityAnswers : undefined,
+            implantAnswers: purchaseLevel !== 'free' ? implantAnswers : undefined,
+            uploadedImage: purchaseLevel === 'premium' ? uploadedImage : undefined,
+            imageAnalysis: purchaseLevel === 'premium' ? imageAnalysis : undefined,
           }
         });
         
         if (error) {
           console.error('Error sending email:', error);
         } else {
-          console.log('Email sent automatically to:', data.email);
+          console.log(`Report email (${purchaseLevel}) sent automatically to:`, data.email);
         }
       } catch (err) {
         console.error('Error invoking send-report-email:', err);
       }
     }
-  }, [purchaseLevel, assessmentResult, userProfile.name, irpResult, saveAssessmentToDatabase]);
+  }, [purchaseLevel, assessmentResult, userProfile.name, irpResult, saveAssessmentToDatabase, densityAnswers, implantAnswers, uploadedImage, imageAnalysis]);
 
   return {
     // State
