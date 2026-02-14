@@ -3,18 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
 import rioThumbnail from "@/assets/rio-video-thumbnail.png";
 import ReportDemoPreview from "@/components/landing/ReportDemoPreview";
+import { useRioTTS } from "@/hooks/useRioTTS";
 
 const HeroSection = () => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const { speak, stop: stopTTS, isPlaying: isTTSPlaying } = useRioTTS();
 
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
+        stopTTS();
       } else {
         videoRef.current.play();
+        speak("Hola, soy Río, tu asistente de implantes dentales. Te ayudaré a descubrir si eres candidato a implantes en solo 5 minutos. ¡Comencemos!");
       }
       setIsPlaying(!isPlaying);
     }
@@ -80,6 +84,7 @@ const HeroSection = () => {
                       src="/hero-intro-v5.mp4"
                       poster={rioThumbnail}
                       playsInline
+                      muted
                       preload="metadata"
                       onEnded={handleVideoEnded}
                       className="absolute inset-0 w-full h-full object-cover"
