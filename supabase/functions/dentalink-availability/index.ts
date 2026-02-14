@@ -1,19 +1,86 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Restrict CORS to production domain
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://implantx.lovable.app';
+// Dynamic CORS whitelist
+const allowedPatterns = [
+  'https://implantx.cl',
+  'https://www.implantx.cl',
+  'https://app.implantx.cl',
+  'https://implantx.lovable.app',
+];
+const allowedRegex = [
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.lovable\.app$/,
+];
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return false;
+  if (allowedPatterns.includes(origin)) return true;
+  return allowedRegex.some(r => r.test(origin));
+}
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const allowed = isOriginAllowed(origin) ? origin : allowedPatterns[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  };
+}
+
+// Rate limiting: 10 requests per minute per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+// Cleanup stale entries
+function cleanupRateLimit() {
+  if (rateLimitMap.size > 1000) {
+    const now = Date.now();
+    for (const [key, val] of rateLimitMap) {
+      if (now > val.resetAt) rateLimitMap.delete(key);
+    }
+  }
+}
 
 const DENTALINK_BASE_URL = 'https://api.dentalink.healthatom.com/api/v1';
 
 serve(async (req) => {
-  // Handle CORS preflight
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Origin validation
+  const origin = req.headers.get('origin');
+  if (!isOriginAllowed(origin)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Rate limiting
+  cleanupRateLimit();
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('cf-connecting-ip') || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+    });
   }
 
   try {
@@ -34,87 +101,47 @@ serve(async (req) => {
 
     switch (action) {
       case 'getSucursales': {
-        // Get clinic branches
         const response = await fetch(`${DENTALINK_BASE_URL}/sucursales`, { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Sucursales fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getDentistas': {
-        // Get dentists/professionals
         const url = new URL(`${DENTALINK_BASE_URL}/dentistas`);
-        if (params.sucursalId) {
-          url.searchParams.set('id_sucursal', params.sucursalId);
-        }
+        if (params.sucursalId) url.searchParams.set('id_sucursal', params.sucursalId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Dentistas fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getHorarios': {
-        // Get available schedules
         const url = new URL(`${DENTALINK_BASE_URL}/horarios`);
-        if (params.dentistaId) {
-          url.searchParams.set('id_dentista', params.dentistaId);
-        }
-        if (params.fecha) {
-          url.searchParams.set('fecha', params.fecha);
-        }
+        if (params.dentistaId) url.searchParams.set('id_dentista', params.dentistaId);
+        if (params.fecha) url.searchParams.set('fecha', params.fecha);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Horarios fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getAgendas': {
-        // Get agendas
         const url = new URL(`${DENTALINK_BASE_URL}/agendas`);
-        if (params.dentistaId) {
-          url.searchParams.set('id_dentista', params.dentistaId);
-        }
-        if (params.sucursalId) {
-          url.searchParams.set('id_sucursal', params.sucursalId);
-        }
+        if (params.dentistaId) url.searchParams.set('id_dentista', params.dentistaId);
+        if (params.sucursalId) url.searchParams.set('id_sucursal', params.sucursalId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Agendas fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getCitas': {
-        // Get appointments
         const url = new URL(`${DENTALINK_BASE_URL}/citas`);
-        if (params.fecha) {
-          url.searchParams.set('fecha', params.fecha);
-        }
-        if (params.dentistaId) {
-          url.searchParams.set('id_dentista', params.dentistaId);
-        }
+        if (params.fecha) url.searchParams.set('fecha', params.fecha);
+        if (params.dentistaId) url.searchParams.set('id_dentista', params.dentistaId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Citas fetched:', result.data?.length || 0);
         break;
       }
-
       case 'createCita': {
-        // Create a new appointment
         const response = await fetch(`${DENTALINK_BASE_URL}/citas`, {
           method: 'POST',
           headers,
@@ -124,7 +151,7 @@ serve(async (req) => {
             fecha: params.fecha,
             hora_inicio: params.horaInicio,
             hora_fin: params.horaFin,
-            id_estado: params.estadoId || 1, // Default: scheduled
+            id_estado: params.estadoId || 1,
             observacion: params.observacion || '',
           }),
         });
@@ -133,36 +160,22 @@ serve(async (req) => {
           throw new Error(`Error creating appointment: ${JSON.stringify(errorData)}`);
         }
         result = await response.json();
-        console.log('Cita created:', result);
         break;
       }
-
       case 'getBoxes': {
-        // Get boxes/rooms
         const url = new URL(`${DENTALINK_BASE_URL}/boxes`);
-        if (params.sucursalId) {
-          url.searchParams.set('id_sucursal', params.sucursalId);
-        }
+        if (params.sucursalId) url.searchParams.set('id_sucursal', params.sucursalId);
         const response = await fetch(url.toString(), { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Boxes fetched:', result.data?.length || 0);
         break;
       }
-
       case 'getEstadosCita': {
-        // Get appointment statuses
         const response = await fetch(`${DENTALINK_BASE_URL}/estados_cita`, { headers });
-        if (!response.ok) {
-          throw new Error(`Dentalink API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Dentalink API error: ${response.status}`);
         result = await response.json();
-        console.log('Estados de cita fetched:', result.data?.length || 0);
         break;
       }
-
       default:
         throw new Error(`Unknown action: ${action}`);
     }
@@ -176,10 +189,7 @@ serve(async (req) => {
     console.error('Dentalink availability error:', errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
