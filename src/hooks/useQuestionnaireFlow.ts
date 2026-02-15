@@ -125,7 +125,7 @@ const getRestoredState = (): { userProfile: Partial<UserProfile>; densityAnswers
   return null;
 };
 
-export const useQuestionnaireFlow = () => {
+export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
   // Use lazy initializer to check for restored state only once
   const [restoredState] = useState(() => getRestoredState());
   
@@ -383,16 +383,22 @@ export const useQuestionnaireFlow = () => {
       oralHygiene: implantAnswers.oralHygiene || 'twice-plus'
     });
     setIrpResult(result);
-    // Skip plan selection — go directly to full clinical flow (free Premium)
-    setPurchaseLevel('premium');
+    
+    if (mode === 'free') {
+      // Free mode: skip plan selection, auto-premium
+      setPurchaseLevel('premium');
+    }
+    // Paid mode: leave purchaseLevel as 'free' until user purchases
     setStep('irp-result');
-  }, [implantAnswers]);
+  }, [implantAnswers, mode]);
 
   const handleContinueFree = useCallback(() => {
-    setPurchaseLevel('premium');
+    if (mode === 'free') {
+      setPurchaseLevel('premium');
+    }
     triggerConfetti();
     setStep('implant-history');
-  }, []);
+  }, [mode]);
 
   const handlePurchasePlan = useCallback((level: PurchaseLevel) => {
     setPurchaseLevel(level);

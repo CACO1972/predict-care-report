@@ -35,8 +35,12 @@ import {
   ResultsStep
 } from "@/components/questionnaire/steps";
 
-const PatientQuestionnaire = () => {
-  const flow = useQuestionnaireFlow();
+interface PatientQuestionnaireProps {
+  mode?: 'free' | 'paid';
+}
+
+const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
+  const flow = useQuestionnaireFlow(mode);
   
   // Preload all questionnaire audio files on mount
   useAudioPreload();
@@ -217,19 +221,29 @@ const PatientQuestionnaire = () => {
             patientName={flow.userProfile.name || 'Paciente'}
             patientEmail={flow.leadData?.email}
             onContinueFree={() => {
-              // Free full flow — go directly to clinical questions (like Premium)
               triggerConfetti();
               flow.setStep('implant-history');
             }}
             onPurchasePlan={flow.handlePurchasePlan}
             onSaveStateForPayment={flow.saveStateForPayment}
+            mode={mode}
           />
         ) : null;
 
       case 'upsell-premium':
-        // No longer needed — skip directly to clinical flow
-        flow.setStep('implant-history');
-        return null;
+        if (mode === 'free') {
+          flow.setStep('implant-history');
+          return null;
+        }
+        return (
+          <UpsellPremiumScreen
+            patientName={flow.userProfile.name || 'Paciente'}
+            patientEmail={flow.leadData?.email}
+            onUpgrade={flow.handleUpgradeToPremium}
+            onSkip={flow.handleSkipUpsell}
+            onSaveStateForPayment={flow.saveStateForPayment}
+          />
+        );
 
       case 'implant-history':
         return (
