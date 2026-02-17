@@ -311,7 +311,7 @@ const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
             requiresDensityPro={flow.requiresDensityPro}
             uploadedImage={flow.uploadedImage}
             onConfirm={() => {
-              flow.setStep('processing');
+            flow.setStep('processing');
               triggerConfetti();
               setTimeout(() => {
                 const result = calculateRiskAssessment(
@@ -319,6 +319,7 @@ const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
                   flow.implantAnswers as ImplantXAnswers,
                   flow.userProfile.age
                 );
+                flow.setAssessmentResult(result);
                 flow.handleLeadSubmit({ email: '', phone: '' });
               }, 3000);
             }}

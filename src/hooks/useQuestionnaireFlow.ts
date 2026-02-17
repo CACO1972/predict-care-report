@@ -546,6 +546,7 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
     setUploadedImage,
     setImageAnalysis,
     setIsMuted,
+    setAssessmentResult,
     
     // Computed
     getStepNumber,
