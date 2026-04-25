@@ -338,21 +338,16 @@ export const useQuestionnaireFlow = () => {
       'tooth-loss': () => setStep('tooth-loss-time'),
       'tooth-loss-time': () => setStep('teeth-count'),
       'teeth-count': () => {
-        // Always go to odontogram (full clinical flow)
-        setStep('odontogram');
+        // Premium gets odontogram + photo upload; Plan de Acción skips to summary
+        if (purchaseLevel === 'premium') {
+          setStep('odontogram');
+        } else {
+          setStep('summary');
+        }
       },
       'odontogram': () => {
-        setStep('processing');
-        triggerConfetti();
-        setTimeout(() => {
-          const result = calculateRiskAssessment(
-            requiresDensityPro ? densityAnswers as DensityProAnswers : null,
-            implantAnswers as ImplantXAnswers,
-            userProfile.age
-          );
-          setAssessmentResult(result);
-          setShowLeadCapture(true);
-        }, 3000);
+        // Move straight to summary; payment + processing happens after the user confirms
+        setStep('summary');
       },
     };
     return transitions[currentStep] || (() => {});
