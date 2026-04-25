@@ -290,17 +290,8 @@ const PatientQuestionnaire = () => {
             requiresDensityPro={flow.requiresDensityPro}
             uploadedImage={flow.uploadedImage}
             onConfirm={() => {
-            flow.setStep('processing');
-              triggerConfetti();
-              setTimeout(() => {
-                const result = calculateRiskAssessment(
-                  flow.requiresDensityPro ? flow.densityAnswers as DensityProAnswers : null,
-                  flow.implantAnswers as ImplantXAnswers,
-                  flow.userProfile.age
-                );
-                flow.setAssessmentResult(result);
-                flow.handleLeadSubmit({ email: '', phone: '' });
-              }, 3000);
+              // Open lead capture modal — on submit it triggers the Flow payment redirect
+              flow.setShowLeadCapture(true);
             }}
             onEdit={() => flow.setStep('name')}
           />
