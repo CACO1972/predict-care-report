@@ -219,31 +219,14 @@ const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
           <IRPResultScreen
             irpResult={flow.irpResult}
             patientName={flow.userProfile.name || 'Paciente'}
-            patientEmail={flow.leadData?.email}
-            onContinueFree={() => {
-              triggerConfetti();
-              flow.setStep('implant-history');
-            }}
-            onPurchasePlan={flow.handlePurchasePlan}
-            onSaveStateForPayment={flow.saveStateForPayment}
-            mode={mode}
+            onSelectPlan={flow.handlePurchasePlan}
           />
         ) : null;
 
       case 'upsell-premium':
-        if (mode === 'free') {
-          flow.setStep('implant-history');
-          return null;
-        }
-        return (
-          <UpsellPremiumScreen
-            patientName={flow.userProfile.name || 'Paciente'}
-            patientEmail={flow.leadData?.email}
-            onUpgrade={flow.handleUpgradeToPremium}
-            onSkip={flow.handleSkipUpsell}
-            onSaveStateForPayment={flow.saveStateForPayment}
-          />
-        );
+        // Plan was already chosen at IRP screen; route directly to clinical history
+        flow.setStep('implant-history');
+        return null;
 
       case 'implant-history':
         return (
