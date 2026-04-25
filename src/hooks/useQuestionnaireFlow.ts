@@ -592,6 +592,7 @@ export const useQuestionnaireFlow = () => {
     setImageAnalysis,
     setIsMuted,
     setAssessmentResult,
+    setShowLeadCapture,
     
     // Computed
     getStepNumber,
