@@ -35,12 +35,8 @@ import {
   ResultsStep
 } from "@/components/questionnaire/steps";
 
-interface PatientQuestionnaireProps {
-  mode?: 'free' | 'paid';
-}
-
-const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
-  const flow = useQuestionnaireFlow(mode);
+const PatientQuestionnaire = () => {
+  const flow = useQuestionnaireFlow();
   
   // Preload all questionnaire audio files on mount
   useAudioPreload();
