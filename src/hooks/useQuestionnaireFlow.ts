@@ -460,24 +460,75 @@ export const useQuestionnaireFlow = () => {
     }
   }, [userProfile, densityAnswers, implantAnswers, irpResult]);
 
+  // Triggered from AnswersSummary → captures email/phone, persists state, redirects to Flow checkout
   const handleLeadSubmit = useCallback(async (data: { email: string; phone: string }) => {
     setLeadData(data);
     setShowLeadCapture(false);
-    setStep('results');
-    triggerConfetti();
-    
-    // Save assessment to database (only if we captured an email)
-    if (data.email) {
-      await saveAssessmentToDatabase(data.email, data.phone);
+
+    // Persist lead immediately so we have it after the Flow redirect (handleStartCheckout will save state too)
+    try {
+      const stateToSave = {
+        userProfile,
+        densityAnswers,
+        implantAnswers,
+        irpResult,
+        leadData: data,
+      };
+      localStorage.setItem('implantx_questionnaire_state', JSON.stringify(stateToSave));
+      if (uploadedImage) localStorage.setItem('implantx_uploaded_image', uploadedImage);
+      if (imageAnalysis) localStorage.setItem('implantx_image_analysis', imageAnalysis);
+    } catch {}
+
+    // Decide checkout based on the plan the user picked at IRP screen
+    const isPremium = purchaseLevel === 'premium';
+    const amount = isPremium ? 29990 : 14990;
+    const subject = isPremium ? 'ImplantX Informe Premium' : 'ImplantX Plan de Acción';
+
+    try {
+      const { data: orderData, error } = await supabase.functions.invoke('create-flow-order', {
+        body: { email: data.email, amount, subject, purchaseLevel },
+      });
+
+      if (error || !orderData?.success) {
+        console.error('Error creating Flow order:', error || orderData?.error);
+        // Fall back: stay on summary so the user can retry
+        setShowLeadCapture(true);
+        return;
+      }
+
+      try {
+        localStorage.setItem('implantx_flow_payment', JSON.stringify({
+          level: purchaseLevel,
+          email: data.email,
+          flowToken: orderData.data.token,
+          timestamp: Date.now(),
+        }));
+      } catch {}
+
+      // Redirect to Flow checkout. The user comes back via /pago-exitoso → /evaluacion (with state restored).
+      window.location.href = orderData.data.paymentUrl;
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setShowLeadCapture(true);
     }
-    
-    // Auto-send report email for ALL tiers (free, plan-accion, premium)
-    if (assessmentResult) {
+  }, [purchaseLevel, userProfile, densityAnswers, implantAnswers, irpResult, uploadedImage, imageAnalysis]);
+
+  // Persist + email the report once the user reaches the results screen (post-payment)
+  useEffect(() => {
+    if (step !== 'results' || !assessmentResult || !leadData?.email) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await saveAssessmentToDatabase(leadData.email, leadData.phone);
+      } catch (err) {
+        console.error('save-assessment error:', err);
+      }
+      if (cancelled) return;
       try {
         const reportId = `EV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-        const { error } = await supabase.functions.invoke('send-report-email', {
+        await supabase.functions.invoke('send-report-email', {
           body: {
-            email: data.email,
+            email: leadData.email,
             patientName: userProfile.name || 'Paciente',
             reportId,
             date: new Date().toLocaleDateString('es-ES'),
@@ -489,30 +540,24 @@ export const useQuestionnaireFlow = () => {
             factors: assessmentResult.riskFactors?.slice(0, 3).map(rf => ({
               name: rf.name,
               value: rf.impact === 'high' ? 'Alto' : rf.impact === 'medium' ? 'Medio' : 'Bajo',
-              impact: rf.impact === 'high' ? 15 : rf.impact === 'medium' ? 10 : 5
+              impact: rf.impact === 'high' ? 15 : rf.impact === 'medium' ? 10 : 5,
             })),
             recommendations: assessmentResult.recommendations?.slice(0, 2).map(rec => ({
               text: rec.title,
-              evidence: rec.description
+              evidence: rec.description,
             })),
-            // Pass additional data for paid tiers
-            densityAnswers: purchaseLevel !== 'free' ? densityAnswers : undefined,
-            implantAnswers: purchaseLevel !== 'free' ? implantAnswers : undefined,
+            densityAnswers,
+            implantAnswers,
             uploadedImage: purchaseLevel === 'premium' ? uploadedImage : undefined,
             imageAnalysis: purchaseLevel === 'premium' ? imageAnalysis : undefined,
-          }
+          },
         });
-        
-        if (error) {
-          console.error('Error sending email:', error);
-        } else {
-          console.log(`Report email (${purchaseLevel}) sent automatically to:`, data.email);
-        }
       } catch (err) {
-        console.error('Error invoking send-report-email:', err);
+        console.error('send-report-email error:', err);
       }
-    }
-  }, [purchaseLevel, assessmentResult, userProfile.name, irpResult, saveAssessmentToDatabase, densityAnswers, implantAnswers, uploadedImage, imageAnalysis]);
+    })();
+    return () => { cancelled = true; };
+  }, [step, assessmentResult, leadData, purchaseLevel, irpResult, densityAnswers, implantAnswers, userProfile.name, uploadedImage, imageAnalysis, saveAssessmentToDatabase]);
 
   return {
     // State
