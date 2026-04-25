@@ -400,39 +400,25 @@ export const useQuestionnaireFlow = () => {
       oralHygiene: implantAnswers.oralHygiene || 'twice-plus'
     });
     setIrpResult(result);
-    
-    if (mode === 'free') {
-      // Free mode: skip plan selection, auto-premium
-      setPurchaseLevel('premium');
-    }
-    // Paid mode: leave purchaseLevel as 'free' until user purchases
+    // Always show plan selection — payment is mandatory to view full report
     setStep('irp-result');
-  }, [implantAnswers, mode]);
+  }, [implantAnswers]);
 
-  const handleContinueFree = useCallback(() => {
-    if (mode === 'free') {
-      setPurchaseLevel('premium');
-    }
-    triggerConfetti();
-    setStep('implant-history');
-  }, [mode]);
-
+  // User selects a plan at the IRP screen — payment is deferred until the summary
   const handlePurchasePlan = useCallback((level: PurchaseLevel) => {
     setPurchaseLevel(level);
-    if (level === 'plan-accion') {
-      setStep('upsell-premium');
-    } else {
-      triggerConfetti();
-      setStep('implant-history');
-    }
-  }, []);
-
-  const handleUpgradeToPremium = useCallback(() => {
-    setPurchaseLevel('premium');
     triggerConfetti();
     setStep('implant-history');
   }, []);
 
+  // Legacy handlers kept as no-ops in case any leftover UI references them
+  const handleContinueFree = useCallback(() => {
+    setStep('implant-history');
+  }, []);
+  const handleUpgradeToPremium = useCallback(() => {
+    setPurchaseLevel('premium');
+    setStep('implant-history');
+  }, []);
   const handleSkipUpsell = useCallback(() => {
     setStep('implant-history');
   }, []);
