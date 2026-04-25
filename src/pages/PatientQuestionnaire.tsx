@@ -2,7 +2,7 @@ import RioConversational from "@/components/RioConversational";
 import AnswersSummary from "@/components/AnswersSummary";
 import IRPProcessingScreen from "@/components/IRPProcessingScreen";
 import IRPResultScreen from "@/components/IRPResultScreen";
-import UpsellPremiumScreen from "@/components/UpsellPremiumScreen";
+// UpsellPremiumScreen removed: plan is selected at IRP screen, payment happens at the end
 import QuestionnaireLayout from "@/components/questionnaire/QuestionnaireLayout";
 import { useQuestionnaireFlow } from "@/hooks/useQuestionnaireFlow";
 import { useAudioPreload, usePreloadNextAudios } from "@/hooks/useAudioPreload";
