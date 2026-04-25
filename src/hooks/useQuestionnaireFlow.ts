@@ -125,11 +125,12 @@ const getRestoredState = (): { userProfile: Partial<UserProfile>; densityAnswers
   return null;
 };
 
-export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
+export const useQuestionnaireFlow = () => {
   // Use lazy initializer to check for restored state only once
   const [restoredState] = useState(() => getRestoredState());
-  
-  const [step, setStep] = useState<QuestionnaireStep>(() => restoredState ? 'irp-result' : 'welcome');
+
+  // After payment we land directly on the processing/results step (already paid)
+  const [step, setStep] = useState<QuestionnaireStep>(() => restoredState ? 'processing' : 'welcome');
   const [userProfile, setUserProfile] = useState<Partial<UserProfile>>(() => restoredState?.userProfile || {});
   const [densityAnswers, setDensityAnswers] = useState<Partial<DensityProAnswers>>(() => restoredState?.densityAnswers || {});
   const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>(() => restoredState?.implantAnswers || {});
@@ -138,17 +139,21 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
   const [purchaseLevel, setPurchaseLevel] = useState<PurchaseLevel>(() => restoredState?.purchaseLevel || 'free');
   const [showRioResponse, setShowRioResponse] = useState(false);
   const [pendingNextStep, setPendingNextStep] = useState<(() => void) | null>(null);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(() => {
+    try { return restoredState ? localStorage.getItem('implantx_uploaded_image') : null; } catch { return null; }
+  });
+  const [imageAnalysis, setImageAnalysis] = useState<string | null>(() => {
+    try { return restoredState ? localStorage.getItem('implantx_image_analysis') : null; } catch { return null; }
+  });
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
   const [showLeadCapture, setShowLeadCapture] = useState(false);
   const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(() => restoredState?.leadData || null);
   const [isMuted, setIsMuted] = useState(true);
   const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | undefined>(undefined);
-  
+
   const welcomeVideoRef = useRef<HTMLVideoElement>(null);
 
-  // If we restored from payment, trigger the purchase plan handler after mount
+  // If we restored from payment, automatically compute the result and show it
   const [needsPostPaymentAction, setNeedsPostPaymentAction] = useState(!!restoredState);
 
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
@@ -156,24 +161,33 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
 
   const requiresDensityPro = userProfile.gender === 'female' && (userProfile.age || 0) >= 50;
 
-  // After restoring from payment, auto-trigger the purchase plan flow
+  // After payment confirmed: compute the final assessment, then unlock results
   useEffect(() => {
     if (needsPostPaymentAction && restoredState) {
       setNeedsPostPaymentAction(false);
-      // The step is already set to 'irp-result' and purchaseLevel is set
-      // The IRPResultScreen will show, and handlePurchasePlan will be called 
-      // automatically via the restored purchase verification
+      // Brief processing screen, then show results
       setTimeout(() => {
-        const level = restoredState.purchaseLevel as PurchaseLevel;
-        if (level === 'plan-accion') {
-          setStep('upsell-premium');
-        } else if (level === 'premium') {
+        try {
+          const result = calculateRiskAssessment(
+            requiresDensityPro ? restoredState.densityAnswers as DensityProAnswers : null,
+            restoredState.implantAnswers as ImplantXAnswers,
+            restoredState.userProfile.age
+          );
+          setAssessmentResult(result);
           triggerConfetti();
-          setStep('implant-history');
+          setStep('results');
+          // Clean up persisted media after restoration
+          try {
+            localStorage.removeItem('implantx_uploaded_image');
+            localStorage.removeItem('implantx_image_analysis');
+          } catch {}
+        } catch (err) {
+          console.error('Error computing post-payment assessment:', err);
+          setStep('results');
         }
-      }, 500);
+      }, 2500);
     }
-  }, [needsPostPaymentAction]);
+  }, [needsPostPaymentAction, restoredState, requiresDensityPro]);
 
   // Save questionnaire state to localStorage (called before payment redirect)
   const saveStateForPayment = useCallback(() => {
@@ -185,8 +199,11 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
         irpResult,
         leadData,
       }));
+      // Persist potentially large media separately so JSON stays small
+      if (uploadedImage) localStorage.setItem('implantx_uploaded_image', uploadedImage);
+      if (imageAnalysis) localStorage.setItem('implantx_image_analysis', imageAnalysis);
     } catch {}
-  }, [userProfile, densityAnswers, implantAnswers, irpResult, leadData]);
+  }, [userProfile, densityAnswers, implantAnswers, irpResult, leadData, uploadedImage, imageAnalysis]);
 
   // Get previous step for back navigation
   const getPreviousStep = useCallback((): QuestionnaireStep | null => {
