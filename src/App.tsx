@@ -23,8 +23,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/evaluacion" element={<PatientQuestionnaire mode="paid" />} />
-            <Route path="/gratis" element={<PatientQuestionnaire mode="free" />} />
+            <Route path="/evaluacion" element={<PatientQuestionnaire />} />
+            {/* /gratis route removed — payment is now mandatory */}
+            <Route path="/gratis" element={<PatientQuestionnaire />} />
             <Route path="/documentacion" element={<Documentation />} />
             <Route path="/admin/audio-generator" element={<AudioGenerator />} />
             <Route path="/pago-exitoso" element={<PagoExitoso />} />

@@ -125,11 +125,12 @@ const getRestoredState = (): { userProfile: Partial<UserProfile>; densityAnswers
   return null;
 };
 
-export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
+export const useQuestionnaireFlow = () => {
   // Use lazy initializer to check for restored state only once
   const [restoredState] = useState(() => getRestoredState());
-  
-  const [step, setStep] = useState<QuestionnaireStep>(() => restoredState ? 'irp-result' : 'welcome');
+
+  // After payment we land directly on the processing/results step (already paid)
+  const [step, setStep] = useState<QuestionnaireStep>(() => restoredState ? 'processing' : 'welcome');
   const [userProfile, setUserProfile] = useState<Partial<UserProfile>>(() => restoredState?.userProfile || {});
   const [densityAnswers, setDensityAnswers] = useState<Partial<DensityProAnswers>>(() => restoredState?.densityAnswers || {});
   const [implantAnswers, setImplantAnswers] = useState<Partial<ImplantXAnswers>>(() => restoredState?.implantAnswers || {});
@@ -138,17 +139,21 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
   const [purchaseLevel, setPurchaseLevel] = useState<PurchaseLevel>(() => restoredState?.purchaseLevel || 'free');
   const [showRioResponse, setShowRioResponse] = useState(false);
   const [pendingNextStep, setPendingNextStep] = useState<(() => void) | null>(null);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imageAnalysis, setImageAnalysis] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(() => {
+    try { return restoredState ? localStorage.getItem('implantx_uploaded_image') : null; } catch { return null; }
+  });
+  const [imageAnalysis, setImageAnalysis] = useState<string | null>(() => {
+    try { return restoredState ? localStorage.getItem('implantx_image_analysis') : null; } catch { return null; }
+  });
   const [currentExpression, setCurrentExpression] = useState<RioExpression>('encouraging');
   const [showLeadCapture, setShowLeadCapture] = useState(false);
   const [leadData, setLeadData] = useState<{ email: string; phone: string } | null>(() => restoredState?.leadData || null);
   const [isMuted, setIsMuted] = useState(true);
   const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | undefined>(undefined);
-  
+
   const welcomeVideoRef = useRef<HTMLVideoElement>(null);
 
-  // If we restored from payment, trigger the purchase plan handler after mount
+  // If we restored from payment, automatically compute the result and show it
   const [needsPostPaymentAction, setNeedsPostPaymentAction] = useState(!!restoredState);
 
   const { feedback, isLoading, generateFeedback, clearFeedback } = useRioFeedback();
@@ -156,24 +161,33 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
 
   const requiresDensityPro = userProfile.gender === 'female' && (userProfile.age || 0) >= 50;
 
-  // After restoring from payment, auto-trigger the purchase plan flow
+  // After payment confirmed: compute the final assessment, then unlock results
   useEffect(() => {
     if (needsPostPaymentAction && restoredState) {
       setNeedsPostPaymentAction(false);
-      // The step is already set to 'irp-result' and purchaseLevel is set
-      // The IRPResultScreen will show, and handlePurchasePlan will be called 
-      // automatically via the restored purchase verification
+      // Brief processing screen, then show results
       setTimeout(() => {
-        const level = restoredState.purchaseLevel as PurchaseLevel;
-        if (level === 'plan-accion') {
-          setStep('upsell-premium');
-        } else if (level === 'premium') {
+        try {
+          const result = calculateRiskAssessment(
+            requiresDensityPro ? restoredState.densityAnswers as DensityProAnswers : null,
+            restoredState.implantAnswers as ImplantXAnswers,
+            restoredState.userProfile.age
+          );
+          setAssessmentResult(result);
           triggerConfetti();
-          setStep('implant-history');
+          setStep('results');
+          // Clean up persisted media after restoration
+          try {
+            localStorage.removeItem('implantx_uploaded_image');
+            localStorage.removeItem('implantx_image_analysis');
+          } catch {}
+        } catch (err) {
+          console.error('Error computing post-payment assessment:', err);
+          setStep('results');
         }
-      }, 500);
+      }, 2500);
     }
-  }, [needsPostPaymentAction]);
+  }, [needsPostPaymentAction, restoredState, requiresDensityPro]);
 
   // Save questionnaire state to localStorage (called before payment redirect)
   const saveStateForPayment = useCallback(() => {
@@ -185,8 +199,11 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
         irpResult,
         leadData,
       }));
+      // Persist potentially large media separately so JSON stays small
+      if (uploadedImage) localStorage.setItem('implantx_uploaded_image', uploadedImage);
+      if (imageAnalysis) localStorage.setItem('implantx_image_analysis', imageAnalysis);
     } catch {}
-  }, [userProfile, densityAnswers, implantAnswers, irpResult, leadData]);
+  }, [userProfile, densityAnswers, implantAnswers, irpResult, leadData, uploadedImage, imageAnalysis]);
 
   // Get previous step for back navigation
   const getPreviousStep = useCallback((): QuestionnaireStep | null => {
@@ -321,21 +338,16 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
       'tooth-loss': () => setStep('tooth-loss-time'),
       'tooth-loss-time': () => setStep('teeth-count'),
       'teeth-count': () => {
-        // Always go to odontogram (full clinical flow)
-        setStep('odontogram');
+        // Premium gets odontogram + photo upload; Plan de Acción skips to summary
+        if (purchaseLevel === 'premium') {
+          setStep('odontogram');
+        } else {
+          setStep('summary');
+        }
       },
       'odontogram': () => {
-        setStep('processing');
-        triggerConfetti();
-        setTimeout(() => {
-          const result = calculateRiskAssessment(
-            requiresDensityPro ? densityAnswers as DensityProAnswers : null,
-            implantAnswers as ImplantXAnswers,
-            userProfile.age
-          );
-          setAssessmentResult(result);
-          setShowLeadCapture(true);
-        }, 3000);
+        // Move straight to summary; payment + processing happens after the user confirms
+        setStep('summary');
       },
     };
     return transitions[currentStep] || (() => {});
@@ -383,39 +395,25 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
       oralHygiene: implantAnswers.oralHygiene || 'twice-plus'
     });
     setIrpResult(result);
-    
-    if (mode === 'free') {
-      // Free mode: skip plan selection, auto-premium
-      setPurchaseLevel('premium');
-    }
-    // Paid mode: leave purchaseLevel as 'free' until user purchases
+    // Always show plan selection — payment is mandatory to view full report
     setStep('irp-result');
-  }, [implantAnswers, mode]);
+  }, [implantAnswers]);
 
-  const handleContinueFree = useCallback(() => {
-    if (mode === 'free') {
-      setPurchaseLevel('premium');
-    }
-    triggerConfetti();
-    setStep('implant-history');
-  }, [mode]);
-
+  // User selects a plan at the IRP screen — payment is deferred until the summary
   const handlePurchasePlan = useCallback((level: PurchaseLevel) => {
     setPurchaseLevel(level);
-    if (level === 'plan-accion') {
-      setStep('upsell-premium');
-    } else {
-      triggerConfetti();
-      setStep('implant-history');
-    }
-  }, []);
-
-  const handleUpgradeToPremium = useCallback(() => {
-    setPurchaseLevel('premium');
     triggerConfetti();
     setStep('implant-history');
   }, []);
 
+  // Legacy handlers kept as no-ops in case any leftover UI references them
+  const handleContinueFree = useCallback(() => {
+    setStep('implant-history');
+  }, []);
+  const handleUpgradeToPremium = useCallback(() => {
+    setPurchaseLevel('premium');
+    setStep('implant-history');
+  }, []);
   const handleSkipUpsell = useCallback(() => {
     setStep('implant-history');
   }, []);
@@ -462,24 +460,75 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
     }
   }, [userProfile, densityAnswers, implantAnswers, irpResult]);
 
+  // Triggered from AnswersSummary → captures email/phone, persists state, redirects to Flow checkout
   const handleLeadSubmit = useCallback(async (data: { email: string; phone: string }) => {
     setLeadData(data);
     setShowLeadCapture(false);
-    setStep('results');
-    triggerConfetti();
-    
-    // Save assessment to database (only if we captured an email)
-    if (data.email) {
-      await saveAssessmentToDatabase(data.email, data.phone);
+
+    // Persist lead immediately so we have it after the Flow redirect (handleStartCheckout will save state too)
+    try {
+      const stateToSave = {
+        userProfile,
+        densityAnswers,
+        implantAnswers,
+        irpResult,
+        leadData: data,
+      };
+      localStorage.setItem('implantx_questionnaire_state', JSON.stringify(stateToSave));
+      if (uploadedImage) localStorage.setItem('implantx_uploaded_image', uploadedImage);
+      if (imageAnalysis) localStorage.setItem('implantx_image_analysis', imageAnalysis);
+    } catch {}
+
+    // Decide checkout based on the plan the user picked at IRP screen
+    const isPremium = purchaseLevel === 'premium';
+    const amount = isPremium ? 29990 : 14990;
+    const subject = isPremium ? 'ImplantX Informe Premium' : 'ImplantX Plan de Acción';
+
+    try {
+      const { data: orderData, error } = await supabase.functions.invoke('create-flow-order', {
+        body: { email: data.email, amount, subject, purchaseLevel },
+      });
+
+      if (error || !orderData?.success) {
+        console.error('Error creating Flow order:', error || orderData?.error);
+        // Fall back: stay on summary so the user can retry
+        setShowLeadCapture(true);
+        return;
+      }
+
+      try {
+        localStorage.setItem('implantx_flow_payment', JSON.stringify({
+          level: purchaseLevel,
+          email: data.email,
+          flowToken: orderData.data.token,
+          timestamp: Date.now(),
+        }));
+      } catch {}
+
+      // Redirect to Flow checkout. The user comes back via /pago-exitoso → /evaluacion (with state restored).
+      window.location.href = orderData.data.paymentUrl;
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setShowLeadCapture(true);
     }
-    
-    // Auto-send report email for ALL tiers (free, plan-accion, premium)
-    if (assessmentResult) {
+  }, [purchaseLevel, userProfile, densityAnswers, implantAnswers, irpResult, uploadedImage, imageAnalysis]);
+
+  // Persist + email the report once the user reaches the results screen (post-payment)
+  useEffect(() => {
+    if (step !== 'results' || !assessmentResult || !leadData?.email) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await saveAssessmentToDatabase(leadData.email, leadData.phone);
+      } catch (err) {
+        console.error('save-assessment error:', err);
+      }
+      if (cancelled) return;
       try {
         const reportId = `EV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-        const { error } = await supabase.functions.invoke('send-report-email', {
+        await supabase.functions.invoke('send-report-email', {
           body: {
-            email: data.email,
+            email: leadData.email,
             patientName: userProfile.name || 'Paciente',
             reportId,
             date: new Date().toLocaleDateString('es-ES'),
@@ -491,30 +540,24 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
             factors: assessmentResult.riskFactors?.slice(0, 3).map(rf => ({
               name: rf.name,
               value: rf.impact === 'high' ? 'Alto' : rf.impact === 'medium' ? 'Medio' : 'Bajo',
-              impact: rf.impact === 'high' ? 15 : rf.impact === 'medium' ? 10 : 5
+              impact: rf.impact === 'high' ? 15 : rf.impact === 'medium' ? 10 : 5,
             })),
             recommendations: assessmentResult.recommendations?.slice(0, 2).map(rec => ({
               text: rec.title,
-              evidence: rec.description
+              evidence: rec.description,
             })),
-            // Pass additional data for paid tiers
-            densityAnswers: purchaseLevel !== 'free' ? densityAnswers : undefined,
-            implantAnswers: purchaseLevel !== 'free' ? implantAnswers : undefined,
+            densityAnswers,
+            implantAnswers,
             uploadedImage: purchaseLevel === 'premium' ? uploadedImage : undefined,
             imageAnalysis: purchaseLevel === 'premium' ? imageAnalysis : undefined,
-          }
+          },
         });
-        
-        if (error) {
-          console.error('Error sending email:', error);
-        } else {
-          console.log(`Report email (${purchaseLevel}) sent automatically to:`, data.email);
-        }
       } catch (err) {
-        console.error('Error invoking send-report-email:', err);
+        console.error('send-report-email error:', err);
       }
-    }
-  }, [purchaseLevel, assessmentResult, userProfile.name, irpResult, saveAssessmentToDatabase, densityAnswers, implantAnswers, uploadedImage, imageAnalysis]);
+    })();
+    return () => { cancelled = true; };
+  }, [step, assessmentResult, leadData, purchaseLevel, irpResult, densityAnswers, implantAnswers, userProfile.name, uploadedImage, imageAnalysis, saveAssessmentToDatabase]);
 
   return {
     // State
@@ -549,6 +592,7 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
     setImageAnalysis,
     setIsMuted,
     setAssessmentResult,
+    setShowLeadCapture,
     
     // Computed
     getStepNumber,

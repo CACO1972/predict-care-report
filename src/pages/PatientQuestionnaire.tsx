@@ -2,7 +2,7 @@ import RioConversational from "@/components/RioConversational";
 import AnswersSummary from "@/components/AnswersSummary";
 import IRPProcessingScreen from "@/components/IRPProcessingScreen";
 import IRPResultScreen from "@/components/IRPResultScreen";
-import UpsellPremiumScreen from "@/components/UpsellPremiumScreen";
+// UpsellPremiumScreen removed: plan is selected at IRP screen, payment happens at the end
 import QuestionnaireLayout from "@/components/questionnaire/QuestionnaireLayout";
 import { useQuestionnaireFlow } from "@/hooks/useQuestionnaireFlow";
 import { useAudioPreload, usePreloadNextAudios } from "@/hooks/useAudioPreload";
@@ -35,12 +35,8 @@ import {
   ResultsStep
 } from "@/components/questionnaire/steps";
 
-interface PatientQuestionnaireProps {
-  mode?: 'free' | 'paid';
-}
-
-const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
-  const flow = useQuestionnaireFlow(mode);
+const PatientQuestionnaire = () => {
+  const flow = useQuestionnaireFlow();
   
   // Preload all questionnaire audio files on mount
   useAudioPreload();
@@ -219,31 +215,14 @@ const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
           <IRPResultScreen
             irpResult={flow.irpResult}
             patientName={flow.userProfile.name || 'Paciente'}
-            patientEmail={flow.leadData?.email}
-            onContinueFree={() => {
-              triggerConfetti();
-              flow.setStep('implant-history');
-            }}
-            onPurchasePlan={flow.handlePurchasePlan}
-            onSaveStateForPayment={flow.saveStateForPayment}
-            mode={mode}
+            onSelectPlan={flow.handlePurchasePlan}
           />
         ) : null;
 
       case 'upsell-premium':
-        if (mode === 'free') {
-          flow.setStep('implant-history');
-          return null;
-        }
-        return (
-          <UpsellPremiumScreen
-            patientName={flow.userProfile.name || 'Paciente'}
-            patientEmail={flow.leadData?.email}
-            onUpgrade={flow.handleUpgradeToPremium}
-            onSkip={flow.handleSkipUpsell}
-            onSaveStateForPayment={flow.saveStateForPayment}
-          />
-        );
+        // Plan was already chosen at IRP screen; route directly to clinical history
+        flow.setStep('implant-history');
+        return null;
 
       case 'implant-history':
         return (
@@ -311,17 +290,8 @@ const PatientQuestionnaire = ({ mode = 'free' }: PatientQuestionnaireProps) => {
             requiresDensityPro={flow.requiresDensityPro}
             uploadedImage={flow.uploadedImage}
             onConfirm={() => {
-            flow.setStep('processing');
-              triggerConfetti();
-              setTimeout(() => {
-                const result = calculateRiskAssessment(
-                  flow.requiresDensityPro ? flow.densityAnswers as DensityProAnswers : null,
-                  flow.implantAnswers as ImplantXAnswers,
-                  flow.userProfile.age
-                );
-                flow.setAssessmentResult(result);
-                flow.handleLeadSubmit({ email: '', phone: '' });
-              }, 3000);
+              // Open lead capture modal — on submit it triggers the Flow payment redirect
+              flow.setShowLeadCapture(true);
             }}
             onEdit={() => flow.setStep('name')}
           />
