@@ -468,8 +468,10 @@ export const useQuestionnaireFlow = (mode: 'free' | 'paid' = 'free') => {
     setStep('results');
     triggerConfetti();
     
-    // Save assessment to database
-    await saveAssessmentToDatabase(data.email, data.phone);
+    // Save assessment to database (only if we captured an email)
+    if (data.email) {
+      await saveAssessmentToDatabase(data.email, data.phone);
+    }
     
     // Auto-send report email for ALL tiers (free, plan-accion, premium)
     if (assessmentResult) {

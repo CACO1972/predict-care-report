@@ -19,7 +19,7 @@ interface NameStepProps {
 export const NameStep = ({ userProfile, setUserProfile, onNext }: NameStepProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasAdvancedRef = useRef(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [videosFinished, setVideosFinished] = useState(false);
