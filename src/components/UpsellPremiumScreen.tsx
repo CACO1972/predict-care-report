@@ -52,6 +52,7 @@ const UpsellPremiumScreen = ({
           amount: 29990,
           subject: 'ImplantX Informe Premium (Upgrade)',
           purchaseLevel: 'premium',
+          returnOrigin: window.location.origin,
         },
       });
 
