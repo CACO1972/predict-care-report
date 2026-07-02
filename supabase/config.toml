@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.verify-payment-status]
 verify_jwt = false
+
+[functions.flow-return]
+verify_jwt = false

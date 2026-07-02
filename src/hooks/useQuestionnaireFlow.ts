@@ -486,7 +486,7 @@ export const useQuestionnaireFlow = () => {
 
     try {
       const { data: orderData, error } = await supabase.functions.invoke('create-flow-order', {
-        body: { email: data.email, amount, subject, purchaseLevel },
+        body: { email: data.email, amount, subject, purchaseLevel, returnOrigin: window.location.origin },
       });
 
       if (error || !orderData?.success) {

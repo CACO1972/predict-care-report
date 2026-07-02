@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, amount, subject, purchaseLevel, commerceOrder } = await req.json();
+    const { email, amount, subject, purchaseLevel, commerceOrder, returnOrigin } = await req.json();
 
     // Validate input
     if (!email || !amount || !subject || !purchaseLevel) {
@@ -39,6 +39,15 @@ Deno.serve(async (req) => {
     // Generate a unique commerce order if not provided
     const order = commerceOrder || `IX-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
+    // Flow.cl posts urlReturn from the user's browser. SPA hosting cannot answer
+    // POST, so we bounce through the flow-return edge function which 302s back
+    // to the SPA. The client's origin is preserved via ?origin= so users testing
+    // on preview/custom domains land back where they started.
+    const safeOrigin = typeof returnOrigin === 'string' && /^https:\/\/[^\s]+$/.test(returnOrigin)
+      ? returnOrigin
+      : 'https://implantx.lovable.app';
+    const urlReturn = `${SUPABASE_URL}/functions/v1/flow-return?origin=${encodeURIComponent(safeOrigin)}`;
+
     // Build Flow API params
     const params: Record<string, string> = {
       apiKey: FLOW_API_KEY,
@@ -48,7 +57,7 @@ Deno.serve(async (req) => {
       amount: String(amount),
       email: email,
       urlConfirmation: `${SUPABASE_URL}/functions/v1/flow-webhook`,
-      urlReturn: 'https://implantx.lovable.app/pago-exitoso',
+      urlReturn,
     };
 
     // Sign: sort keys alphabetically, concat key+value, HMAC-SHA256
