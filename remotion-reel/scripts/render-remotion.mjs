@@ -24,7 +24,7 @@ await renderMedia({
   codec: "h264",
   outputLocation: "/mnt/documents/implantx-reel.mp4",
   puppeteerInstance: browser,
-  muted: true,
+  muted: false,
   concurrency: 1,
 });
 
