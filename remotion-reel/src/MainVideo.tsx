@@ -1,4 +1,4 @@
-import { AbsoluteFill, Series, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
+import { AbsoluteFill, Audio, Series, staticFile, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 import { SceneHook } from "./scenes/SceneHook";
 import { SceneRio } from "./scenes/SceneRio";
 import { SceneFeatures } from "./scenes/SceneFeatures";
