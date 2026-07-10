@@ -36,6 +36,7 @@ export const MainVideo = () => {
   return (
     <AbsoluteFill style={{ background: "#000" }}>
       <GrainAndVignette />
+      <Audio src={staticFile("audio/narration.mp3")} volume={1} />
       <Series>
         <Series.Sequence durationInFrames={60}><SceneHook /></Series.Sequence>
         <Series.Sequence durationInFrames={120}><SceneRio /></Series.Sequence>
